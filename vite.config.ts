@@ -1,7 +1,18 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import dts from 'vite-plugin-dts';
 
 export default defineConfig({
+  plugins: [
+    dts({
+      include: ['src/**/*.ts'],
+      exclude: ['src/internal/future-formats.ts', 'tests/**'],
+      outDir: 'dist',
+      entryRoot: 'src',
+      rollupTypes: false,
+      copyDtsFiles: true,
+    }),
+  ],
   build: {
     target: 'es2019',
     minify: 'esbuild',
@@ -20,7 +31,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         preserveModules: false,
+        chunkFileNames: 'chunks/[name].[hash].mjs',
       },
     },
+    emptyOutDir: true,
   },
 });

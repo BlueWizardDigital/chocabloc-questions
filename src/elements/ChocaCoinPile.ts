@@ -2,7 +2,6 @@ import type {
   CADCoinName,
   Choice,
   MoneyQuestion,
-  NormalizedQuestion,
   USDCoinName,
 } from '../types';
 import { buildChoicePool } from '../helpers/choice-builder';
@@ -105,9 +104,15 @@ export class ChocaCoinPile extends HTMLElement {
     this._render();
   }
 
-  set question(q: NormalizedQuestion) {
-    if (q.format !== 'money') {
-      throw new Error(`ChocaCoinPile only renders money questions, got: ${q.format}`);
+  set question(q: MoneyQuestion) {
+    // Defensive: if a non-money question slipped through TypeScript at runtime,
+    // log and skip rather than crash. The dispatcher (ChocablocQuestion) routes
+    // by format, so this guard catches direct misuse only.
+    if ((q as { format: string }).format !== 'money') {
+      console.error(
+        `[chocabloc-questions] ChocaCoinPile only renders money questions, got: ${(q as { format: string }).format}`,
+      );
+      return;
     }
     this._question = q;
     this._render();

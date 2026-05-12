@@ -1,4 +1,4 @@
-import type { NormalizedQuestion } from '../types';
+import type { MoneyQuestion, NormalizedQuestion } from '../types';
 import './ChocaCoinPile';
 
 // Fallback template built via DOM API, not template strings, to make the
@@ -63,7 +63,7 @@ export class ChocablocQuestion extends HTMLElement {
       const locale = this.getAttribute('locale');
       if (locale !== null) inner.setAttribute('locale', locale);
       if (this.hasAttribute('disabled')) inner.setAttribute('disabled', '');
-      (inner as HTMLElement & { question: NormalizedQuestion }).question = this._question;
+      (inner as HTMLElement & { question: MoneyQuestion }).question = this._question as MoneyQuestion;
       this._shadow.appendChild(inner);
       this._wireEvents(inner);
       return;
