@@ -72,3 +72,37 @@ describe('<chocabloc-question> M1 subset', () => {
     expect(captured).to.not.be.null;
   });
 });
+
+describe('<chocabloc-question> M2 hardening', () => {
+  it('XSS hardening — malicious text-only stem does not inject HTML', async () => {
+    const el = mount(`<chocabloc-question></chocabloc-question>`);
+    (el as HTMLElement & { question: unknown }).question = {
+      id: 'X',
+      skillIds: ['MISC'],
+      format: 'text',
+      content: { stem: '<img src=x onerror="window.__pwned2=true">' },
+      answer: 'whatever',
+      distractors: [],
+    };
+    await new Promise((r) => requestAnimationFrame(r));
+    expect(el.shadowRoot!.querySelector('img')).to.be.null;
+    expect((window as unknown as { __pwned2?: boolean }).__pwned2).to.be.undefined;
+  });
+
+  it('forwards rendered event from inner', async () => {
+    const el = mount(`<chocabloc-question seed="42"></chocabloc-question>`);
+    let rendered = 0;
+    el.addEventListener('rendered', () => rendered++);
+    (el as HTMLElement & { question: unknown }).question = {
+      id: 'X',
+      skillIds: ['MONEY-COIN-VALUE-USD'],
+      format: 'money',
+      imageType: 'coins',
+      content: { coins: { quarter: 1 }, currency: 'USD' },
+      answer: 25,
+      distractors: [],
+    };
+    await new Promise((r) => requestAnimationFrame(r));
+    expect(rendered).to.be.greaterThan(0);
+  });
+});
