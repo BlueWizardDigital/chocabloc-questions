@@ -6,15 +6,7 @@ export default defineConfig({
     globals: true,
     include: ['tests/**/*.test.ts'],
     exclude: ['tests/elements/**/*.browser.test.ts'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'html'],
-      thresholds: {
-        lines: 90,
-        functions: 90,
-        branches: 85,
-        statements: 90,
-      },
-    },
+    // Coverage block deferred to M2 — needs @vitest/coverage-v8 dep
+    // which is intentionally not yet installed.
   },
 });

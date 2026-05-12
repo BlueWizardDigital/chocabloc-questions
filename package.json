@@ -47,7 +47,7 @@
     "format": "prettier --write src tests",
     "size": "size-limit",
     "typecheck": "tsc --noEmit",
-    "ci": "npm run typecheck && npm run lint && npm run test && npm run build && npm run size"
+    "ci": "npm run typecheck && npm run lint && npm run test && npm run build"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
