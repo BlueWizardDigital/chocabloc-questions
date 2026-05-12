@@ -1,0 +1,11 @@
+[
+  {
+    "id": "MONEY-COIN-VALUE-CAD-835",
+    "skill_ids": ["MONEY-COIN-VALUE-CAD"],
+    "content": { "coins": { "nickel": 1, "dime": 3, "quarter": 0, "loonie": 0, "toonie": 4 }, "operation": "money" },
+    "answer": 835,
+    "distractors": [],
+    "format": "money",
+    "image_type": "coins"
+  }
+]

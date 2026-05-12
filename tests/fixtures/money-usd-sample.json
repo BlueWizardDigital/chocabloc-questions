@@ -1,0 +1,23 @@
+[
+  {
+    "id": "MONEY-COIN-VALUE-USD-27",
+    "skill_ids": ["MONEY-COIN-VALUE-USD"],
+    "content": { "coins": { "penny": 2, "nickel": 0, "dime": 0, "quarter": 1 }, "operation": "money" },
+    "answer": 27,
+    "distractors": [
+      { "value": 32, "error_type": "off-by-nickel" },
+      { "value": 22, "error_type": "off-by-nickel" }
+    ],
+    "format": "money",
+    "image_type": "coins"
+  },
+  {
+    "id": "MONEY-COIN-VALUE-USD-144",
+    "skill_ids": ["MONEY-COIN-VALUE-USD"],
+    "content": { "coins": { "penny": 4, "nickel": 1, "dime": 1, "quarter": 5 }, "operation": "money" },
+    "answer": 144,
+    "distractors": [],
+    "format": "money",
+    "image_type": "coins"
+  }
+]

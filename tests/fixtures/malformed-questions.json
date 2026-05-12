@@ -1,0 +1,7 @@
+[
+  { "id": "BAD-1", "format": "martian" },
+  { "id": "BAD-2", "format": "money", "content": {}, "answer": "not-a-number", "skill_ids": ["MONEY-COIN-VALUE-USD"], "distractors": [] },
+  { "format": "money" },
+  null,
+  "not-an-object"
+]
