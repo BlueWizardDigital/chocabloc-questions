@@ -130,3 +130,50 @@ describe('<choca-coin-pile> M1 subset', () => {
     expect(pad.hasAttribute('disabled')).to.equal(true);
   });
 });
+
+describe('<choca-coin-pile> M2 a11y', () => {
+  it('aria-live region announces coin count via formatCoinCountForScreenReader', async () => {
+    const el = mount(`<choca-coin-pile answer-mode="mc" seed="42"></choca-coin-pile>`);
+    await setQuestion(el, moneyQ({ content: { coins: { quarter: 2, dime: 1 }, currency: 'USD' }, answer: 60 }));
+    const live = el.shadowRoot!.querySelector('[aria-live="polite"]') as HTMLElement;
+    expect(live).to.not.be.null;
+    expect(live.textContent ?? '').to.contain('2 quarters');
+    expect(live.textContent ?? '').to.contain('1 dime');
+  });
+
+  it('container has aria-label with prompt', async () => {
+    const el = mount(`<choca-coin-pile answer-mode="mc" seed="42"></choca-coin-pile>`);
+    await setQuestion(el, moneyQ());
+    const container = el.shadowRoot!.querySelector('[part="container"]') as HTMLElement;
+    const label = container.getAttribute('aria-label') ?? '';
+    expect(label).to.contain('Question');
+  });
+
+  it('XSS hardening — malicious prompt does not inject HTML elements', async () => {
+    const el = mount(`<choca-coin-pile answer-mode="mc" seed="42"></choca-coin-pile>`);
+    (el as HTMLElement & { prompt: string }).prompt = '<img src=x onerror="window.__pwned=true">';
+    await setQuestion(el, moneyQ());
+    expect(el.shadowRoot!.querySelector('img')).to.be.null;
+    expect((window as unknown as { __pwned?: boolean }).__pwned).to.be.undefined;
+  });
+
+  it('seed determinism — same seed across 3 mounts produces same order', async () => {
+    const orders: string[][] = [];
+    for (let i = 0; i < 3; i++) {
+      const el = mount(`<choca-coin-pile answer-mode="mc" seed="42"></choca-coin-pile>`);
+      await setQuestion(el, moneyQ({
+        distractors: [
+          { value: 20, errorType: 'a' },
+          { value: 30, errorType: 'b' },
+          { value: 26, errorType: 'c' },
+          { value: 28, errorType: 'd' },
+        ],
+      }));
+      const pad = el.shadowRoot!.querySelector('choca-choice-pad') as HTMLElement;
+      const order = Array.from(pad.shadowRoot!.querySelectorAll('button')).map((b) => b.textContent ?? '');
+      orders.push(order);
+    }
+    expect(orders[0]).to.deep.equal(orders[1]);
+    expect(orders[1]).to.deep.equal(orders[2]);
+  });
+});

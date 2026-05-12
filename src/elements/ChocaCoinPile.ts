@@ -6,6 +6,7 @@ import type {
 } from '../types';
 import { buildChoicePool } from '../helpers/choice-builder';
 import { validateAnswer } from '../helpers/validators';
+import { formatCoinCountForScreenReader } from '../helpers/formatters';
 import './ChocaChoicePad';
 
 const TEMPLATE = `
@@ -24,6 +25,27 @@ const TEMPLATE = `
       background: var(--cq-container-bg, transparent);
       border-radius: var(--cq-container-radius, 0);
       border: var(--cq-container-border, none);
+      outline: 2px solid transparent;
+    }
+    [part="container"]:focus-visible {
+      outline: 2px solid var(--cq-focus-ring, currentColor);
+      outline-offset: 2px;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      [part="container"] {
+        transition: outline-color 120ms ease;
+      }
+    }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
     [part="prompt"] {
       font-size: var(--cq-prompt-size, 1rem);
@@ -52,9 +74,10 @@ const TEMPLATE = `
     [part~="coin-loonie"]  { background-image: var(--cq-coin-loonie-img, none); }
     [part~="coin-toonie"]  { background-image: var(--cq-coin-toonie-img, none); }
   </style>
-  <div part="container" role="group">
+  <div part="container" role="group" tabindex="-1">
     <div part="prompt"></div>
     <div part="canvas"></div>
+    <div class="sr-only" aria-live="polite"></div>
     <choca-choice-pad part="choices"></choca-choice-pad>
   </div>
 `;
@@ -68,7 +91,7 @@ const COIN_ORDER: readonly (USDCoinName | CADCoinName)[] = [
   'penny',
 ];
 
-const DEFAULT_PROMPT = 'How much money is shown?';
+const DEFAULT_PROMPT = 'TEST RELOAD';
 
 export class ChocaCoinPile extends HTMLElement {
   private _shadow: ShadowRoot;
@@ -78,6 +101,8 @@ export class ChocaCoinPile extends HTMLElement {
   private _defaultPad!: HTMLElement;
   private _canvas!: HTMLElement;
   private _promptEl!: HTMLElement;
+  private _liveRegion!: HTMLElement;
+  private _container!: HTMLElement;
 
   static get observedAttributes(): string[] {
     return ['answer-mode', 'disabled', 'locale', 'seed'];
@@ -90,6 +115,8 @@ export class ChocaCoinPile extends HTMLElement {
     this._canvas = this._shadow.querySelector('[part="canvas"]') as HTMLElement;
     this._promptEl = this._shadow.querySelector('[part="prompt"]') as HTMLElement;
     this._defaultPad = this._shadow.querySelector('choca-choice-pad') as HTMLElement;
+    this._liveRegion = this._shadow.querySelector('[aria-live="polite"]') as HTMLElement;
+    this._container = this._shadow.querySelector('[part="container"]') as HTMLElement;
     // Listen on shadow root so picks bubble through composed paths
     this._shadow.addEventListener('picked', (e) =>
       this._onPicked((e as CustomEvent).detail as Choice),
@@ -136,6 +163,8 @@ export class ChocaCoinPile extends HTMLElement {
     this._renderPrompt();
     this._renderCoins();
     this._renderChoices();
+    this._renderLiveRegion();
+    this._renderAria();
     this._renderedAt = performance.now();
     this.dispatchEvent(
       new CustomEvent('rendered', {
@@ -184,6 +213,19 @@ export class ChocaCoinPile extends HTMLElement {
     } else {
       this._defaultPad.removeAttribute('disabled');
     }
+  }
+
+  private _renderLiveRegion(): void {
+    if (!this._question) return;
+    const coins = this._question.content.coins as Partial<Record<USDCoinName | CADCoinName, number>>;
+    const text = formatCoinCountForScreenReader(coins, this._question.content.currency);
+    // R2.8: textContent only
+    this._liveRegion.textContent = text;
+  }
+
+  private _renderAria(): void {
+    // R2.8: prompt is already textContent-safe; use as attribute value only
+    this._container.setAttribute('aria-label', `Question: ${this._prompt}`);
   }
 
   private _onPicked(choice: Choice): void {
