@@ -40,7 +40,15 @@ module.exports = {
   },
   overrides: [
     {
+      // src/elements use innerHTML only for static template strings, not user content.
       files: ['src/elements/*.ts'],
+      rules: {
+        'no-restricted-syntax': 'off',
+      },
+    },
+    {
+      // Test helpers use innerHTML to parse fixture HTML strings, not user content.
+      files: ['tests/elements/*.ts'],
       rules: {
         'no-restricted-syntax': 'off',
       },

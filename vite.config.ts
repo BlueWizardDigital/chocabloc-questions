@@ -9,6 +9,9 @@ export default defineConfig({
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
+        'helpers-only': resolve(__dirname, 'src/helpers-only.ts'),
+        full: resolve(__dirname, 'src/full.ts'),
+        'elements/coin-pile': resolve(__dirname, 'src/elements/coin-pile.ts'),
       },
       formats: ['es', 'cjs'],
       fileName: (format, entryName) =>
