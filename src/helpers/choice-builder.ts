@@ -51,6 +51,13 @@ export function buildChoicePool(
     seen.add(key);
     deduped.push(w);
   }
-  const pool: Choice[] = [correct, ...deduped].slice(0, count);
+  // R2/CQ#1: shuffle distractors FIRST so we don't deterministically drop the
+  // last N when count is smaller than the available distractor pool. Then slice
+  // to count - 1 distractors, prepend the correct answer, and optionally
+  // shuffle the final pool for display order.
+  const distractorsForRound = opts.shuffle
+    ? shuffleChoices(deduped, opts.seed).slice(0, count - 1)
+    : deduped.slice(0, count - 1);
+  const pool: Choice[] = [correct, ...distractorsForRound];
   return opts.shuffle ? shuffleChoices(pool, opts.seed) : pool;
 }

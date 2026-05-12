@@ -61,6 +61,34 @@ describe('normalizeQuestion (dev mode - strict)', () => {
     const q = normalizeQuestion(raw) as MoneyQuestion;
     expect(q.content.currency).toBe('CAD');
   });
+
+  it('throws on ambiguous currency (both -USD and -CAD in skill ids)', () => {
+    expect(() =>
+      normalizeQuestion({
+        id: 'X',
+        skill_ids: ['MONEY-COIN-VALUE-USD', 'MONEY-COIN-VALUE-CAD'],
+        content: { coins: { penny: 1 } },
+        answer: 1,
+        distractors: [],
+        format: 'money',
+        image_type: 'coins',
+      }),
+    ).toThrow(/Ambiguous currency/);
+  });
+
+  it('normalizes distractors that already use camelCase errorType (no rename needed)', () => {
+    const raw = {
+      id: 'X',
+      skill_ids: ['MONEY-COIN-VALUE-USD'],
+      content: { coins: { penny: 1 } },
+      answer: 1,
+      distractors: [{ value: 2, errorType: 'already-camelCase' }],
+      format: 'money',
+      image_type: 'coins',
+    };
+    const q = normalizeQuestion(raw) as MoneyQuestion;
+    expect(q.distractors[0]?.errorType).toBe('already-camelCase');
+  });
 });
 
 describe('normalizeQuestion (prod mode - lenient)', () => {

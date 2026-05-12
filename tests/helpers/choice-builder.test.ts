@@ -56,6 +56,29 @@ describe('buildChoicePool', () => {
     const b = buildChoicePool(sampleMoneyQ, { shuffle: true, seed: 999 });
     expect(a.map((c) => c.value)).not.toEqual(b.map((c) => c.value));
   });
+
+  it('shuffles distractor selection — does not deterministically drop the last N', () => {
+    const qWithFiveDistractors: MoneyQuestion = {
+      ...sampleMoneyQ,
+      distractors: [
+        { value: 140, errorType: 'a' },
+        { value: 150, errorType: 'b' },
+        { value: 145, errorType: 'c' },
+        { value: 138, errorType: 'd' },
+        { value: 152, errorType: 'e' },
+      ],
+    };
+    // Across many seeds with count=4, all 5 distractors should appear at least once
+    const seen = new Set<number>();
+    for (let seed = 1; seed <= 50; seed++) {
+      const pool = buildChoicePool(qWithFiveDistractors, { count: 4, shuffle: true, seed });
+      for (const c of pool) {
+        if (!c.correct && typeof c.value === 'number') seen.add(c.value);
+      }
+    }
+    // All 5 distractor values should have appeared in at least one round
+    expect(seen.size).toBe(5);
+  });
 });
 
 describe('shuffleChoices', () => {

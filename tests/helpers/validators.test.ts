@@ -45,6 +45,41 @@ describe('validateAnswer (async)', () => {
     const r = await validateAnswer(q, '144');
     expect(r.correct).toBe(true);
   });
+
+  it('does not coerce empty string to zero (CQ#4)', async () => {
+    const zeroQ: MoneyQuestion = {
+      ...q,
+      answer: 0,
+      distractors: [],
+    };
+    const r = await validateAnswer(zeroQ, '');
+    expect(r.correct).toBe(false);
+  });
+
+  it('does not coerce whitespace-only to zero', async () => {
+    const zeroQ: MoneyQuestion = {
+      ...q,
+      answer: 0,
+      distractors: [],
+    };
+    const r = await validateAnswer(zeroQ, '   ');
+    expect(r.correct).toBe(false);
+  });
+
+  it('does not coerce alphanumeric mix to number', async () => {
+    const r = await validateAnswer(q, '144abc');
+    expect(r.correct).toBe(false);
+  });
+
+  it('accepts well-formed numeric strings', async () => {
+    const r = await validateAnswer(q, '144');
+    expect(r.correct).toBe(true);
+  });
+
+  it('accepts numeric strings with leading/trailing whitespace', async () => {
+    const r = await validateAnswer(q, '  144  ');
+    expect(r.correct).toBe(true);
+  });
 });
 
 describe('matchesDistractor', () => {

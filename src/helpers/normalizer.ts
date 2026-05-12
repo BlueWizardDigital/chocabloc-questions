@@ -8,7 +8,7 @@ import type {
   USDCoinName,
   CADCoinName,
 } from '../types';
-import { ParseError } from '../types';
+import { NormalizeError } from '../types';
 import { parseQuestion, isQuestionLike } from './parsers';
 import { isProd } from '../internal/env';
 
@@ -26,11 +26,21 @@ const USD_COIN_KEYS: readonly USDCoinName[] = ['penny', 'nickel', 'dime', 'quart
 const CAD_COIN_KEYS: readonly CADCoinName[] = ['nickel', 'dime', 'quarter', 'loonie', 'toonie'];
 
 function inferCurrency(skillIds: string[]): Currency {
+  let usdFound = false;
+  let cadFound = false;
   for (const id of skillIds) {
-    if (id.endsWith('-USD')) return 'USD';
-    if (id.endsWith('-CAD')) return 'CAD';
+    if (id.endsWith('-USD')) usdFound = true;
+    if (id.endsWith('-CAD')) cadFound = true;
   }
-  throw new ParseError('Cannot infer currency from skill ids', skillIds);
+  if (usdFound && cadFound) {
+    throw new NormalizeError(
+      'Ambiguous currency in skill ids: both -USD and -CAD suffixes present',
+      skillIds,
+    );
+  }
+  if (usdFound) return 'USD';
+  if (cadFound) return 'CAD';
+  throw new NormalizeError('Cannot infer currency from skill ids', skillIds);
 }
 
 function normalizeDistractors(raw: unknown): Distractor[] {
@@ -53,12 +63,12 @@ function normalizeDistractors(raw: unknown): Distractor[] {
 
 function normalizeMoneyContent(rawContent: unknown, currency: Currency): MoneyContent {
   if (typeof rawContent !== 'object' || rawContent === null) {
-    throw new ParseError('Money content must be an object', rawContent);
+    throw new NormalizeError('Money content must be an object', rawContent);
   }
   const cc = rawContent as Record<string, unknown>;
   const rawCoins = cc['coins'];
   if (typeof rawCoins !== 'object' || rawCoins === null) {
-    throw new ParseError('Money content.coins must be an object', rawContent);
+    throw new NormalizeError('Money content.coins must be an object', rawContent);
   }
   const coinSrc = rawCoins as Record<string, unknown>;
 
@@ -93,15 +103,15 @@ function getStringArray(r: Record<string, unknown>, keyA: string, keyB?: string)
 function normalizeMoneyRow(r: Record<string, unknown>): MoneyQuestion {
   const skillIds = getStringArray(r, 'skill_ids', 'skillIds');
   if (skillIds.length === 0) {
-    throw new ParseError('Money question missing skill_ids', r);
+    throw new NormalizeError('Money question missing skill_ids', r);
   }
   const currency = inferCurrency(skillIds);
   const content = normalizeMoneyContent(r['content'], currency);
   if (typeof r['answer'] !== 'number') {
-    throw new ParseError('Money answer must be a number (cents)', r);
+    throw new NormalizeError('Money answer must be a number (cents)', r);
   }
   const id = getString(r, 'id');
-  if (!id) throw new ParseError('Question missing id', r);
+  if (!id) throw new NormalizeError('Question missing id', r);
   return {
     id,
     skillIds,
@@ -116,19 +126,19 @@ function normalizeMoneyRow(r: Record<string, unknown>): MoneyQuestion {
 function normalizeTextRow(r: Record<string, unknown>): TextOnlyQuestion {
   const skillIds = getStringArray(r, 'skill_ids', 'skillIds');
   const id = getString(r, 'id');
-  if (!id) throw new ParseError('Question missing id', r);
+  if (!id) throw new NormalizeError('Question missing id', r);
   if (typeof r['content'] !== 'object' || r['content'] === null) {
-    throw new ParseError('Text question content must be an object', r);
+    throw new NormalizeError('Text question content must be an object', r);
   }
   const stem = getString(r['content'] as Record<string, unknown>, 'stem');
-  if (!stem) throw new ParseError('Text question missing stem', r);
+  if (!stem) throw new NormalizeError('Text question missing stem', r);
   const answer = r['answer'];
   if (
     typeof answer !== 'number' &&
     typeof answer !== 'string' &&
     !(Array.isArray(answer) && answer.length === 2)
   ) {
-    throw new ParseError('Text question answer must be number, string, or [n,n]', r);
+    throw new NormalizeError('Text question answer must be number, string, or [n,n]', r);
   }
   return {
     id,
@@ -142,7 +152,7 @@ function normalizeTextRow(r: Record<string, unknown>): TextOnlyQuestion {
 
 function doNormalize(raw: unknown): NormalizedQuestion {
   if (!isQuestionLike(raw)) {
-    throw new ParseError('Input does not have id + format strings', raw);
+    throw new NormalizeError('Input does not have id + format strings', raw);
   }
   const r = raw as Record<string, unknown>;
   let result: NormalizedQuestion;
@@ -151,9 +161,10 @@ function doNormalize(raw: unknown): NormalizedQuestion {
   } else if (r['format'] === 'text') {
     result = normalizeTextRow(r);
   } else {
-    throw new ParseError(
+    throw new NormalizeError(
       `Unsupported format: ${String(r['format'])} (v0 supports money + text only)`,
       raw,
+      String(r['format']),
     );
   }
   return parseQuestion(result);
