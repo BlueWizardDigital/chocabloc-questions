@@ -155,3 +155,101 @@ describe('normalizer fixtures', () => {
     expect(onMalformed).toHaveBeenCalledTimes(malformed.length);
   });
 });
+
+describe('normalizeQuestion — text format', () => {
+  beforeEach(() => {
+    vi.spyOn(env, 'isProd').mockReturnValue(false);
+  });
+
+  it('normalizes a valid text question with string answer', () => {
+    const raw = {
+      id: 'TEXT-1',
+      skillIds: ['MISC'],
+      format: 'text',
+      content: { stem: 'What is 2 + 2?' },
+      answer: 'four',
+      distractors: [],
+    };
+    const q = normalizeQuestion(raw);
+    expect(q).not.toBeNull();
+    expect(q!.format).toBe('text');
+    expect((q!.content as { stem: string }).stem).toBe('What is 2 + 2?');
+    expect(q!.answer).toBe('four');
+  });
+
+  it('normalizes a valid text question with numeric answer', () => {
+    const raw = {
+      id: 'TEXT-2',
+      skillIds: ['MATH'],
+      format: 'text',
+      content: { stem: 'What is 2 + 2?' },
+      answer: 4,
+      distractors: [],
+    };
+    const q = normalizeQuestion(raw);
+    expect(q).not.toBeNull();
+    expect(q!.answer).toBe(4);
+  });
+
+  it('normalizes a text question with [n,n] coordinate answer', () => {
+    const raw = {
+      id: 'TEXT-3',
+      skillIds: ['MISC'],
+      format: 'text',
+      content: { stem: 'What is the coordinate?' },
+      answer: [3, 4],
+      distractors: [],
+    };
+    const q = normalizeQuestion(raw);
+    expect(q).not.toBeNull();
+    expect(q!.answer).toEqual([3, 4]);
+  });
+
+  it('throws on text question with missing stem', () => {
+    const raw = {
+      id: 'TEXT-4',
+      skillIds: ['MISC'],
+      format: 'text',
+      content: { notStem: 'no stem here' },
+      answer: 'x',
+      distractors: [],
+    };
+    expect(() => normalizeQuestion(raw)).toThrow();
+  });
+
+  it('throws on text question with non-object content', () => {
+    const raw = {
+      id: 'TEXT-5',
+      skillIds: ['MISC'],
+      format: 'text',
+      content: 'not an object',
+      answer: 'x',
+      distractors: [],
+    };
+    expect(() => normalizeQuestion(raw)).toThrow();
+  });
+
+  it('throws on text question with invalid answer type', () => {
+    const raw = {
+      id: 'TEXT-6',
+      skillIds: ['MISC'],
+      format: 'text',
+      content: { stem: 'What?' },
+      answer: { nested: 'object' },
+      distractors: [],
+    };
+    expect(() => normalizeQuestion(raw)).toThrow();
+  });
+
+  it('throws on unsupported format', () => {
+    const raw = {
+      id: 'UNK-1',
+      skillIds: ['MISC'],
+      format: 'video',
+      content: {},
+      answer: 'x',
+      distractors: [],
+    };
+    expect(() => normalizeQuestion(raw)).toThrow(/Unsupported format/);
+  });
+});

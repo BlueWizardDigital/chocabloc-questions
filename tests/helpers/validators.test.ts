@@ -91,3 +91,57 @@ describe('matchesDistractor', () => {
     expect(matchesDistractor(q, 999)).toBeNull();
   });
 });
+
+describe('validateAnswer — array and cross-type branches', () => {
+  it('array answer matches identical array student answer', async () => {
+    const coordQ = {
+      id: 'COORD-1',
+      skillIds: ['MISC'],
+      format: 'text' as const,
+      content: { stem: 'Pick the point' },
+      answer: [3, 4] as [number, number],
+      distractors: [],
+    };
+    const r = await validateAnswer(coordQ, [3, 4]);
+    expect(r.correct).toBe(true);
+  });
+
+  it('array answer does not match different array', async () => {
+    const coordQ = {
+      id: 'COORD-2',
+      skillIds: ['MISC'],
+      format: 'text' as const,
+      content: { stem: 'Pick the point' },
+      answer: [3, 4] as [number, number],
+      distractors: [],
+    };
+    const r = await validateAnswer(coordQ, [3, 5]);
+    expect(r.correct).toBe(false);
+  });
+
+  it('string student answer matches numeric question answer via coercion', async () => {
+    const numQ = {
+      id: 'NUM-1',
+      skillIds: ['MISC'],
+      format: 'text' as const,
+      content: { stem: 'What is the answer?' },
+      answer: 42,
+      distractors: [],
+    };
+    const r = await validateAnswer(numQ, '42');
+    expect(r.correct).toBe(true);
+  });
+
+  it('numeric student answer matches string question answer via coercion', async () => {
+    const strQ = {
+      id: 'STR-1',
+      skillIds: ['MISC'],
+      format: 'text' as const,
+      content: { stem: 'What number?' },
+      answer: '42',
+      distractors: [],
+    };
+    const r = await validateAnswer(strQ, 42);
+    expect(r.correct).toBe(true);
+  });
+});
