@@ -189,4 +189,44 @@ describe('parseQuestion malformed inputs', () => {
       }),
     ).toThrow();
   });
+
+  it('rejects distractor with object value (R2.2 Important #3 — guard must not lie)', () => {
+    expect(() =>
+      parseQuestion({
+        id: 'MONEY-X',
+        skillIds: ['MONEY-COIN-VALUE-USD'],
+        format: 'money',
+        imageType: 'coins',
+        content: { coins: { penny: 1 }, currency: 'USD' },
+        answer: 1,
+        distractors: [{ value: { weird: 1 }, errorType: 'odd' }],
+      }),
+    ).toThrow();
+  });
+
+  it('rejects distractor with tuple of wrong length', () => {
+    expect(() =>
+      parseQuestion({
+        id: 'MONEY-X',
+        skillIds: ['MONEY-COIN-VALUE-USD'],
+        format: 'money',
+        imageType: 'coins',
+        content: { coins: { penny: 1 }, currency: 'USD' },
+        answer: 1,
+        distractors: [{ value: [1, 2, 3], errorType: 'odd' }],
+      }),
+    ).toThrow();
+  });
+
+  it('accepts distractor with valid tuple value', () => {
+    const q = parseQuestion({
+      id: 'TEXT-1',
+      skillIds: ['MISC'],
+      format: 'text',
+      content: { stem: 'pick coord' },
+      answer: 'a',
+      distractors: [{ value: [3, 4], errorType: 'reversed' }],
+    });
+    expect(q.distractors).toHaveLength(1);
+  });
 });

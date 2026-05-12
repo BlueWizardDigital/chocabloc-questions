@@ -6,6 +6,7 @@ import type {
   Distractor,
   USDCoinName,
   CADCoinName,
+  AnswerValue,
 } from '../types';
 import { ParseError } from '../types';
 
@@ -31,10 +32,19 @@ export function isQuestionLike(raw: unknown): boolean {
   return true;
 }
 
+function isValidAnswerValue(v: unknown): v is AnswerValue {
+  if (typeof v === 'number') return Number.isFinite(v);
+  if (typeof v === 'string') return true;
+  if (Array.isArray(v) && v.length === 2) {
+    return v.every((n) => typeof n === 'number' && Number.isFinite(n));
+  }
+  return false;
+}
+
 function isValidDistractor(d: unknown): d is Distractor {
   if (typeof d !== 'object' || d === null) return false;
   const dd = d as Record<string, unknown>;
-  if (dd['value'] === undefined || dd['value'] === null) return false;
+  if (!isValidAnswerValue(dd['value'])) return false;
   if (typeof dd['errorType'] !== 'string') return false;
   return true;
 }
@@ -73,14 +83,7 @@ function isValidTextQuestion(r: Record<string, unknown>): r is TextOnlyQuestion 
   if (r['format'] !== 'text') return false;
   if (!Array.isArray(r['skillIds']) || !r['skillIds'].every((s) => typeof s === 'string')) return false;
   if (!isValidTextContent(r['content'])) return false;
-  const ans = r['answer'];
-  if (
-    typeof ans !== 'number' &&
-    typeof ans !== 'string' &&
-    !(Array.isArray(ans) && ans.length === 2)
-  ) {
-    return false;
-  }
+  if (!isValidAnswerValue(r['answer'])) return false;
   if (!Array.isArray(r['distractors']) || !r['distractors'].every(isValidDistractor)) return false;
   return true;
 }
