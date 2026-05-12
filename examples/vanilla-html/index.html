@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>chocabloc-questions — Vanilla HTML Example</title>
+  <style>
+    body { font-family: system-ui; padding: 32px; max-width: 800px; margin: 0 auto; }
+    chocabloc-question {
+      --cq-font: system-ui, sans-serif;
+      --cq-text: #1C2B45;
+      --cq-coin-size: 56px;
+      --cq-coin-gap: 8px;
+      --cq-choice-bg: #D4881F;
+      --cq-choice-text: #FFF;
+      --cq-choice-radius: 10px;
+      --cq-focus-ring: #1C2B45;
+    }
+    chocabloc-question::part(container) {
+      background: linear-gradient(180deg, #FFF8E5, #FEEFC9);
+      border: 2px solid #D4881F;
+      border-radius: 14px;
+      padding: 24px;
+    }
+    #result { margin-top: 16px; font-family: monospace; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>chocabloc-questions — vanilla HTML demo</h1>
+  <p>Pick a choice. Result appears below.</p>
+  <chocabloc-question id="q" answer-mode="mc" seed="42"></chocabloc-question>
+  <div id="result"></div>
+  <script type="module">
+    import '../../dist/elements/coin-pile.mjs';
+    import { normalizeQuestion } from '../../dist/helpers-only.mjs';
+
+    const raw = {
+      id: 'MONEY-COIN-VALUE-USD-144',
+      skill_ids: ['MONEY-COIN-VALUE-USD'],
+      content: { coins: { penny: 4, nickel: 1, dime: 1, quarter: 5 }, operation: 'money' },
+      answer: 144,
+      distractors: [
+        { value: 140, error_type: 'off-by-nickel' },
+        { value: 150, error_type: 'off-by-nickel' },
+        { value: 145, error_type: 'off-by-1' },
+      ],
+      format: 'money',
+      image_type: 'coins',
+    };
+
+    const q = normalizeQuestion(raw);
+    const el = document.getElementById('q');
+    el.question = q;
+
+    el.addEventListener('answered', (e) => {
+      document.getElementById('result').textContent = JSON.stringify(e.detail, null, 2);
+    });
+  </script>
+</body>
+</html>
