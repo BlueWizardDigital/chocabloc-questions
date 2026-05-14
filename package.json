@@ -39,6 +39,7 @@
   "scripts": {
     "build": "vite build",
     "build:watch": "vite build --watch",
+    "prepare": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:browser": "wtr",
