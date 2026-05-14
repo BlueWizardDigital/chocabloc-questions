@@ -42,6 +42,9 @@ export type BaseQuestion = {
   skillIds: SkillId[];
   gradeBand?: GradeBand;
   gradeLevel?: number;
+  // Human-readable question stem. Optional — renderers fall back to a
+  // format-appropriate default if unset.
+  prompt?: string;
 };
 
 // USD / CAD content variants discriminated on currency

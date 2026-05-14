@@ -91,7 +91,7 @@ const COIN_ORDER: readonly (USDCoinName | CADCoinName)[] = [
   'penny',
 ];
 
-const DEFAULT_PROMPT = 'TEST RELOAD';
+const DEFAULT_PROMPT = 'How much money is shown?';
 
 export class ChocaCoinPile extends HTMLElement {
   private _shadow: ShadowRoot;
@@ -142,6 +142,11 @@ export class ChocaCoinPile extends HTMLElement {
       return;
     }
     this._question = q;
+    // Auto-bind prompt from the question if present. Caller can still
+    // override via the `prompt` setter AFTER assigning question.
+    if (typeof q.prompt === 'string' && q.prompt.length > 0) {
+      this._prompt = q.prompt;
+    }
     this._render();
   }
 

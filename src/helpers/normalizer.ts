@@ -112,7 +112,15 @@ function normalizeMoneyRow(r: Record<string, unknown>): MoneyQuestion {
   }
   const id = getString(r, 'id');
   if (!id) throw new NormalizeError('Question missing id', r);
-  return {
+  // Prompt may arrive as top-level `prompt` (PlatformQuestion adapter output)
+  // or nested in content.prompt (legacy/static bank rows). Lift either onto
+  // the normalized question for renderers to use.
+  const promptRaw =
+    getString(r, 'prompt') ||
+    (typeof (r['content'] as Record<string, unknown> | undefined)?.['prompt'] === 'string'
+      ? (((r['content'] as Record<string, unknown>)['prompt']) as string)
+      : '');
+  const out: MoneyQuestion = {
     id,
     skillIds,
     format: 'money',
@@ -121,6 +129,8 @@ function normalizeMoneyRow(r: Record<string, unknown>): MoneyQuestion {
     answer: r['answer'],
     distractors: normalizeDistractors(r['distractors']),
   };
+  if (promptRaw) out.prompt = promptRaw;
+  return out;
 }
 
 function normalizeTextRow(r: Record<string, unknown>): TextOnlyQuestion {
