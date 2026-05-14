@@ -65,7 +65,9 @@ export class ChocablocQuestion extends HTMLElement {
       if (this.hasAttribute('disabled')) inner.setAttribute('disabled', '');
       (inner as HTMLElement & { question: MoneyQuestion }).question = this._question as MoneyQuestion;
       this._shadow.appendChild(inner);
-      this._wireEvents(inner);
+      // Inner element dispatches with bubbles:true + composed:true so events
+      // cross the shadow DOM boundary and reach a consumer listener on the
+      // host naturally. No re-dispatch needed — _wireEvents would double-fire.
       return;
     }
     if (this._question.format === 'text') {
@@ -83,16 +85,6 @@ export class ChocablocQuestion extends HTMLElement {
     this._shadow.appendChild(fragment);
   }
 
-  private _wireEvents(inner: HTMLElement): void {
-    for (const eventName of ['answered', 'rendered', 'skipped']) {
-      inner.addEventListener(eventName, (e) => {
-        const detail = (e as CustomEvent).detail as unknown;
-        this.dispatchEvent(
-          new CustomEvent(eventName, { detail, bubbles: true, composed: true }),
-        );
-      });
-    }
-  }
 }
 
 if (!customElements.get('chocabloc-question')) {
