@@ -1,10 +1,22 @@
-import type { Choice, NormalizedQuestion } from '../types';
+import type { AnswerValue, Choice, Currency, NormalizedQuestion } from '../types';
+import { formatAnswerForDisplay } from './formatters';
 
 export type ChoiceBuilderOptions = {
   count?: number;
   shuffle?: boolean;
   seed?: number;
 };
+
+function getQuestionCurrency(q: NormalizedQuestion): Currency | undefined {
+  if (q.format === 'money') {
+    return (q as { currency?: Currency }).currency;
+  }
+  return undefined;
+}
+
+function labelFor(value: AnswerValue, q: NormalizedQuestion): string {
+  return formatAnswerForDisplay(value, q.format, { currency: getQuestionCurrency(q) });
+}
 
 function mulberry32(seed: number): () => number {
   let s = seed >>> 0;
@@ -37,11 +49,13 @@ export function buildChoicePool(
   const correct: Choice = {
     value: question.answer,
     correct: true,
+    label: labelFor(question.answer, question),
   };
   const wrong: Choice[] = question.distractors.map((d) => ({
     value: d.value,
     correct: false,
     errorType: d.errorType,
+    label: labelFor(d.value, question),
   }));
   const seen = new Set<string>([JSON.stringify(question.answer)]);
   const deduped: Choice[] = [];

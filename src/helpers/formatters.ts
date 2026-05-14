@@ -20,12 +20,20 @@ export function formatCurrency(cents: number, opts: CurrencyFormatOptions = {}):
   }).format(cents / 100);
 }
 
+// Pedagogical money formatting convention (CCSS 2.MD.C.8 + 4.NF.C.6 aligned):
+//   Sub-dollar amounts use cent symbol form (`45¢`) — matches real coin/price-
+//     tag notation early-grade learners encounter, requires no decimal place
+//     value understanding.
+//   Dollar-plus amounts use decimal form (`$1.25`) — cent form past 100¢ is
+//     incorrect notation (`125¢` is not how money is written) and by that
+//     stage decimal place value is being taught anyway.
 export function formatAnswerForDisplay(
   answer: AnswerValue,
   format: QuestionFormat,
   opts: CurrencyFormatOptions = {},
 ): string {
   if (format === 'money' && typeof answer === 'number') {
+    if (answer >= 0 && answer < 100) return `${answer}¢`;
     return formatCurrency(answer, opts);
   }
   if (Array.isArray(answer) && answer.length === 2) {

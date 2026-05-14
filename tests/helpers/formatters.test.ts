@@ -30,8 +30,28 @@ describe('formatCurrency', () => {
 });
 
 describe('formatAnswerForDisplay', () => {
-  it('formats money answer as currency', () => {
+  it('formats money answer >= $1 as decimal currency', () => {
     expect(formatAnswerForDisplay(144, 'money')).toBe('$1.44');
+  });
+
+  it('formats sub-dollar money answer with cent symbol (pedagogical CCSS 2.MD.C.8)', () => {
+    expect(formatAnswerForDisplay(45, 'money')).toBe('45¢');
+  });
+
+  it('formats single-digit cents with cent symbol', () => {
+    expect(formatAnswerForDisplay(5, 'money')).toBe('5¢');
+  });
+
+  it('formats zero cents with cent symbol', () => {
+    expect(formatAnswerForDisplay(0, 'money')).toBe('0¢');
+  });
+
+  it('formats 99¢ boundary with cent symbol', () => {
+    expect(formatAnswerForDisplay(99, 'money')).toBe('99¢');
+  });
+
+  it('formats 100¢ boundary as $1.00 decimal', () => {
+    expect(formatAnswerForDisplay(100, 'money')).toBe('$1.00');
   });
 
   it('passes strings through', () => {
