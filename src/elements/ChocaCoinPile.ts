@@ -64,24 +64,26 @@ const TEMPLATE = `
       align-items: center;
     }
     [part~="coin"] {
-      width: var(--cq-coin-size, 56px);
-      height: var(--cq-coin-size, 56px);
+      --cq-coin-px: var(--cq-coin-size, 56px);
+      width: var(--cq-coin-px);
+      height: var(--cq-coin-px);
       border-radius: 50%;
       background-color: var(--cq-coin-fallback-bg, #d4af37);
       background-size: contain;
       background-position: center;
       background-repeat: no-repeat;
       position: relative;
+      flex: 0 0 auto;
     }
     [part~="coin"]:not(:first-child) {
-      margin-left: var(--cq-coin-overlap-pct, -25%);
+      margin-left: calc(var(--cq-coin-px) * var(--cq-coin-overlap-frac, -0.25));
     }
-    [part~="coin-toonie"]  { width: var(--cq-coin-toonie-size, var(--cq-coin-size, 56px));  height: var(--cq-coin-toonie-size, var(--cq-coin-size, 56px));  background-image: var(--cq-coin-toonie-img, none); }
-    [part~="coin-loonie"]  { width: var(--cq-coin-loonie-size, var(--cq-coin-size, 56px));  height: var(--cq-coin-loonie-size, var(--cq-coin-size, 56px));  background-image: var(--cq-coin-loonie-img, none); }
-    [part~="coin-quarter"] { width: var(--cq-coin-quarter-size, var(--cq-coin-size, 56px)); height: var(--cq-coin-quarter-size, var(--cq-coin-size, 56px)); background-image: var(--cq-coin-quarter-img, none); }
-    [part~="coin-dime"]    { width: var(--cq-coin-dime-size, 40px);    height: var(--cq-coin-dime-size, 40px);    background-image: var(--cq-coin-dime-img, none); }
-    [part~="coin-nickel"]  { width: var(--cq-coin-nickel-size, 43px);  height: var(--cq-coin-nickel-size, 43px);  background-image: var(--cq-coin-nickel-img, none); }
-    [part~="coin-penny"]   { width: var(--cq-coin-penny-size, 43px);   height: var(--cq-coin-penny-size, 43px);   background-image: var(--cq-coin-penny-img, none); }
+    [part~="coin-toonie"]  { --cq-coin-px: var(--cq-coin-toonie-size, var(--cq-coin-size, 56px));  background-image: var(--cq-coin-toonie-img, none); }
+    [part~="coin-loonie"]  { --cq-coin-px: var(--cq-coin-loonie-size, var(--cq-coin-size, 56px));  background-image: var(--cq-coin-loonie-img, none); }
+    [part~="coin-quarter"] { --cq-coin-px: var(--cq-coin-quarter-size, var(--cq-coin-size, 56px)); background-image: var(--cq-coin-quarter-img, none); }
+    [part~="coin-dime"]    { --cq-coin-px: var(--cq-coin-dime-size, 40px);    background-image: var(--cq-coin-dime-img, none); }
+    [part~="coin-nickel"]  { --cq-coin-px: var(--cq-coin-nickel-size, 43px);  background-image: var(--cq-coin-nickel-img, none); }
+    [part~="coin-penny"]   { --cq-coin-px: var(--cq-coin-penny-size, 43px);   background-image: var(--cq-coin-penny-img, none); }
   </style>
   <div part="container" role="group" tabindex="-1">
     <div part="prompt"></div>

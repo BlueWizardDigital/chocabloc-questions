@@ -5,6 +5,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.0-alpha.5] — 2026-05-15
+
+### Fixed (`<choca-coin-pile>` — Phase D follow-up)
+
+- Same-denom overlap previously used `margin-left: -25%`, which CSS resolves
+  against the flex container's width (not the coin's own width). Result:
+  rows with mixed/many coins collapsed leftward — coins disappeared off the
+  left edge and z-index stacking visually inverted because all coins piled
+  on top of each other near x=0.
+- Switched to `margin-left: calc(var(--cq-coin-px) * var(--cq-coin-overlap-frac, -0.25))`
+  where `--cq-coin-px` is a per-denomination size set by each
+  `[part~="coin-<denom>"]` selector. Overlap is now a unitless multiplier
+  of the coin's own width — predictable across rows of any denomination.
+- Added `flex: 0 0 auto` to coin spans so flex can't shrink them when the
+  row exceeds available width.
+
+### Changed (breaking, theming surface)
+
+- Var renamed: `--cq-coin-overlap-pct` → `--cq-coin-overlap-frac` (value
+  semantics changed from percentage string to unitless number, e.g. `-0.25`
+  instead of `-25%`). Consumers overriding the old name need to update.
+
 ## [0.1.0-alpha.4] — 2026-05-15
 
 ### Changed (`<choca-coin-pile>` — Phase D visual refinement)

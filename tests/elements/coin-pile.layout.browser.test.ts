@@ -125,6 +125,29 @@ describe('<choca-coin-pile> Phase D layout', () => {
     expect(getComputedStyle(quarter).width).to.equal('56px');
   });
 
+  it('applies per-denom margin-left overlap (px-based, not %)', async () => {
+    const el = mount(`<choca-coin-pile answer-mode="mc" seed="42"></choca-coin-pile>`);
+    await setQuestion(
+      el,
+      moneyQ({
+        content: { coins: { dime: 3, quarter: 3 }, currency: 'CAD' },
+        answer: 105,
+      }),
+    );
+    const dimes = Array.from(
+      el.shadowRoot!.querySelectorAll('[part~="coin-dime"]'),
+    ) as HTMLElement[];
+    const quarters = Array.from(
+      el.shadowRoot!.querySelectorAll('[part~="coin-quarter"]'),
+    ) as HTMLElement[];
+    // first child of each row has no negative margin
+    expect(getComputedStyle(dimes[0]).marginLeft).to.equal('0px');
+    expect(getComputedStyle(quarters[0]).marginLeft).to.equal('0px');
+    // 25% overlap of 40px dime = -10px; 25% overlap of 56px quarter = -14px
+    expect(getComputedStyle(dimes[1]).marginLeft).to.equal('-10px');
+    expect(getComputedStyle(quarters[1]).marginLeft).to.equal('-14px');
+  });
+
   it('assigns increasing z-index inline so later coins layer over earlier', async () => {
     const el = mount(`<choca-coin-pile answer-mode="mc" seed="42"></choca-coin-pile>`);
     await setQuestion(

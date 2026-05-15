@@ -57,7 +57,7 @@ themes are expected to meet the same bar.
 | `--cq-coin-nickel-size` | `43px` | Nickel diameter |
 | `--cq-coin-penny-size` | `43px` | Penny diameter |
 | `--cq-coin-row-gap` | `8px` | Vertical gap between denomination rows |
-| `--cq-coin-overlap-pct` | `-25%` | Horizontal overlap between same-denom coins (negative margin) |
+| `--cq-coin-overlap-frac` | `-0.25` | Horizontal overlap between same-denom coins as unitless multiplier of the coin's own width (negative = overlap leftward into prior coin). Replaces alpha.4 `--cq-coin-overlap-pct` which resolved against the row, not the coin. |
 | `--cq-coin-fallback-bg` | `#d4af37` | Gold disc shown when no sprite URL |
 | `--cq-coin-penny-img` | `none` | Penny sprite URL |
 | `--cq-coin-nickel-img` | `none` | Nickel sprite URL |
