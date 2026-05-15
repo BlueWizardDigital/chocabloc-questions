@@ -36,6 +36,8 @@ themes are expected to meet the same bar.
 | `coin-quarter` | Quarter coins |
 | `coin-loonie` | Loonie coins (CAD) |
 | `coin-toonie` | Toonie coins (CAD) |
+| `coin-row` | One row per non-empty denomination (high-to-low order) |
+| `coin-row-<name>` | Specific denomination row (e.g. `coin-row-quarter`) |
 
 | Var | Default | Purpose |
 |-----|---------|---------|
@@ -45,9 +47,17 @@ themes are expected to meet the same bar.
 | `--cq-container-border` | `none` | Container border |
 | `--cq-prompt-size` | `1rem` | Prompt font size |
 | `--cq-prompt-weight` | `600` | Prompt font weight |
-| `--cq-canvas-justify` | `flex-start` | Coin pile alignment |
-| `--cq-coin-size` | `48px` | Coin diameter |
-| `--cq-coin-gap` | `8px` | Gap between coins |
+| `--cq-canvas-justify` | `flex-start` | Coin pile horizontal justify |
+| `--cq-canvas-align` | `flex-start` | Coin pile cross-axis alignment of rows |
+| `--cq-coin-size` | `56px` | Base coin diameter (toonie/loonie/quarter inherit) |
+| `--cq-coin-toonie-size` | `var(--cq-coin-size)` | Toonie diameter override |
+| `--cq-coin-loonie-size` | `var(--cq-coin-size)` | Loonie diameter override |
+| `--cq-coin-quarter-size` | `var(--cq-coin-size)` | Quarter diameter override |
+| `--cq-coin-dime-size` | `40px` | Dime diameter (smaller per physical scale) |
+| `--cq-coin-nickel-size` | `43px` | Nickel diameter |
+| `--cq-coin-penny-size` | `43px` | Penny diameter |
+| `--cq-coin-row-gap` | `8px` | Vertical gap between denomination rows |
+| `--cq-coin-overlap-pct` | `-25%` | Horizontal overlap between same-denom coins (negative margin) |
 | `--cq-coin-fallback-bg` | `#d4af37` | Gold disc shown when no sprite URL |
 | `--cq-coin-penny-img` | `none` | Penny sprite URL |
 | `--cq-coin-nickel-img` | `none` | Nickel sprite URL |

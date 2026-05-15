@@ -5,6 +5,36 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.0-alpha.4] — 2026-05-15
+
+### Changed (`<choca-coin-pile>` — Phase D visual refinement)
+
+- Coin pile now lays out one denomination per row in high-to-low canonical
+  order (toonie → loonie → quarter → dime → nickel → penny), replacing the
+  previous flex-wrap single row.
+- Per-denomination size defaults reflect physical scale: dime 40px, nickel
+  43px, penny 43px; toonie/loonie/quarter inherit `--cq-coin-size` (now
+  56px, up from 48px).
+- Same-denom coins overlap horizontally by `--cq-coin-overlap-pct` (default
+  `-25%`) so high-count rows stay readable. Each coin gets an inline
+  ascending `z-index` so later coins layer over earlier.
+
+### Added (theming surface)
+
+- Parts: `coin-row`, `coin-row-<denom>` for each emitted row.
+- CSS vars:
+  - `--cq-coin-{toonie,loonie,quarter,dime,nickel,penny}-size` per-denom overrides
+  - `--cq-coin-row-gap` (default `8px`) — vertical gap between rows
+  - `--cq-coin-overlap-pct` (default `-25%`) — same-denom horizontal overlap
+  - `--cq-canvas-align` (default `flex-start`) — cross-axis row alignment
+
+### Removed
+
+- `--cq-coin-gap` (replaced by `--cq-coin-row-gap` for column-direction
+  rhythm; intra-row spacing now controlled by `--cq-coin-overlap-pct`).
+  Breaking only for consumers that set `--cq-coin-gap` directly; no known
+  consumers do.
+
 ## [0.1.0-alpha.0] — 2026-05-12
 
 Initial alpha release. Lib reaches consumers via `npm link` only; no npm

@@ -53,26 +53,35 @@ const TEMPLATE = `
     }
     [part="canvas"] {
       display: flex;
-      flex-wrap: wrap;
-      gap: var(--cq-coin-gap, 8px);
-      align-items: center;
+      flex-direction: column;
+      gap: var(--cq-coin-row-gap, 8px);
+      align-items: var(--cq-canvas-align, flex-start);
       justify-content: var(--cq-canvas-justify, flex-start);
     }
+    [part~="coin-row"] {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+    }
     [part~="coin"] {
-      width: var(--cq-coin-size, 48px);
-      height: var(--cq-coin-size, 48px);
+      width: var(--cq-coin-size, 56px);
+      height: var(--cq-coin-size, 56px);
       border-radius: 50%;
       background-color: var(--cq-coin-fallback-bg, #d4af37);
       background-size: contain;
       background-position: center;
       background-repeat: no-repeat;
+      position: relative;
     }
-    [part~="coin-penny"]   { background-image: var(--cq-coin-penny-img, none); }
-    [part~="coin-nickel"]  { background-image: var(--cq-coin-nickel-img, none); }
-    [part~="coin-dime"]    { background-image: var(--cq-coin-dime-img, none); }
-    [part~="coin-quarter"] { background-image: var(--cq-coin-quarter-img, none); }
-    [part~="coin-loonie"]  { background-image: var(--cq-coin-loonie-img, none); }
-    [part~="coin-toonie"]  { background-image: var(--cq-coin-toonie-img, none); }
+    [part~="coin"]:not(:first-child) {
+      margin-left: var(--cq-coin-overlap-pct, -25%);
+    }
+    [part~="coin-toonie"]  { width: var(--cq-coin-toonie-size, var(--cq-coin-size, 56px));  height: var(--cq-coin-toonie-size, var(--cq-coin-size, 56px));  background-image: var(--cq-coin-toonie-img, none); }
+    [part~="coin-loonie"]  { width: var(--cq-coin-loonie-size, var(--cq-coin-size, 56px));  height: var(--cq-coin-loonie-size, var(--cq-coin-size, 56px));  background-image: var(--cq-coin-loonie-img, none); }
+    [part~="coin-quarter"] { width: var(--cq-coin-quarter-size, var(--cq-coin-size, 56px)); height: var(--cq-coin-quarter-size, var(--cq-coin-size, 56px)); background-image: var(--cq-coin-quarter-img, none); }
+    [part~="coin-dime"]    { width: var(--cq-coin-dime-size, 40px);    height: var(--cq-coin-dime-size, 40px);    background-image: var(--cq-coin-dime-img, none); }
+    [part~="coin-nickel"]  { width: var(--cq-coin-nickel-size, 43px);  height: var(--cq-coin-nickel-size, 43px);  background-image: var(--cq-coin-nickel-img, none); }
+    [part~="coin-penny"]   { width: var(--cq-coin-penny-size, 43px);   height: var(--cq-coin-penny-size, 43px);   background-image: var(--cq-coin-penny-img, none); }
   </style>
   <div part="container" role="group" tabindex="-1">
     <div part="prompt"></div>
@@ -191,13 +200,18 @@ export class ChocaCoinPile extends HTMLElement {
     this._canvas.replaceChildren();
     for (const name of COIN_ORDER) {
       const count = coins[name] ?? 0;
+      if (count <= 0) continue;
+      const row = document.createElement('div');
+      row.setAttribute('part', `coin-row coin-row-${name}`);
       for (let i = 0; i < count; i++) {
         const span = document.createElement('span');
         span.setAttribute('part', `coin coin-${name}`);
         span.setAttribute('role', 'img');
         span.setAttribute('aria-label', name);
-        this._canvas.appendChild(span);
+        span.style.zIndex = String(i + 1);
+        row.appendChild(span);
       }
+      this._canvas.appendChild(row);
     }
   }
 
