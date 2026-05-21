@@ -1,29 +1,39 @@
 # chocabloc-questions
 
-Framework-agnostic question data + renderers for ChocaBLOC iframe games.
+A question library for ChocaBLOC's iframe-based learning games. Think of it
+as a shared toolkit so every game (built in React, Phaser, or plain HTML)
+handles questions the same way — without each game having to reinvent the
+wheel.
 
-## Why this exists
+## The problem it solves
 
-ChocaBLOC games run in sandboxed iframes and can't share React components with
-the host. This library gives every game a single source of truth for:
+ChocaBLOC games run inside sandboxed iframes, which means they can't share
+React components with the host page. So this library gives every game one
+common foundation for:
 
-- **Normalized question schema** — consume the messy bank shape, expose a clean
-  discriminated union to consumers
-- **Pure math + validation helpers** — coin totals, distractor matching, choice
-  building, currency formatting, screen-reader text
-- **Optional Web Component renderers** — `<chocabloc-question>` and per-format
-  custom elements that work in React, Phaser, vanilla HTML
+- Reading messy raw question data from the bank and turning it into a clean,
+  predictable shape
+- Doing the math (coin totals, answer checking, building multiple-choice
+  options)
+- Optionally rendering the question UI for you
 
-The library is **two-tier**. Tier 1 is pure logic (no DOM, no framework dep).
-Tier 2 is Web Components built on top, optional and themable.
+## Two tiers, pick what you need
 
-## Tier 1 is sufficient
+**Tier 1 — Pure logic (`src/helpers/`)**
+Just functions. No DOM, no framework. Drop it into a Phaser canvas, a React
+component, anything. Gives you helpers like `normalizeQuestion`,
+`validateAnswer`, `buildChoicePool`, currency formatters, and screen-reader
+text.
 
-Any format the lib supports is renderable using **Tier 1 alone**. The
-`<chocabloc-question>` element is convenience, not capability. A Phaser game
-that wants to render questions inside its canvas can use Tier 1 helpers
-(`computeCoinTotal`, `validateAnswer`, `buildChoicePool`) directly. Tier 2 just
-gives you defaults, accessibility, and a themable surface for free.
+**Tier 2 — Web Components (`src/elements/`)**
+If you don't want to build your own UI, use the custom elements
+(`<chocabloc-question>`, `<choca-coin-pile>`, `<choca-choice-pad>`). They
+come with accessibility and theming via CSS custom properties — and they
+work in any framework because they're native browser elements.
+
+Tier 1 is enough on its own. A Phaser game rendering inside its canvas can
+use the helpers directly. Tier 2 is just there if you want defaults, a11y,
+and a themable surface for free.
 
 ## Install
 
@@ -63,19 +73,20 @@ const q = normalizeQuestion(rawBankRow);
 
 See `examples/` for working demos.
 
-## v0 scope
+## What's in v0
 
-v0 ships **money format only** (plus a `text` fallback for forms without a
-custom renderer). Public discriminated union is:
+Just **money questions** (USD and CAD coins) plus a plain `text` fallback for
+forms without a custom renderer. Public discriminated union is:
 
 ```ts
 type NormalizedQuestion = MoneyQuestion | TextOnlyQuestion;
 ```
 
-Future formats (bar graph, pictograph, coordinate plane, number line, geometry
-properties / area / angles / volume, pythagorean, coordinate distance) are NOT
-in v0's public surface. Each ships as a minor version once its helpers +
-renderer + tests are ready.
+Other formats — bar graphs, pictographs, coordinate plane, number line,
+geometry (properties / area / angles / volume), pythagorean, coordinate
+distance — are stubbed in `src/internal/future-formats.ts` but kept out of
+the public API until their renderers and tests are ready. Each ships as a
+minor version when it lands.
 
 ## Theming
 
