@@ -88,12 +88,50 @@ function isValidTextQuestion(r: Record<string, unknown>): r is TextOnlyQuestion 
   return true;
 }
 
+const VISUAL_FORMAT_STRINGS: ReadonlySet<string> = new Set([
+  'geometry_attributes',
+  'geometry_classify',
+  'geometry_properties',
+  'pythagorean',
+  'geometry_area',
+  'geometry_angles',
+  'geometry_perimeter',
+  'geometry_circumference',
+  'geometry_angle_classify',
+  'geometry_circle_parts',
+  'data_graph',
+  'multiplication',
+  'fraction_concept',
+  'time',
+  'pattern',
+  'coordinate_distance',
+  'money_budget_adjust',
+]);
+
+function isValidVisualQuestion(r: Record<string, unknown>): boolean {
+  const format = r['format'];
+  if (typeof format !== 'string' || !VISUAL_FORMAT_STRINGS.has(format)) return false;
+  if (
+    !Array.isArray(r['skillIds']) ||
+    !r['skillIds'].every((s) => typeof s === 'string')
+  )
+    return false;
+  if (typeof r['content'] !== 'object' || r['content'] === null) return false;
+  if (!isValidAnswerValue(r['answer'])) return false;
+  if (
+    !Array.isArray(r['distractors']) ||
+    !r['distractors'].every(isValidDistractor)
+  )
+    return false;
+  return true;
+}
+
 export function isNormalizedQuestion(raw: unknown): raw is NormalizedQuestion {
   if (!isQuestionLike(raw)) return false;
   const r = raw as Record<string, unknown>;
   if (r['format'] === 'money') return isValidMoneyQuestion(r);
   if (r['format'] === 'text') return isValidTextQuestion(r);
-  return false;
+  return isValidVisualQuestion(r);
 }
 
 export function parseQuestion(raw: unknown): NormalizedQuestion {
@@ -103,8 +141,9 @@ export function parseQuestion(raw: unknown): NormalizedQuestion {
   const r = raw as Record<string, unknown>;
   if (isValidMoneyQuestion(r)) return r;
   if (isValidTextQuestion(r)) return r;
+  if (isValidVisualQuestion(r)) return r as NormalizedQuestion;
   throw new ParseError(
-    `Input failed normalized validation for format=${String(r['format'])} (v0 supports money + text only)`,
+    `Input failed normalized validation for format=${String(r['format'])}`,
     raw,
   );
 }

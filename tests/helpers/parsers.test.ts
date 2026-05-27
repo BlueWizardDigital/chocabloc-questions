@@ -114,9 +114,9 @@ describe('parseQuestion malformed inputs', () => {
     expect(() => parseQuestion({ format: 'money' })).toThrow(/id . format/);
   });
 
-  it('throws ParseError for unsupported format (v0 only money + text)', () => {
+  it('throws ParseError for unsupported format', () => {
     expect(() => parseQuestion({ id: 'x', format: 'martian', skillIds: [], distractors: [] })).toThrow(
-      /v0 supports money . text only/,
+      /Input failed normalized validation for format=martian/,
     );
   });
 
