@@ -3,6 +3,24 @@ import { buildChoicePool } from '../helpers/choice-builder';
 import { validateAnswer } from '../helpers/validators';
 import './ChocaChoicePad';
 
+const COLOR_MAP: Record<string, string> = {
+  red: '#e53935', blue: '#1e88e5', green: '#43a047', yellow: '#fdd835',
+  orange: '#fb8c00', purple: '#8e24aa', pink: '#d81b60', brown: '#6d4c41',
+  black: '#212121', white: '#fafafa',
+};
+
+const ANIMAL_MAP: Record<string, string> = {
+  cow: '🐄', dog: '🐕', cat: '🐱', frog: '🐸', turtle: '🐢', fox: '🦊',
+  bird: '🐦', fish: '🐟', rabbit: '🐰', bear: '🐻', pig: '🐷', horse: '🐴',
+};
+
+function elementDisplay(value: string): { type: 'color'; css: string } | { type: 'emoji'; text: string } | { type: 'text'; text: string } {
+  const lower = value.toLowerCase();
+  if (COLOR_MAP[lower]) return { type: 'color', css: COLOR_MAP[lower]! };
+  if (ANIMAL_MAP[lower]) return { type: 'emoji', text: ANIMAL_MAP[lower]! };
+  return { type: 'text', text: value };
+}
+
 function buildShell(): {
   fragment: DocumentFragment;
   promptEl: HTMLElement;
@@ -55,6 +73,14 @@ function buildShell(): {
       color: var(--cq-pattern-missing-color, #e65100);
       border-color: var(--cq-pattern-missing-border-color, #ff9800);
       font-size: calc(var(--cq-pattern-item-size, 48px) * 0.5);
+    }
+    [part~="pattern-color"] {
+      border: var(--cq-pattern-color-border, 3px solid rgba(0,0,0,0.15));
+    }
+    [part~="pattern-emoji"] {
+      background: transparent;
+      border: none;
+      font-size: calc(var(--cq-pattern-item-size, 48px) * 0.65);
     }
   `;
   const container = document.createElement('div');
@@ -124,9 +150,21 @@ export class ChocaPatternQuestion extends HTMLElement {
     this._sequenceEl.replaceChildren();
     q.content.sequence.forEach((el, i) => {
       const span = document.createElement('span');
-      span.setAttribute('part', `pattern-item pattern-item-${i}`);
+      const display = elementDisplay(el);
+      let partStr = `pattern-item pattern-item-${i}`;
+      if (display.type === 'color') {
+        partStr += ' pattern-color';
+        span.style.background = display.css;
+        span.setAttribute('aria-label', el);
+      } else if (display.type === 'emoji') {
+        partStr += ' pattern-emoji';
+        span.textContent = display.text;
+        span.setAttribute('aria-label', el);
+      } else {
+        span.textContent = display.text;
+      }
+      span.setAttribute('part', partStr);
       span.setAttribute('role', 'listitem');
-      span.textContent = el;
       this._sequenceEl.appendChild(span);
     });
 

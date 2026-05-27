@@ -94,11 +94,14 @@
       spacer.className = 'spacer';
       const counter = document.createElement('span');
       counter.className = 'counter';
+      const prevBtn = document.createElement('button');
+      prevBtn.className = 'next-btn';
+      prevBtn.textContent = '◀ Prev';
       const nextBtn = document.createElement('button');
       nextBtn.className = 'next-btn';
       nextBtn.textContent = 'Next ▶';
-      if (rows.length <= 1) nextBtn.style.display = 'none';
-      header.append(titleSpan, codeSpan, spacer, counter, nextBtn);
+      if (rows.length <= 1) { prevBtn.style.display = 'none'; nextBtn.style.display = 'none'; }
+      header.append(titleSpan, codeSpan, spacer, counter, prevBtn, nextBtn);
 
       const el = document.createElement('chocabloc-question');
       el.setAttribute('answer-mode', 'mc');
@@ -145,6 +148,10 @@
         statusSpan.style.color = d.correct ? '#2e7d32' : '#c62828';
       });
 
+      prevBtn.addEventListener('click', () => {
+        idx = (idx - 1 + rows.length) % rows.length;
+        load(idx);
+      });
       nextBtn.addEventListener('click', () => {
         idx = (idx + 1) % rows.length;
         load(idx);
