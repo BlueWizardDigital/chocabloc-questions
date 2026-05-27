@@ -76,9 +76,194 @@ export type TextOnlyQuestion = BaseQuestion & {
   distractors: Distractor[];
 };
 
-// v0 PUBLIC union — money + text only.
-// Future formats live in src/internal/future-formats.ts and are NOT exported.
-export type NormalizedQuestion = MoneyQuestion | TextOnlyQuestion;
+type VisualQuestion<
+  F extends string,
+  I extends string | undefined,
+  C extends Record<string, unknown>,
+> = BaseQuestion & {
+  format: F;
+  imageType: I;
+  content: C;
+  answer: AnswerValue;
+  distractors: Distractor[];
+};
+
+// — Geometry family —
+
+export type GeometryAttributesContent = { attribute: string };
+export type GeometryAttributesQuestion = VisualQuestion<
+  'geometry_attributes',
+  'shape_2d',
+  GeometryAttributesContent
+>;
+
+export type GeometryClassifyContent = { shape: string; dimension: string };
+export type GeometryClassifyQuestion = VisualQuestion<
+  'geometry_classify',
+  'shape_2d' | 'shape_3d',
+  GeometryClassifyContent
+>;
+
+export type GeometryPropertiesContent = { shape: string; property: string };
+export type GeometryPropertiesQuestion = VisualQuestion<
+  'geometry_properties',
+  'shape_3d',
+  GeometryPropertiesContent
+>;
+
+export type PythagoreanContent = {
+  legs: [number, number];
+  hypotenuse: number;
+  operands: [number, number];
+};
+export type PythagoreanQuestion = VisualQuestion<
+  'pythagorean',
+  'right_triangle',
+  PythagoreanContent
+>;
+
+export type GeometryAreaContent = {
+  shape: string;
+  operands: number[];
+  components?: { width: number; height: number }[];
+  radius?: number;
+};
+export type GeometryAreaQuestion = VisualQuestion<
+  'geometry_area',
+  'compound_shape' | undefined,
+  GeometryAreaContent
+>;
+
+export type GeometryAnglesContent = {
+  known_angles: number[];
+  missing_angle: number;
+};
+export type GeometryAnglesQuestion = VisualQuestion<
+  'geometry_angles',
+  undefined,
+  GeometryAnglesContent
+>;
+
+export type GeometryPerimeterContent = {
+  shape: string;
+  operands: [number, number];
+};
+export type GeometryPerimeterQuestion = VisualQuestion<
+  'geometry_perimeter',
+  undefined,
+  GeometryPerimeterContent
+>;
+
+export type GeometryCircumferenceContent = { radius: number };
+export type GeometryCircumferenceQuestion = VisualQuestion<
+  'geometry_circumference',
+  undefined,
+  GeometryCircumferenceContent
+>;
+
+export type GeometryAngleClassifyContent = { angle: number };
+export type GeometryAngleClassifyQuestion = VisualQuestion<
+  'geometry_angle_classify',
+  'angle',
+  GeometryAngleClassifyContent
+>;
+
+export type GeometryCirclePartsContent = { part: string };
+export type GeometryCirclePartsQuestion = VisualQuestion<
+  'geometry_circle_parts',
+  'circle_parts',
+  GeometryCirclePartsContent
+>;
+
+// — Data family —
+
+export type DataGraphContent = {
+  data: Record<string, number>;
+  question: string;
+};
+export type DataGraphQuestion = VisualQuestion<
+  'data_graph',
+  'bar_graph' | 'pictograph',
+  DataGraphContent
+>;
+
+// — Math visuals —
+
+export type MultiplicationVisualContent = { operands: [number, number] };
+export type MultiplicationVisualQuestion = VisualQuestion<
+  'multiplication',
+  'array' | 'number_line',
+  MultiplicationVisualContent
+>;
+
+export type FractionConceptContent = { fraction: [number, number] };
+export type FractionConceptQuestion = VisualQuestion<
+  'fraction_concept',
+  'fraction_visual',
+  FractionConceptContent
+>;
+
+// — Special formats —
+
+export type TimeContent = { hour: number; minute: number; time: string };
+export type TimeQuestion = VisualQuestion<
+  'time',
+  'analog_clock',
+  TimeContent
+>;
+
+export type PatternContent = { sequence: string[] };
+export type PatternQuestion = VisualQuestion<
+  'pattern',
+  'pattern_visual',
+  PatternContent
+>;
+
+export type CoordinateDistanceContent = {
+  point1: [number, number];
+  point2: [number, number];
+};
+export type CoordinateDistanceQuestion = VisualQuestion<
+  'coordinate_distance',
+  'coordinate_plane',
+  CoordinateDistanceContent
+>;
+
+export type MoneyBudgetAdjustContent = {
+  currency: Currency;
+  solve_for: string;
+  answer_cents: number;
+  original_income_cents: number;
+  original_rows: { category: string; amount_cents: number }[];
+  change_event: { type: string; new_income_cents: number };
+};
+export type MoneyBudgetAdjustQuestion = VisualQuestion<
+  'money_budget_adjust',
+  'table',
+  MoneyBudgetAdjustContent
+>;
+
+// PUBLIC union — all 19 formats.
+export type NormalizedQuestion =
+  | MoneyQuestion
+  | TextOnlyQuestion
+  | GeometryAttributesQuestion
+  | GeometryClassifyQuestion
+  | GeometryPropertiesQuestion
+  | PythagoreanQuestion
+  | GeometryAreaQuestion
+  | GeometryAnglesQuestion
+  | GeometryPerimeterQuestion
+  | GeometryCircumferenceQuestion
+  | GeometryAngleClassifyQuestion
+  | GeometryCirclePartsQuestion
+  | DataGraphQuestion
+  | MultiplicationVisualQuestion
+  | FractionConceptQuestion
+  | TimeQuestion
+  | PatternQuestion
+  | CoordinateDistanceQuestion
+  | MoneyBudgetAdjustQuestion;
 
 export type QuestionFormat = NormalizedQuestion['format'];
 
