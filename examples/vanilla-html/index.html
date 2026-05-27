@@ -4,7 +4,39 @@
   <meta charset="utf-8">
   <title>chocabloc-questions — Vanilla HTML Example</title>
   <style>
-    body { font-family: system-ui; padding: 32px; max-width: 800px; margin: 0 auto; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui; padding: 32px; max-width: 1200px; margin: 0 auto; }
+    h1 { margin-bottom: 8px; }
+    .intro { color: #555; margin-bottom: 24px; }
+
+    .nav { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 32px; }
+    .nav a {
+      padding: 4px 10px; border-radius: 6px; font-size: 0.8rem;
+      background: #e3f2fd; color: #1565c0; text-decoration: none;
+    }
+    .nav a:hover { background: #bbdefb; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 24px; }
+
+    .card {
+      border: 1px solid #ddd; border-radius: 12px; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .card-header {
+      padding: 8px 14px; background: #f5f5f5; font-size: 0.85rem;
+      font-weight: 600; color: #333; border-bottom: 1px solid #ddd;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-header code { font-weight: 400; color: #888; }
+    .card-header .spacer { flex: 1; }
+    .card-header .counter { font-weight: 400; color: #999; font-size: 0.75rem; }
+
+    .next-btn {
+      padding: 2px 10px; border-radius: 4px; border: 1px solid #ccc;
+      background: #fff; cursor: pointer; font-size: 0.75rem; color: #555;
+    }
+    .next-btn:hover { background: #e3f2fd; border-color: #90caf9; }
+
     chocabloc-question {
       --cq-font: system-ui, sans-serif;
       --cq-text: #1C2B45;
@@ -17,43 +49,158 @@
     }
     chocabloc-question::part(container) {
       background: linear-gradient(180deg, #FFF8E5, #FEEFC9);
-      border: 2px solid #D4881F;
-      border-radius: 14px;
-      padding: 24px;
+      padding: 20px;
     }
-    #result { margin-top: 16px; font-family: monospace; white-space: pre-wrap; }
+
+    .result {
+      padding: 8px 14px; font-family: monospace; font-size: 0.75rem;
+      background: #fafafa; border-top: 1px solid #eee;
+      min-height: 28px; color: #666;
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    }
+    .result .qid { color: #aaa; font-size: 0.65rem; text-align: right; flex-shrink: 0; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .error { padding: 16px; color: #c62828; font-size: 0.85rem; }
   </style>
 </head>
 <body>
-  <h1>chocabloc-questions — vanilla HTML demo</h1>
-  <p>Pick a choice. Result appears below.</p>
-  <chocabloc-question id="q" answer-mode="mc" seed="42"></chocabloc-question>
-  <div id="result"></div>
+  <h1>chocabloc-questions — all formats</h1>
+  <p class="intro">Every supported question format rendered from real data. Pick a choice to see the <code>answered</code> event. Hit <b>Next</b> to cycle through questions.</p>
+  <nav class="nav" id="nav"></nav>
+  <div class="grid" id="grid"></div>
+
   <script type="module">
-    import '../../dist/elements/coin-pile.mjs';
+    import '../../dist/full.mjs';
     import { normalizeQuestion } from '../../dist/helpers-only.mjs';
 
-    const raw = {
-      id: 'MONEY-COIN-VALUE-USD-144',
-      skill_ids: ['MONEY-COIN-VALUE-USD'],
-      content: { coins: { penny: 4, nickel: 1, dime: 1, quarter: 5 }, operation: 'money' },
-      answer: 144,
-      distractors: [
-        { value: 140, error_type: 'off-by-nickel' },
-        { value: 150, error_type: 'off-by-nickel' },
-        { value: 145, error_type: 'off-by-1' },
-      ],
-      format: 'money',
-      image_type: 'coins',
-    };
+    const grid = document.getElementById('grid');
+    const nav = document.getElementById('nav');
 
-    const q = normalizeQuestion(raw);
-    const el = document.getElementById('q');
-    el.question = q;
+    function mountCard(label, imageType, rows) {
+      const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      let idx = 0;
 
-    el.addEventListener('answered', (e) => {
-      document.getElementById('result').textContent = JSON.stringify(e.detail, null, 2);
-    });
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.id = slug;
+
+      const header = document.createElement('div');
+      header.className = 'card-header';
+      const titleSpan = document.createElement('span');
+      titleSpan.textContent = label;
+      const codeSpan = document.createElement('code');
+      codeSpan.textContent = imageType;
+      const spacer = document.createElement('span');
+      spacer.className = 'spacer';
+      const counter = document.createElement('span');
+      counter.className = 'counter';
+      const nextBtn = document.createElement('button');
+      nextBtn.className = 'next-btn';
+      nextBtn.textContent = 'Next ▶';
+      if (rows.length <= 1) nextBtn.style.display = 'none';
+      header.append(titleSpan, codeSpan, spacer, counter, nextBtn);
+
+      const el = document.createElement('chocabloc-question');
+      el.setAttribute('answer-mode', 'mc');
+
+      const result = document.createElement('div');
+      result.className = 'result';
+      const statusSpan = document.createElement('span');
+      const qidSpan = document.createElement('span');
+      qidSpan.className = 'qid';
+      result.append(statusSpan, qidSpan);
+
+      card.append(header, el, result);
+      grid.appendChild(card);
+
+      const link = document.createElement('a');
+      link.href = '#' + slug;
+      link.textContent = label;
+      nav.appendChild(link);
+
+      function load(index) {
+        const raw = rows[index];
+        statusSpan.textContent = 'awaiting answer...';
+        statusSpan.style.color = '#666';
+        const rawId = raw.id || raw.question_id || '?';
+        qidSpan.textContent = rawId;
+        qidSpan.title = rawId;
+        el.setAttribute('seed', String(Math.floor(Math.random() * 10000)));
+        counter.textContent = `${index + 1} / ${rows.length}`;
+        try {
+          const q = normalizeQuestion(raw);
+          el.question = q;
+        } catch (err) {
+          statusSpan.textContent = 'Normalize error: ' + err.message;
+          statusSpan.style.color = '#c62828';
+        }
+      }
+
+      el.addEventListener('answered', (e) => {
+        const d = e.detail;
+        statusSpan.textContent = d.correct
+          ? `correct (${d.studentAnswer}) in ${Math.round(d.timeToAnswerMs)}ms`
+          : `wrong: picked ${d.studentAnswer}, expected ${d.expected}` +
+            (d.distractorMatched ? ` (${d.distractorMatched.errorType})` : '');
+        statusSpan.style.color = d.correct ? '#2e7d32' : '#c62828';
+      });
+
+      nextBtn.addEventListener('click', () => {
+        idx = (idx + 1) % rows.length;
+        load(idx);
+      });
+
+      load(0);
+    }
+
+    // Map image_type to snapshot filename and display label
+    const formats = [
+      { label: 'Money',               imageType: 'coins',            file: 'type-coins.json' },
+      { label: 'Budget Table',         imageType: 'table',            file: 'type-table.json' },
+      { label: 'Pattern',             imageType: 'pattern_visual',    file: 'type-pattern_visual.json' },
+      { label: 'Number Line',         imageType: 'number_line',       file: 'type-number_line.json' },
+      { label: 'Multiplication Array', imageType: 'array',            file: 'type-array.json' },
+      { label: 'Bar Graph',           imageType: 'bar_graph',         file: 'type-bar_graph.json' },
+      { label: 'Pictograph',          imageType: 'pictograph',        file: 'type-pictograph.json' },
+      { label: 'Geometry 2D',         imageType: 'shape_2d',          file: 'type-shape_2d.json' },
+      { label: 'Geometry 3D',         imageType: 'shape_3d',          file: 'type-shape_3d.json' },
+      { label: 'Right Triangle',      imageType: 'right_triangle',    file: 'type-right_triangle.json' },
+      { label: 'Compound Shape',      imageType: 'compound_shape',    file: 'type-compound_shape.json' },
+      { label: 'Angle',               imageType: 'angle',             file: 'type-angle.json' },
+      { label: 'Circle Parts',        imageType: 'circle_parts',      file: 'type-circle_parts.json' },
+      { label: 'Fraction',            imageType: 'fraction_visual',   file: 'type-fraction_visual.json' },
+      { label: 'Analog Clock',        imageType: 'analog_clock',      file: 'type-analog_clock.json' },
+      { label: 'Coordinate Plane',    imageType: 'coordinate_plane',  file: 'type-coordinate_plane.json' },
+    ];
+
+    const snapshotBase = '../../scripts/db-snapshot/';
+
+    async function fetchSnapshot(file) {
+      const resp = await fetch(snapshotBase + file);
+      if (!resp.ok) return null;
+      const text = await resp.text();
+      return JSON.parse(text.replace(/\\n/g, '\n'));
+    }
+
+    const supportedFormats = new Set([
+      'money', 'money_budget_adjust', 'pattern', 'multiplication',
+      'geometry_attributes', 'geometry_classify', 'geometry_properties',
+      'pythagorean', 'geometry_area', 'geometry_angles', 'geometry_perimeter',
+      'geometry_circumference', 'geometry_angle_classify', 'geometry_circle_parts',
+      'data_graph', 'fraction_concept', 'time', 'coordinate_distance',
+    ]);
+
+    for (const fmt of formats) {
+      try {
+        const rows = await fetchSnapshot(fmt.file);
+        if (!rows?.length) continue;
+        const supported = rows.filter(r => supportedFormats.has(r.format));
+        if (!supported.length) continue;
+        mountCard(fmt.label, fmt.imageType, supported);
+      } catch (e) {
+        console.warn(`Skipping ${fmt.file}:`, e.message);
+      }
+    }
   </script>
 </body>
 </html>
