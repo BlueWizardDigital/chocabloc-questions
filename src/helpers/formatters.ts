@@ -36,6 +36,13 @@ export function formatAnswerForDisplay(
     if (answer >= 0 && answer < 100) return `${answer}¢`;
     return formatCurrency(answer, opts);
   }
+  if (format === 'money_budget_adjust' && typeof answer === 'string') {
+    const cents = Number(answer);
+    if (Number.isFinite(cents)) {
+      if (cents >= 0 && cents < 100) return `${cents}¢`;
+      return formatCurrency(cents, opts);
+    }
+  }
   if (Array.isArray(answer) && answer.length === 2) {
     return `(${answer[0]}, ${answer[1]})`;
   }
