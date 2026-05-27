@@ -26,3 +26,6 @@ Thumbs.db
 # Logs
 npm-debug.log*
 *.log
+
+# DB snapshot data (regenerate via scripts/db-snapshot/snapshot.sh)
+scripts/db-snapshot/*.json
