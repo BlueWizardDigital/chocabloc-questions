@@ -1,5 +1,9 @@
 import type { MoneyQuestion, NormalizedQuestion } from '../types';
 import './ChocaCoinPile';
+import './ChocaCanvasQuestion';
+import './ChocaTableQuestion';
+import './ChocaPatternQuestion';
+import './ChocaNumberLineQuestion';
 
 // Fallback template built via DOM API, not template strings, to make the
 // no-innerHTML rule trivially auditable (R2.8).
@@ -77,12 +81,24 @@ export class ChocablocQuestion extends HTMLElement {
       this._shadow.appendChild(fragment);
       return;
     }
-    // R2.9: unknown format — v0 only supports money + text.
-    const { fragment, promptEl } = buildFallback();
-    const fmt = (this._question as { format: string }).format;
-    console.warn(`[chocabloc-questions] Unsupported format in v0: ${fmt}`);
-    promptEl.textContent = `Unsupported format: ${fmt}`;
-    this._shadow.appendChild(fragment);
+    // Route to format-specific DOM components
+    let tag: string;
+    if (this._question.format === 'money_budget_adjust') {
+      tag = 'choca-table-question';
+    } else if (this._question.format === 'pattern') {
+      tag = 'choca-pattern-question';
+    } else if (this._question.format === 'multiplication' && this._question.imageType === 'number_line') {
+      tag = 'choca-number-line-question';
+    } else {
+      tag = 'choca-canvas-question';
+    }
+    const inner = document.createElement(tag);
+    inner.setAttribute('answer-mode', this.getAttribute('answer-mode') ?? 'mc');
+    const seed = this.getAttribute('seed');
+    if (seed !== null) inner.setAttribute('seed', seed);
+    if (this.hasAttribute('disabled')) inner.setAttribute('disabled', '');
+    (inner as HTMLElement & { question: NormalizedQuestion }).question = this._question;
+    this._shadow.appendChild(inner);
   }
 
 }
