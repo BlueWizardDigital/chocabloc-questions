@@ -255,22 +255,87 @@ Add lazy-loaded tool components as separate chunks. Vite's dynamic `import()` ha
 
 ---
 
-## CSS Custom Properties
+## Theming & Customization
 
-All new components expose `--cq-tool-*` variables for consumer theming:
+All new components follow the same pattern as existing components: CSS custom properties for values, `::part()` selectors for structural styling, and replaceable icons.
+
+### CSS Custom Properties (`--cq-tool-*`)
 
 - `--cq-tool-bg` — tool panel background
 - `--cq-tool-border` — panel border
-- `--cq-tool-icon-size` — toolbar icon size
-- `--cq-tool-icon-color` — icon color
+- `--cq-tool-icon-size` — toolbar icon size (default 32px)
+- `--cq-tool-icon-color` — icon color (default currentColor)
 - `--cq-tool-icon-active` — active/toggled icon color
 - `--cq-tool-radius` — panel border radius
+- `--cq-tool-btn-bg` — tool panel button background (calculator keys, whiteboard tools, PVC +/−)
+- `--cq-tool-btn-color` — tool panel button text color
+- `--cq-tool-btn-radius` — tool panel button border radius
+- `--cq-tool-btn-font` — tool panel button font family
+- `--cq-tool-btn-size` — tool panel button font size
 - `--cq-input-border` — answer input border
 - `--cq-input-focus` — answer input focus ring color
 - `--cq-input-error` — wrong answer feedback color
 - `--cq-input-success` — correct answer feedback color
+- `--cq-input-font` — answer input font family
+- `--cq-input-size` — answer input font size
 
-Follows existing `--cq-*` naming convention.
+### CSS Parts (`::part()`)
+
+Consumers can fully restyle any element exposed as a part:
+
+**ChocaToolbar:**
+- `toolbar` — toolbar container
+- `tool-btn` — each toolbar icon button
+- `tool-btn-whiteboard` — whiteboard toggle specifically
+- `tool-btn-calculator` — calculator toggle specifically
+- `tool-btn-pvc` — place value chart toggle specifically
+
+**ChocaWhiteboard:**
+- `wb-panel` — whiteboard panel container
+- `wb-canvas` — the drawing canvas
+- `wb-tool-btn` — each tool button (pen, eraser, clear, undo)
+- `wb-color-btn` — each color swatch button
+- `wb-width-btn` — each line width button
+
+**ChocaCalculator:**
+- `calc-panel` — calculator panel container
+- `calc-display` — result display
+- `calc-key` — each calculator button
+- `calc-key-num` — number keys specifically
+- `calc-key-op` — operation keys (+, −, ×, ÷)
+- `calc-key-mem` — memory keys (M+, M−, MR, MC)
+- `calc-key-action` — action keys (=, C, backspace)
+
+**ChocaPlaceValueChart:**
+- `pvc-panel` — chart panel container
+- `pvc-header` — column header row
+- `pvc-column` — each column
+- `pvc-counter` — each counter dot/block
+- `pvc-btn` — +/− buttons
+- `pvc-total` — running total display
+
+**ChocaAnswerInput:**
+- `input-field` — the text/number input element
+- `input-submit` — submit button
+- `input-feedback` — correct/incorrect feedback area
+
+### Replaceable Icons
+
+Toolbar icons use CSS `mask-image` with a default SVG data URI. Consumer overrides icon by setting `mask-image` on the part:
+
+```css
+chocabloc-question::part(tool-btn-calculator) {
+  mask-image: url('/my-custom-calculator-icon.svg');
+  background-color: var(--my-brand-color);
+}
+```
+
+This pattern means:
+- Default icons ship with the library (no external asset dependencies)
+- Consumer replaces any icon with one line of CSS
+- Icon color is controlled via `background-color` (since `mask-image` acts as a stencil)
+
+Same approach for whiteboard tool icons (pen, eraser) and any other iconography.
 
 ---
 
