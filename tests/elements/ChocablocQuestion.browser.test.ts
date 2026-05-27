@@ -106,3 +106,80 @@ describe('<chocabloc-question> M2 hardening', () => {
     expect(rendered).to.be.greaterThan(0);
   });
 });
+
+describe('<chocabloc-question> dispatcher routing', () => {
+  it('dispatches to choca-canvas-question for geometry_attributes format', async () => {
+    const el = mount(`<chocabloc-question seed="42"></chocabloc-question>`);
+    (el as HTMLElement & { question: unknown }).question = {
+      id: 'GEOM-2D-ATTRIBUTES-1',
+      skillIds: ['GEOM-2D-ATTRIBUTES'],
+      format: 'geometry_attributes',
+      imageType: 'shape_2d',
+      content: { attribute: 'no sides and no corners' },
+      answer: 'circle',
+      distractors: [{ value: 'triangle', errorType: 'wrong-classification' }],
+    };
+    await new Promise((r) => requestAnimationFrame(r));
+    const inner = el.shadowRoot!.querySelector('choca-canvas-question');
+    expect(inner).to.not.be.null;
+  });
+
+  it('dispatches to choca-table-question for money_budget_adjust format', async () => {
+    const el = mount(`<chocabloc-question seed="42"></chocabloc-question>`);
+    (el as HTMLElement & { question: unknown }).question = {
+      id: 'MONEY-BUDGET-ADJUST-1',
+      skillIds: ['MONEY-BUDGET-ADJUST'],
+      format: 'money_budget_adjust',
+      imageType: 'table',
+      content: {
+        currency: 'CAD',
+        solve_for: 'entertainment',
+        answer_cents: 100,
+        change_event: { type: 'income_drop', new_income_cents: 1135 },
+        original_rows: [
+          { category: 'utilities', amount_cents: 185 },
+          { category: 'entertainment', amount_cents: 300 },
+          { category: 'rent', amount_cents: 850 },
+        ],
+        original_income_cents: 1335,
+      },
+      answer: 100,
+      distractors: [{ value: 300, errorType: 'unchanged-original' }],
+    };
+    await new Promise((r) => requestAnimationFrame(r));
+    const inner = el.shadowRoot!.querySelector('choca-table-question');
+    expect(inner).to.not.be.null;
+  });
+
+  it('dispatches to choca-pattern-question for pattern format', async () => {
+    const el = mount(`<chocabloc-question seed="42"></chocabloc-question>`);
+    (el as HTMLElement & { question: unknown }).question = {
+      id: 'PATTERN-1',
+      skillIds: ['PATTERN-REPEATING-SIMPLE'],
+      format: 'pattern',
+      imageType: 'pattern_visual',
+      content: { sequence: ['A', 'B', 'A', 'B'] },
+      answer: 'A',
+      distractors: [{ value: 'B', errorType: 'wrong-element' }],
+    };
+    await new Promise((r) => requestAnimationFrame(r));
+    const inner = el.shadowRoot!.querySelector('choca-pattern-question');
+    expect(inner).to.not.be.null;
+  });
+
+  it('dispatches to choca-number-line-question for multiplication + number_line', async () => {
+    const el = mount(`<chocabloc-question seed="42"></chocabloc-question>`);
+    (el as HTMLElement & { question: unknown }).question = {
+      id: 'MULT-NL-1',
+      skillIds: ['INT-MULT-NUMBER-LINE'],
+      format: 'multiplication',
+      imageType: 'number_line',
+      content: { operands: [3, 4] },
+      answer: 12,
+      distractors: [{ value: 11, errorType: 'off-by-1' }],
+    };
+    await new Promise((r) => requestAnimationFrame(r));
+    const inner = el.shadowRoot!.querySelector('choca-number-line-question');
+    expect(inner).to.not.be.null;
+  });
+});
