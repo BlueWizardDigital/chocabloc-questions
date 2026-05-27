@@ -64,6 +64,7 @@ export function buildChoicePool(
   const seen = new Set<string>([JSON.stringify(question.answer)]);
   const deduped: Choice[] = [];
   for (const w of wrong) {
+    if (w.value === '' || w.value === null || w.value === undefined) continue;
     const key = JSON.stringify(w.value);
     if (seen.has(key)) continue;
     seen.add(key);

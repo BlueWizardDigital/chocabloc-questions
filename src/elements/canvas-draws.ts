@@ -257,6 +257,16 @@ export function drawBarGraph(
   const barWidth = (w - margin.left - margin.right) / labels.length - 8;
   const chartHeight = h - margin.top - margin.bottom;
   ctx.fillStyle = '#42a5f5'; ctx.strokeStyle = '#1976d2'; ctx.lineWidth = 1;
+  const tickCount = 5;
+  ctx.fillStyle = '#666'; ctx.font = '9px Arial'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let t = 0; t <= tickCount; t++) {
+    const val = Math.round((maxVal / tickCount) * t);
+    const y = h - margin.bottom - (t / tickCount) * chartHeight;
+    ctx.fillText(String(val), margin.left - 4, y);
+    ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(margin.left, y); ctx.lineTo(w - margin.right, y); ctx.stroke();
+  }
+  ctx.fillStyle = '#42a5f5'; ctx.strokeStyle = '#1976d2'; ctx.lineWidth = 1;
   labels.forEach((label, i) => {
     const barH = (values[i]! / maxVal) * chartHeight;
     const x = margin.left + i * (barWidth + 8) + 4;
@@ -267,11 +277,27 @@ export function drawBarGraph(
     ctx.fillText(label, x + barWidth / 2, h - 8);
     ctx.fillStyle = '#42a5f5';
   });
-  ctx.strokeStyle = '#666'; ctx.beginPath();
+  ctx.strokeStyle = '#666'; ctx.lineWidth = 1; ctx.beginPath();
   ctx.moveTo(margin.left, margin.top);
   ctx.lineTo(margin.left, h - margin.bottom);
   ctx.lineTo(w - margin.right, h - margin.bottom);
   ctx.stroke();
+}
+
+const EMOJI_MAP: Record<string, string> = {
+  apples: '🍎', apple: '🍎', mangoes: '🥭', mango: '🥭',
+  peaches: '🍑', peach: '🍑', strawberries: '🍓', strawberry: '🍓',
+  grapes: '🍇', grape: '🍇', cherries: '🍒', cherry: '🍒',
+  bananas: '🍌', banana: '🍌', oranges: '🍊', orange: '🍊',
+  watermelons: '🍉', watermelon: '🍉', pineapples: '🍍', pineapple: '🍍',
+  lemons: '🍋', lemon: '🍋', pears: '🍐', pear: '🍐',
+  cats: '🐱', cat: '🐱', dogs: '🐶', dog: '🐶',
+  stars: '⭐', star: '⭐', hearts: '❤️', heart: '❤️',
+  books: '📚', book: '📚', pencils: '✏️', pencil: '✏️',
+};
+
+function emojiFor(label: string): string {
+  return EMOJI_MAP[label.toLowerCase()] ?? '●';
 }
 
 export function drawPictograph(
@@ -280,16 +306,26 @@ export function drawPictograph(
   ctx.clearRect(0, 0, w, h);
   const labels = Object.keys(data);
   const values = Object.values(data);
-  const rowHeight = 24, iconSize = 14, labelWidth = 60;
-  ctx.font = '10px Arial'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  const rowHeight = 24, iconSize = 14, labelWidth = 70;
+  ctx.textBaseline = 'middle';
   labels.forEach((label, i) => {
     const y = 15 + i * rowHeight;
-    ctx.fillStyle = '#333'; ctx.fillText(label, labelWidth - 5, y);
-    ctx.fillStyle = '#ffb74d'; ctx.strokeStyle = '#f57c00'; ctx.lineWidth = 1;
-    for (let j = 0; j < values[i]!; j++) {
-      const x = labelWidth + 5 + j * (iconSize + 3);
-      ctx.beginPath(); ctx.arc(x + iconSize / 2, y, iconSize / 2 - 1, 0, Math.PI * 2);
-      ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#333'; ctx.font = '10px Arial'; ctx.textAlign = 'right';
+    ctx.fillText(label, labelWidth - 5, y);
+    const emoji = emojiFor(label);
+    if (emoji === '●') {
+      ctx.fillStyle = '#ffb74d'; ctx.strokeStyle = '#f57c00'; ctx.lineWidth = 1;
+      for (let j = 0; j < values[i]!; j++) {
+        const x = labelWidth + 5 + j * (iconSize + 3);
+        ctx.beginPath(); ctx.arc(x + iconSize / 2, y, iconSize / 2 - 1, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+      }
+    } else {
+      ctx.font = `${iconSize}px Arial`; ctx.textAlign = 'center';
+      for (let j = 0; j < values[i]!; j++) {
+        const x = labelWidth + 5 + j * (iconSize + 3) + iconSize / 2;
+        ctx.fillText(emoji, x, y);
+      }
     }
   });
 }

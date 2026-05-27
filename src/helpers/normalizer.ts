@@ -107,8 +107,8 @@ function normalizeMoneyContent(rawContent: unknown, currency: Currency): MoneyCo
   return { currency: 'CAD', coins };
 }
 
-function getString(r: Record<string, unknown>, key: string): string | undefined {
-  const v = r[key];
+function getString(r: Record<string, unknown>, key: string, fallbackKey?: string): string | undefined {
+  const v = r[key] ?? (fallbackKey ? r[fallbackKey] : undefined);
   return typeof v === 'string' ? v : undefined;
 }
 
@@ -135,7 +135,7 @@ function extractBase(r: Record<string, unknown>): {
   skillIds: string[];
   prompt?: string;
 } {
-  const id = getString(r, 'id');
+  const id = getString(r, 'id', 'question_id');
   if (!id) throw new NormalizeError('Question missing id', r);
   const skillIds = getStringArray(r, 'skill_ids', 'skillIds');
   const promptRaw =
@@ -541,8 +541,9 @@ export function normalizeBatch(
 
 function extractId(raw: unknown): string {
   if (typeof raw === 'object' && raw !== null) {
-    const r = raw as { id?: unknown };
+    const r = raw as { id?: unknown; question_id?: unknown };
     if (typeof r.id === 'string') return r.id;
+    if (typeof r.question_id === 'string') return r.question_id;
   }
   return '<unknown>';
 }

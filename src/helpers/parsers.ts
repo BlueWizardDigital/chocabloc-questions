@@ -27,7 +27,7 @@ const CAD_COIN_KEYS: ReadonlySet<CADCoinName> = new Set([
 export function isQuestionLike(raw: unknown): boolean {
   if (typeof raw !== 'object' || raw === null) return false;
   const r = raw as Record<string, unknown>;
-  if (typeof r['id'] !== 'string') return false;
+  if (typeof r['id'] !== 'string' && typeof r['question_id'] !== 'string') return false;
   if (typeof r['format'] !== 'string') return false;
   return true;
 }
