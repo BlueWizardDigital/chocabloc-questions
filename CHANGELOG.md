@@ -5,6 +5,61 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.0-alpha.6] — 2026-05-27
+
+### Added (full format expansion)
+
+- **17 new question formats** with full pipeline coverage: types → normalizer →
+  validator → choice-builder → Web Component renderer. `NormalizedQuestion` is
+  now a 19-member discriminated union (up from 2).
+- **`ChocaCanvasQuestion`** — single canvas component rendering 13 formats:
+  geometry (attributes, classify, properties, area, angles, perimeter,
+  circumference, angle classify, circle parts), data graphs (bar + pictograph),
+  fractions, analog clock, coordinate plane, multiplication arrays.
+- **`ChocaTableQuestion`** — DOM-based real HTML `<table>` for
+  `money_budget_adjust` format. Solve-for cell highlighted via `part="solve-for"`.
+- **`ChocaPatternQuestion`** — DOM flexbox for `pattern` format. Renders colors
+  as filled circles, animals as emoji (🐄🐕🐱🐸🐢🦊), shapes as unicode, letters
+  as text. CSS vars for item size, colors, borders.
+- **`ChocaNumberLineQuestion`** — SVG-in-DOM for `multiplication` with
+  `number_line` imageType. Quadratic-curve arc jumps with arrowheads, tick marks,
+  labels. CSS vars for line/arc colors.
+- **`elements/canvas-question`** build entry point for tree-shaking visual
+  formats separately from money.
+- **Bar graph Y-axis** with scale numbers and light gridlines.
+- **Pictograph emoji** — maps common labels (fruits, animals) to emoji instead
+  of generic circles.
+- **`question_id` field support** in normalizer/parser — raw DB rows accepted
+  without renaming.
+- **Empty distractor filtering** in `buildChoicePool` — blank `""` values no
+  longer produce empty choice buttons.
+- **DB snapshot script** tracked at `scripts/db-snapshot/snapshot.sh` (JSON
+  output gitignored).
+- **All-format example page** at `examples/vanilla-html/` with Prev/Next cycling
+  through 10 questions per format from snapshot data.
+- 17 format types via `VisualQuestion<F, I, C>` generic (internal).
+- Map-based normalizer dispatch (`FORMAT_NORMALIZERS`) with shared utilities.
+- `VISUAL_FORMAT_STRINGS` set in parsers for validation.
+- Test fixtures: `tests/fixtures/visual-format-samples.json` (16 formats).
+- 76 visual normalizer tests + 34 browser tests for new components.
+- Total: 179 unit tests + 78 browser tests.
+
+### Changed
+
+- `NormalizedQuestion` union expanded from `MoneyQuestion | TextOnlyQuestion`
+  to all 19 formats.
+- `ChocablocQuestion` dispatcher routes to format-specific components instead
+  of logging unsupported-format warnings.
+- Build outputs 5 bundles (was 4): added `elements/canvas-question`.
+- Size budgets updated: helpers-only 12 KB (was 8), full 40 KB (was 25),
+  new canvas-question 20 KB.
+- `isQuestionLike` accepts `question_id` as alias for `id`.
+- `choice-builder` accesses `q.content.currency` via typed path instead of cast.
+
+### Removed
+
+- `src/internal/future-formats.ts` — all formats now promoted to public surface.
+
 ## [0.1.0-alpha.5] — 2026-05-15
 
 ### Fixed (`<choca-coin-pile>` — Phase D follow-up)

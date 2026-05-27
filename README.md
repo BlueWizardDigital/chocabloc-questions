@@ -26,10 +26,18 @@ component, anything. Gives you helpers like `normalizeQuestion`,
 text.
 
 **Tier 2 — Web Components (`src/elements/`)**
-If you don't want to build your own UI, use the custom elements
-(`<chocabloc-question>`, `<choca-coin-pile>`, `<choca-choice-pad>`). They
-come with accessibility and theming via CSS custom properties — and they
-work in any framework because they're native browser elements.
+If you don't want to build your own UI, use the custom elements. The root
+dispatcher `<chocabloc-question>` routes to format-specific renderers:
+
+- `<choca-coin-pile>` — money questions (DOM, CSS vars for coin images)
+- `<choca-canvas-question>` — geometry, data graphs, fractions, clock, arrays, coordinates (canvas)
+- `<choca-table-question>` — budget tables (real HTML `<table>` for a11y)
+- `<choca-pattern-question>` — patterns with emoji animals, colored dots, shapes (DOM flexbox)
+- `<choca-number-line-question>` — number line multiplication (SVG-in-DOM)
+- `<choca-choice-pad>` — shared multiple-choice answer pad (all components use this)
+
+All components support theming via CSS custom properties and `::part()`
+selectors, and work in any framework because they're native browser elements.
 
 Tier 1 is enough on its own. A Phaser game rendering inside its canvas can
 use the helpers directly. Tier 2 is just there if you want defaults, a11y,
@@ -46,7 +54,7 @@ npm install chocabloc-questions
 ## Quick start (React)
 
 ```jsx
-import 'chocabloc-questions/elements/coin-pile';
+import 'chocabloc-questions/full';  // registers all elements
 import { normalizeQuestion } from 'chocabloc-questions/helpers';
 
 const q = normalizeQuestion(rawBankRow);
@@ -58,11 +66,18 @@ const q = normalizeQuestion(rawBankRow);
 />
 ```
 
+For tree-shaking, import only what you need:
+
+```jsx
+import 'chocabloc-questions/elements/coin-pile';       // money only
+import 'chocabloc-questions/elements/canvas-question';  // visual formats
+```
+
 ## Quick start (vanilla HTML)
 
 ```html
 <script type="module">
-  import '../node_modules/chocabloc-questions/dist/elements/coin-pile.mjs';
+  import '../node_modules/chocabloc-questions/dist/full.mjs';
   import { normalizeQuestion } from '../node_modules/chocabloc-questions/dist/helpers-only.mjs';
 
   const el = document.querySelector('chocabloc-question');
@@ -71,22 +86,46 @@ const q = normalizeQuestion(rawBankRow);
 </script>
 ```
 
-See `examples/` for working demos.
+See `examples/vanilla-html/` for a working demo that renders all formats
+from DB snapshot data with per-card cycling.
 
-## What's in v0
+## Supported formats
 
-Just **money questions** (USD and CAD coins) plus a plain `text` fallback for
-forms without a custom renderer. Public discriminated union is:
+19-member discriminated union on `format`:
+
+| Format | Image type | Renderer |
+|--------|-----------|----------|
+| `money` | `coins` | `ChocaCoinPile` (DOM) |
+| `text` | — | inline fallback |
+| `money_budget_adjust` | `table` | `ChocaTableQuestion` (DOM) |
+| `pattern` | `pattern_visual` | `ChocaPatternQuestion` (DOM) |
+| `multiplication` | `number_line` | `ChocaNumberLineQuestion` (SVG) |
+| `multiplication` | `array` | `ChocaCanvasQuestion` (canvas) |
+| `geometry_attributes` | `shape_2d` | `ChocaCanvasQuestion` |
+| `geometry_classify` | `shape_2d` / `shape_3d` | `ChocaCanvasQuestion` |
+| `geometry_properties` | `shape_3d` | `ChocaCanvasQuestion` |
+| `pythagorean` | `right_triangle` | `ChocaCanvasQuestion` |
+| `geometry_area` | `compound_shape` | `ChocaCanvasQuestion` |
+| `geometry_angles` | — | `ChocaCanvasQuestion` |
+| `geometry_perimeter` | — | `ChocaCanvasQuestion` |
+| `geometry_circumference` | — | `ChocaCanvasQuestion` |
+| `geometry_angle_classify` | `angle` | `ChocaCanvasQuestion` |
+| `geometry_circle_parts` | `circle_parts` | `ChocaCanvasQuestion` |
+| `data_graph` | `bar_graph` / `pictograph` | `ChocaCanvasQuestion` |
+| `fraction_concept` | `fraction_visual` | `ChocaCanvasQuestion` |
+| `time` | `analog_clock` | `ChocaCanvasQuestion` |
+| `coordinate_distance` | `coordinate_plane` | `ChocaCanvasQuestion` |
 
 ```ts
-type NormalizedQuestion = MoneyQuestion | TextOnlyQuestion;
+type NormalizedQuestion =
+  | MoneyQuestion | TextOnlyQuestion | MoneyBudgetAdjustQuestion
+  | PatternQuestion | MultiplicationVisualQuestion | GeometryAttributesQuestion
+  | GeometryClassifyQuestion | GeometryPropertiesQuestion | PythagoreanQuestion
+  | GeometryAreaQuestion | GeometryAnglesQuestion | GeometryPerimeterQuestion
+  | GeometryCircumferenceQuestion | GeometryAngleClassifyQuestion
+  | GeometryCirclePartsQuestion | DataGraphQuestion | FractionConceptQuestion
+  | TimeQuestion | CoordinateDistanceQuestion;
 ```
-
-Other formats — bar graphs, pictographs, coordinate plane, number line,
-geometry (properties / area / angles / volume), pythagorean, coordinate
-distance — are stubbed in `src/internal/future-formats.ts` but kept out of
-the public API until their renderers and tests are ready. Each ships as a
-minor version when it lands.
 
 ## Theming
 

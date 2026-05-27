@@ -44,17 +44,25 @@ Local consumer dev uses `npm link` — run `npm run build:watch` in this repo, t
 The library is intentionally split into two tiers, each with its own entry point in `vite.config.ts`:
 
 - **Tier 1 — `src/helpers/`** — pure logic. No DOM, no framework, no globals. Exported via `src/helpers-only.ts` (the `chocabloc-questions/helpers` subpath). Sufficient to render any supported format from inside a Phaser canvas or other custom renderer.
-- **Tier 2 — `src/elements/`** — Web Components built on top of Tier 1. `ChocablocQuestion` is the root dispatcher; per-format custom elements (`ChocaCoinPile`, `ChocaChoicePad`) render the actual UI. Side-effect imports in `src/full.ts` and `src/elements/coin-pile.ts` register the elements via `customElements.define`.
+- **Tier 2 — `src/elements/`** — Web Components built on top of Tier 1. `ChocablocQuestion` is the root dispatcher; it routes to format-specific elements:
+  - `ChocaCoinPile` — money (DOM, per-denom CSS vars)
+  - `ChocaCanvasQuestion` — 13 canvas-rendered formats (geometry, data graphs, fractions, clock, arrays, coordinates)
+  - `ChocaTableQuestion` — budget tables (real HTML `<table>`)
+  - `ChocaPatternQuestion` — patterns (DOM flexbox, emoji animals, colored dots)
+  - `ChocaNumberLineQuestion` — number line multiplication (SVG-in-DOM)
+  - `ChocaChoicePad` — shared multiple-choice pad (all components use this)
 
-Build outputs four bundles: `index`, `helpers-only`, `full`, and `elements/coin-pile`. Size budgets are enforced in `.size-limit.cjs` (helpers-only 8 KB gz, coin-pile 15 KB gz, full 25 KB gz).
+  Side-effect imports in `src/full.ts`, `src/elements/coin-pile.ts`, and `src/elements/canvas-question.ts` register elements via `customElements.define`.
 
-### Public surface vs. internal
+Build outputs five bundles: `index`, `helpers-only`, `full`, `elements/coin-pile`, and `elements/canvas-question`. Size budgets in `.size-limit.cjs` (helpers-only 12 KB gz, coin-pile 15 KB gz, canvas-question 20 KB gz, full 40 KB gz).
 
-v0 exposes only `MoneyQuestion | TextOnlyQuestion` as `NormalizedQuestion`. Other formats (bar graph, pictograph, number line, geometry, etc.) live in `src/internal/future-formats.ts` and are **deliberately not re-exported** from `helpers-only.ts`. The dts plugin excludes that file from type emission, and Vitest coverage excludes it from thresholds. When promoting a future format to public, follow the eight-step checklist in `CONTRIBUTING.md` ("Adding a new format").
+### Public surface
+
+`NormalizedQuestion` is a 19-member discriminated union on `format`. All format types and their content types are exported from `helpers-only.ts`. The normalizer uses a `FORMAT_NORMALIZERS` map for dispatch — adding a format means adding a normalizer function and a map entry. The `VisualQuestion<F, I, C>` generic (internal, not exported) DRYs up the 17 visual format type definitions.
 
 ### Question pipeline
 
-Raw bank rows → `parseQuestion` → `normalizeQuestion` → `NormalizedQuestion`. Validation happens through `validateAnswer` (which also matches distractors by `errorType`). Multiple-choice rendering goes through `buildChoicePool` + `shuffleChoices`. Currency for money questions is inferred from `-USD`/`-CAD` suffixes on skill IDs in `normalizer.ts:inferCurrency` — both suffixes present throws `NormalizeError`.
+Raw bank rows → `normalizeQuestion` → `NormalizedQuestion`. The normalizer accepts both `id` and `question_id` fields (raw DB rows use the latter). Shared utilities (`extractBase`, `extractAnswer`, `requireContent`, `resolveImageType`, `getNumber`, `getNumberArray`) DRY up the 19 per-format normalizers. Validation happens through `validateAnswer` (which also matches distractors by `errorType`). `buildChoicePool` filters out empty-string distractors and deduplicates. Currency for money questions is inferred from `-USD`/`-CAD` suffixes on skill IDs in `normalizer.ts:inferCurrency`.
 
 ### Coin pile rendering
 
@@ -85,4 +93,8 @@ Adding a helper / attribute / event field / CSS part / CSS var = **minor**. Rena
 
 ## Coverage thresholds
 
-Vitest enforces 90/90/85/90 (lines / functions / branches / statements) on `src/**/*.ts`. Re-export files (`index.ts`, `full.ts`, `helpers-only.ts`, `elements/coin-pile.ts`), `src/elements/**` (covered by browser tests), and `src/internal/future-formats.ts` are excluded.
+Vitest enforces 90/90/85/90 (lines / functions / branches / statements) on `src/**/*.ts`. Re-export files (`index.ts`, `full.ts`, `helpers-only.ts`, `elements/coin-pile.ts`, `elements/canvas-question.ts`) and `src/elements/**` (covered by browser tests) are excluded.
+
+## DB snapshots
+
+`scripts/db-snapshot/snapshot.sh` dumps question-bank data from local Postgres into JSON files. The JSON files are gitignored; the script is tracked. Output has literal `\n` between array elements (psql artifact) — in browser contexts, parse with `text.replace(/\\n/g, '\n')` before `JSON.parse`. The example page at `examples/vanilla-html/` uses these files.

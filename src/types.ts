@@ -1,8 +1,5 @@
 // Public contract for the lib. Consumers import types from here.
 // Bank's raw row shape is NOT exported — only NormalizedQuestion is.
-// v0 public union: MoneyQuestion | TextOnlyQuestion. Future formats are
-// gated behind minor versions when their renderers ship — they do not exist
-// in the public surface yet.
 
 export type GradeBand = 'sprout' | 'adventure' | 'thunder';
 
