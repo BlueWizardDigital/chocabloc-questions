@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [
     dts({
       include: ['src/**/*.ts'],
-      exclude: ['src/internal/future-formats.ts', 'tests/**'],
+      exclude: ['tests/**'],
       outDir: 'dist',
       entryRoot: 'src',
       rollupTypes: false,
@@ -23,6 +23,7 @@ export default defineConfig({
         'helpers-only': resolve(__dirname, 'src/helpers-only.ts'),
         full: resolve(__dirname, 'src/full.ts'),
         'elements/coin-pile': resolve(__dirname, 'src/elements/coin-pile.ts'),
+        'elements/canvas-question': resolve(__dirname, 'src/elements/canvas-question.ts'),
       },
       formats: ['es', 'cjs'],
       fileName: (format, entryName) =>

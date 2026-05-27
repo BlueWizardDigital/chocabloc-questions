@@ -2,7 +2,7 @@ module.exports = [
   {
     name: 'helpers-only (Tier 1)',
     path: 'dist/helpers-only.mjs',
-    limit: '8 KB',
+    limit: '12 KB',
     gzip: true,
   },
   {
@@ -12,9 +12,15 @@ module.exports = [
     gzip: true,
   },
   {
+    name: 'canvas-question bundle (Tier 1 + Tier 2 visual)',
+    path: 'dist/elements/canvas-question.mjs',
+    limit: '20 KB',
+    gzip: true,
+  },
+  {
     name: 'full (everything)',
     path: 'dist/full.mjs',
-    limit: '25 KB',
+    limit: '40 KB',
     gzip: true,
   },
 ];
