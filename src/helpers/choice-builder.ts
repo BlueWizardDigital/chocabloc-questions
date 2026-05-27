@@ -9,13 +9,17 @@ export type ChoiceBuilderOptions = {
 
 function getQuestionCurrency(q: NormalizedQuestion): Currency | undefined {
   if (q.format === 'money') {
-    return (q as { currency?: Currency }).currency;
+    return q.content.currency;
   }
   return undefined;
 }
 
 function labelFor(value: AnswerValue, q: NormalizedQuestion): string {
-  return formatAnswerForDisplay(value, q.format, { currency: getQuestionCurrency(q) });
+  const currency = getQuestionCurrency(q);
+  if (currency) {
+    return formatAnswerForDisplay(value, q.format, { currency });
+  }
+  return formatAnswerForDisplay(value, q.format);
 }
 
 function mulberry32(seed: number): () => number {
