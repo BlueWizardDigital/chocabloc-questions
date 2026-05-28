@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`base10_blocks` format** — full pipeline: types, normalizer, canvas renderer,
+  CSS custom properties. Handles 4 DB operations (`base10_count`, `base10_block_count`,
+  `base10_regroup`, `base10_compare`) under single normalized `format: 'base10_blocks'`.
+  Thousands cubes render with 3D faces; place highlighting (pink stroke) for
+  `base10_block_count`; side-by-side comparison layout for `base10_compare`;
+  auto-scaling to fit canvas.
+- **CSS vars for base10 block colors**: `--cq-b10-ones`, `--cq-b10-tens`,
+  `--cq-b10-hundreds`, `--cq-b10-thousands`, `--cq-b10-stroke`.
+- `base10_blocks` added to DB snapshot script and vanilla HTML example.
+
+### Changed
+
+- `NormalizedQuestion` union expanded to 20 formats.
+- Coin-pile size budget bumped 16 → 17 KB (shared normalizer growth via dispatcher).
+
 ## [0.1.0-alpha.6] — 2026-05-27
 
 ### Added (full format expansion)

@@ -58,11 +58,11 @@ Build outputs five bundles: `index`, `helpers-only`, `full`, `elements/coin-pile
 
 ### Public surface
 
-`NormalizedQuestion` is a 19-member discriminated union on `format`. All format types and their content types are exported from `helpers-only.ts`. The normalizer uses a `FORMAT_NORMALIZERS` map for dispatch — adding a format means adding a normalizer function and a map entry. The `VisualQuestion<F, I, C>` generic (internal, not exported) DRYs up the 17 visual format type definitions.
+`NormalizedQuestion` is a 20-member discriminated union on `format`. All format types and their content types are exported from `helpers-only.ts`. The normalizer uses a `FORMAT_NORMALIZERS` map for dispatch — adding a format means adding a normalizer function and a map entry. The `VisualQuestion<F, I, C>` generic (internal, not exported) DRYs up the 18 visual format type definitions.
 
 ### Question pipeline
 
-Raw bank rows → `normalizeQuestion` → `NormalizedQuestion`. The normalizer accepts both `id` and `question_id` fields (raw DB rows use the latter). Shared utilities (`extractBase`, `extractAnswer`, `requireContent`, `resolveImageType`, `getNumber`, `getNumberArray`) DRY up the 19 per-format normalizers. Validation happens through `validateAnswer` (which also matches distractors by `errorType`). `buildChoicePool` filters out empty-string distractors and deduplicates. Currency for money questions is inferred from `-USD`/`-CAD` suffixes on skill IDs in `normalizer.ts:inferCurrency`.
+Raw bank rows → `normalizeQuestion` → `NormalizedQuestion`. The normalizer accepts both `id` and `question_id` fields (raw DB rows use the latter). Shared utilities (`extractBase`, `extractAnswer`, `requireContent`, `resolveImageType`, `getNumber`, `getNumberArray`) DRY up the 20 per-format normalizers. Validation happens through `validateAnswer` (which also matches distractors by `errorType`). `buildChoicePool` filters out empty-string distractors and deduplicates. Currency for money questions is inferred from `-USD`/`-CAD` suffixes on skill IDs in `normalizer.ts:inferCurrency`.
 
 ### Coin pile rendering
 

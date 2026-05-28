@@ -66,6 +66,19 @@ themes are expected to meet the same bar.
 | `--cq-coin-loonie-img` | `none` | Loonie sprite URL |
 | `--cq-coin-toonie-img` | `none` | Toonie sprite URL |
 
+## `<choca-canvas-question>` — base-10 blocks
+
+Applies when `format === 'base10_blocks'`. These vars are read from the host
+element via `getComputedStyle` and passed to the canvas draw function.
+
+| Var | Default | Purpose |
+|-----|---------|---------|
+| `--cq-b10-ones` | `#90caf9` | Unit cube fill |
+| `--cq-b10-tens` | `#a5d6a7` | Ten rod fill |
+| `--cq-b10-hundreds` | `#ffcc80` | Hundred flat fill |
+| `--cq-b10-thousands` | `#ef9a9a` | Thousand cube fill |
+| `--cq-b10-stroke` | `#000` | Block stroke/outline color |
+
 ## `<choca-choice-pad>` specific
 
 | Part | What it targets |

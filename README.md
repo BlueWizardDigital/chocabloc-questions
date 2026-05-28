@@ -91,7 +91,7 @@ from DB snapshot data with per-card cycling.
 
 ## Supported formats
 
-19-member discriminated union on `format`:
+20-member discriminated union on `format`:
 
 | Format | Image type | Renderer |
 |--------|-----------|----------|
@@ -115,6 +115,7 @@ from DB snapshot data with per-card cycling.
 | `fraction_concept` | `fraction_visual` | `ChocaCanvasQuestion` |
 | `time` | `analog_clock` | `ChocaCanvasQuestion` |
 | `coordinate_distance` | `coordinate_plane` | `ChocaCanvasQuestion` |
+| `base10_blocks` | `base10_blocks` | `ChocaCanvasQuestion` |
 
 ```ts
 type NormalizedQuestion =
@@ -124,7 +125,7 @@ type NormalizedQuestion =
   | GeometryAreaQuestion | GeometryAnglesQuestion | GeometryPerimeterQuestion
   | GeometryCircumferenceQuestion | GeometryAngleClassifyQuestion
   | GeometryCirclePartsQuestion | DataGraphQuestion | FractionConceptQuestion
-  | TimeQuestion | CoordinateDistanceQuestion;
+  | TimeQuestion | CoordinateDistanceQuestion | Base10BlocksQuestion;
 ```
 
 ## Theming
