@@ -35,6 +35,9 @@ describe('parseInputAnswer', () => {
   it('parses plain number for degrees', () => {
     expect(parseInputAnswer('90', 'geometry_angles')).toBe(90);
   });
+  it('strips degree symbol for angle_classify', () => {
+    expect(parseInputAnswer('90°', 'geometry_angle_classify')).toBe(90);
+  });
   it('parses integer for numeric formats', () => {
     expect(parseInputAnswer('24', 'geometry_area')).toBe(24);
   });
