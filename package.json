@@ -29,6 +29,12 @@
       "import": "./dist/elements/coin-pile.mjs"
     }
   },
+  "sideEffects": [
+    "./dist/full.mjs",
+    "./dist/full.cjs",
+    "./dist/elements/coin-pile.mjs",
+    "./dist/elements/canvas-question.mjs"
+  ],
   "files": [
     "dist",
     "README.md",
