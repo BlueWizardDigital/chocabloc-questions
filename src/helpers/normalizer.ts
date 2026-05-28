@@ -134,6 +134,7 @@ function extractBase(r: Record<string, unknown>): {
   id: string;
   skillIds: string[];
   prompt?: string;
+  answerMode?: 'choice' | 'input';
 } {
   const id = getString(r, 'id', 'question_id');
   if (!id) throw new NormalizeError('Question missing id', r);
@@ -146,7 +147,13 @@ function extractBase(r: Record<string, unknown>): {
     (typeof (r['content'] as Record<string, unknown> | undefined)?.['prompt'] === 'string'
       ? ((r['content'] as Record<string, unknown>)['prompt'] as string)
       : undefined);
-  return { id, skillIds, ...(promptRaw ? { prompt: promptRaw } : {}) };
+  const rawMode = getString(r, 'answerMode', 'answer_mode');
+  const answerMode = rawMode === 'input' || rawMode === 'choice' ? rawMode : undefined;
+  return {
+    id, skillIds,
+    ...(promptRaw ? { prompt: promptRaw } : {}),
+    ...(answerMode ? { answerMode } : {}),
+  };
 }
 
 function extractAnswer(r: Record<string, unknown>): AnswerValue {
@@ -177,7 +184,7 @@ function resolveImageType(
 }
 
 function normalizeMoneyRow(r: Record<string, unknown>): MoneyQuestion {
-  const { id, skillIds, prompt: promptRaw } = extractBase(r);
+  const { id, skillIds, prompt: promptRaw, answerMode } = extractBase(r);
   if (skillIds.length === 0) {
     throw new NormalizeError('Money question missing skill_ids', r);
   }
@@ -191,11 +198,12 @@ function normalizeMoneyRow(r: Record<string, unknown>): MoneyQuestion {
     content, answer: r['answer'], distractors: normalizeDistractors(r['distractors']),
   };
   if (promptRaw) out.prompt = promptRaw;
+  if (answerMode) out.answerMode = answerMode;
   return out;
 }
 
 function normalizeTextRow(r: Record<string, unknown>): TextOnlyQuestion {
-  const { id, skillIds } = extractBase(r);
+  const { id, skillIds, answerMode } = extractBase(r);
   const c = requireContent(r);
   const stem = getString(c, 'stem');
   if (!stem) throw new NormalizeError('Text question missing stem', r);
@@ -211,6 +219,7 @@ function normalizeTextRow(r: Record<string, unknown>): TextOnlyQuestion {
     id, skillIds, format: 'text', content: { stem },
     answer: answer as TextOnlyQuestion['answer'],
     distractors: normalizeDistractors(r['distractors']),
+    ...(answerMode ? { answerMode } : {}),
   };
 }
 

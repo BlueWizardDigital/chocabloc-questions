@@ -253,3 +253,34 @@ describe('normalizeQuestion — text format', () => {
     expect(() => normalizeQuestion(raw)).toThrow(/Unsupported format/);
   });
 });
+
+describe('answerMode passthrough', () => {
+  it('passes answerMode: input through', () => {
+    const raw = {
+      id: 'INPUT-1', format: 'money', skill_ids: ['MONEY-COIN-VALUE-USD'],
+      content: { coins: { quarter: 1 } }, answer: 25, distractors: [],
+      answerMode: 'input',
+    };
+    const q = normalizeQuestion(raw);
+    expect(q?.answerMode).toBe('input');
+  });
+
+  it('reads snake_case answer_mode', () => {
+    const raw = {
+      id: 'SNAKE-1', format: 'money', skill_ids: ['MONEY-COIN-VALUE-USD'],
+      content: { coins: { quarter: 1 } }, answer: 25, distractors: [],
+      answer_mode: 'input',
+    };
+    const q = normalizeQuestion(raw);
+    expect(q?.answerMode).toBe('input');
+  });
+
+  it('leaves undefined when absent', () => {
+    const raw = {
+      id: 'NONE-1', format: 'money', skill_ids: ['MONEY-COIN-VALUE-USD'],
+      content: { coins: { quarter: 1 } }, answer: 25, distractors: [],
+    };
+    const q = normalizeQuestion(raw);
+    expect(q?.answerMode).toBeUndefined();
+  });
+});

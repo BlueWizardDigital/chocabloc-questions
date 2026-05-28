@@ -42,6 +42,7 @@ export type BaseQuestion = {
   // Human-readable question stem. Optional — renderers fall back to a
   // format-appropriate default if unset.
   prompt?: string;
+  answerMode?: 'choice' | 'input';
 };
 
 // USD / CAD content variants discriminated on currency
@@ -283,3 +284,17 @@ export class NormalizeError extends Error {
     this.name = 'NormalizeError';
   }
 }
+
+export type ToolName = 'whiteboard' | 'calculator' | 'place-value-chart';
+
+export type AnsweredDetail = {
+  questionId: string;
+  studentAnswer: AnswerValue;
+  correct: boolean;
+  distractorMatched: Distractor | null;
+  skillTags: SkillId[];
+  expected: AnswerValue;
+  timeToAnswerMs: number;
+  toolsUsed?: ToolName[];
+  rawInput?: string;
+};

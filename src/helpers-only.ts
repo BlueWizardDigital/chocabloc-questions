@@ -42,6 +42,8 @@ export {
   COIN_VALUES_CAD,
 } from './helpers/computers/money';
 
+export { parseInputAnswer } from './helpers/input-parser';
+
 export type {
   NormalizedQuestion,
   MoneyQuestion,
@@ -94,6 +96,8 @@ export type {
   CoinName,
   GradeBand,
   SkillId,
+  ToolName,
+  AnsweredDetail,
 } from './types';
 
 export { SCHEMA_VERSION, ParseError, NormalizeError } from './types';
