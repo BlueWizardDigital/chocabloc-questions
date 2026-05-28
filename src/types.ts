@@ -241,7 +241,33 @@ export type MoneyBudgetAdjustQuestion = VisualQuestion<
   MoneyBudgetAdjustContent
 >;
 
-// PUBLIC union — all 19 formats.
+// — Base-10 blocks —
+
+export type Base10Blocks = {
+  thousands?: number;
+  hundreds?: number;
+  tens?: number;
+  ones?: number;
+};
+
+export type Base10BlocksContent = {
+  operation: string;
+  blocks?: Base10Blocks;
+  number?: number;
+  place?: string;
+  tens_shown?: number;
+  ones_shown?: number;
+  set_a?: { number: number; blocks: Base10Blocks };
+  set_b?: { number: number; blocks: Base10Blocks };
+};
+
+export type Base10BlocksQuestion = VisualQuestion<
+  'base10_blocks',
+  'base10_blocks',
+  Base10BlocksContent
+>;
+
+// PUBLIC union — all 20 formats.
 export type NormalizedQuestion =
   | MoneyQuestion
   | TextOnlyQuestion
@@ -261,7 +287,8 @@ export type NormalizedQuestion =
   | TimeQuestion
   | PatternQuestion
   | CoordinateDistanceQuestion
-  | MoneyBudgetAdjustQuestion;
+  | MoneyBudgetAdjustQuestion
+  | Base10BlocksQuestion;
 
 export type QuestionFormat = NormalizedQuestion['format'];
 

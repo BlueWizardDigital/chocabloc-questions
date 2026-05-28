@@ -6,7 +6,8 @@ import {
   drawRightTriangle, drawTriangleAngles, drawPerimeterShape,
   drawAreaShape, drawCircumference, drawFractionVisual, drawAngle,
   drawCircleParts, drawCompoundShape, drawArray,
-  drawAnalogClock, drawCoordinatePlane,
+  drawAnalogClock, drawCoordinatePlane, drawBase10Blocks,
+  type Base10Colors,
 } from './canvas-draws';
 import './ChocaChoicePad';
 
@@ -129,6 +130,13 @@ export class ChocaCanvasQuestion extends HTMLElement {
       else if (q.format === 'time') text = 'What time is shown?';
       else if (q.format === 'coordinate_distance') text = 'What is the distance between the points?';
       else if (q.format === 'multiplication') text = `What is ${q.content.operands[0]} × ${q.content.operands[1]}?`;
+      else if (q.format === 'base10_blocks') {
+        const op = q.content.operation;
+        if (op === 'base10_compare') text = 'Which set shows a greater number?';
+        else if (op === 'base10_block_count' && q.content.place) text = `How many ${q.content.place} blocks?`;
+        else if (op === 'base10_regroup') text = 'How can you regroup these blocks?';
+        else text = 'What number do these blocks show?';
+      }
       else text = 'Solve:';
     }
     this._promptEl.textContent = text;
@@ -194,6 +202,18 @@ export class ChocaCanvasQuestion extends HTMLElement {
       case 'coordinate_distance':
         drawCoordinatePlane(ctx, w, h, q.content.point1, q.content.point2);
         break;
+      case 'base10_blocks': {
+        const cs = getComputedStyle(this);
+        const rv = (name: string) => cs.getPropertyValue(name).trim();
+        const b10Colors: Base10Colors = {};
+        const ones = rv('--cq-b10-ones');     if (ones) b10Colors.fillOnes = ones;
+        const tens = rv('--cq-b10-tens');      if (tens) b10Colors.fillTens = tens;
+        const huns = rv('--cq-b10-hundreds');  if (huns) b10Colors.fillHundreds = huns;
+        const thou = rv('--cq-b10-thousands'); if (thou) b10Colors.fillThousands = thou;
+        const strk = rv('--cq-b10-stroke');    if (strk) b10Colors.stroke = strk;
+        drawBase10Blocks(ctx, w, h, q.content, b10Colors);
+        break;
+      }
       default:
         break;
     }

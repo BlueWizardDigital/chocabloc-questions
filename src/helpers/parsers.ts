@@ -106,6 +106,7 @@ const VISUAL_FORMAT_STRINGS: ReadonlySet<string> = new Set([
   'pattern',
   'coordinate_distance',
   'money_budget_adjust',
+  'base10_blocks',
 ]);
 
 function isValidVisualQuestion(r: Record<string, unknown>): boolean {

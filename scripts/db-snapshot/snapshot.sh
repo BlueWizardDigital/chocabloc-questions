@@ -115,7 +115,7 @@ run_json "visual skills" \
 for img_type in coins table angle circle_parts compound_shape right_triangle \
                 bar_graph pictograph shape_2d shape_3d fraction_visual \
                 analog_clock coordinate_grid coordinate_plane number_line \
-                pattern_visual shape_shaded array; do
+                pattern_visual shape_shaded array base10_blocks; do
   run_json "$img_type questions (up to 10)" \
     "SELECT sub.*
      FROM (

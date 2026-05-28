@@ -25,6 +25,9 @@ import type {
   PatternQuestion,
   CoordinateDistanceQuestion,
   MoneyBudgetAdjustQuestion,
+  Base10BlocksQuestion,
+  Base10Blocks,
+  Base10BlocksContent,
 } from '../types';
 import { NormalizeError } from '../types';
 import { parseQuestion, isQuestionLike } from './parsers';
@@ -483,6 +486,61 @@ function normalizeMoneyBudgetAdjustRow(r: Record<string, unknown>): MoneyBudgetA
   };
 }
 
+function parseBlocks(raw: unknown): Base10Blocks {
+  if (typeof raw !== 'object' || raw === null) return {};
+  const b = raw as Record<string, unknown>;
+  return {
+    ...(typeof b['thousands'] === 'number' ? { thousands: b['thousands'] } : {}),
+    ...(typeof b['hundreds'] === 'number' ? { hundreds: b['hundreds'] } : {}),
+    ...(typeof b['tens'] === 'number' ? { tens: b['tens'] } : {}),
+    ...(typeof b['ones'] === 'number' ? { ones: b['ones'] } : {}),
+  };
+}
+
+function normalizeBase10BlocksRow(r: Record<string, unknown>): Base10BlocksQuestion {
+  const base = extractBase(r);
+  const c = requireContent(r);
+  const operation = getString(c, 'operation') ?? 'base10_count';
+  const content: Base10BlocksContent = { operation };
+
+  content.blocks = parseBlocks(c['blocks']);
+
+  const num = getNumber(c, 'number');
+  if (num !== undefined) content.number = num;
+
+  const place = getString(c, 'place');
+  if (place) content.place = place;
+
+  const tensShown = getNumber(c, 'tens_shown');
+  if (tensShown !== undefined) content.tens_shown = tensShown;
+  const onesShown = getNumber(c, 'ones_shown');
+  if (onesShown !== undefined) content.ones_shown = onesShown;
+
+  if (operation === 'base10_compare') {
+    const rawA = c['set_a'];
+    if (typeof rawA === 'object' && rawA !== null) {
+      const sa = rawA as Record<string, unknown>;
+      content.set_a = {
+        number: getNumber(sa, 'number') ?? 0,
+        blocks: parseBlocks(sa['blocks']),
+      };
+    }
+    const rawB = c['set_b'];
+    if (typeof rawB === 'object' && rawB !== null) {
+      const sb = rawB as Record<string, unknown>;
+      content.set_b = {
+        number: getNumber(sb, 'number') ?? 0,
+        blocks: parseBlocks(sb['blocks']),
+      };
+    }
+  }
+
+  return {
+    ...base, format: 'base10_blocks', imageType: 'base10_blocks',
+    content, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+  };
+}
+
 const FORMAT_NORMALIZERS: Record<string, (r: Record<string, unknown>) => NormalizedQuestion> = {
   money: normalizeMoneyRow,
   text: normalizeTextRow,
@@ -503,6 +561,11 @@ const FORMAT_NORMALIZERS: Record<string, (r: Record<string, unknown>) => Normali
   pattern: normalizePatternRow,
   coordinate_distance: normalizeCoordinateDistanceRow,
   money_budget_adjust: normalizeMoneyBudgetAdjustRow,
+  base10_blocks: normalizeBase10BlocksRow,
+  base10_count: normalizeBase10BlocksRow,
+  base10_block_count: normalizeBase10BlocksRow,
+  base10_regroup: normalizeBase10BlocksRow,
+  base10_compare: normalizeBase10BlocksRow,
 };
 
 function doNormalize(raw: unknown): NormalizedQuestion {
