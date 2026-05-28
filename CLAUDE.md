@@ -54,7 +54,11 @@ The library is intentionally split into two tiers, each with its own entry point
 
   Side-effect imports in `src/full.ts`, `src/elements/coin-pile.ts`, and `src/elements/canvas-question.ts` register elements via `customElements.define`.
 
-Build outputs five bundles: `index`, `helpers-only`, `full`, `elements/coin-pile`, and `elements/canvas-question`. Size budgets in `.size-limit.cjs` (helpers-only 12 KB gz, coin-pile 15 KB gz, canvas-question 20 KB gz, full 40 KB gz).
+Build outputs five bundles: `index`, `helpers-only`, `full`, `elements/coin-pile`, and `elements/canvas-question`. Size budgets in `.size-limit.cjs` (helpers-only 12 KB gz, coin-pile 17 KB gz, canvas-question 20 KB gz, full 45 KB gz).
+
+### Tree-shaking
+
+`package.json` declares `sideEffects` so consumer bundlers can tree-shake pure-logic imports. `helpers-only` and `index` are side-effect-free; `full`, `elements/coin-pile`, and `elements/canvas-question` are listed as side-effectful (they call `customElements.define()`). If a new entry point is added that registers custom elements, it must be added to the `sideEffects` array. Verify with `node tests/tree-shake-test.mjs` — it builds a helpers-only import and asserts no Web Component code leaks.
 
 ### Public surface
 

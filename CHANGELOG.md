@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **`sideEffects` field** in `package.json` — enables consumer bundlers to
+  tree-shake unused exports from `helpers-only` and `index` entry points.
+  Side-effectful entries (`full`, `coin-pile`, `canvas-question`) are listed
+  explicitly so `customElements.define()` calls are preserved.
+- **Tree-shake verification script** at `tests/tree-shake-test.mjs` — builds
+  a helpers-only import via Vite and asserts no Web Component code leaks into
+  the output.
+
 - **`base10_blocks` format** — full pipeline: types, normalizer, canvas renderer,
   CSS custom properties. Handles 4 DB operations (`base10_count`, `base10_block_count`,
   `base10_regroup`, `base10_compare`) under single normalized `format: 'base10_blocks'`.

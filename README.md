@@ -66,7 +66,11 @@ const q = normalizeQuestion(rawBankRow);
 />
 ```
 
-For tree-shaking, import only what you need:
+The `sideEffects` field in `package.json` tells bundlers which entry points
+are safe to tree-shake. Importing from `chocabloc-questions` or
+`chocabloc-questions/helpers` lets your bundler drop anything you don't use.
+
+For finer control over which Web Components ship, import individual entries:
 
 ```jsx
 import 'chocabloc-questions/elements/coin-pile';       // money only
