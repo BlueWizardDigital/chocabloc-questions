@@ -35,8 +35,9 @@ export function isQuestionLike(raw: unknown): boolean {
 function isValidAnswerValue(v: unknown): v is AnswerValue {
   if (typeof v === 'number') return Number.isFinite(v);
   if (typeof v === 'string') return true;
-  if (Array.isArray(v) && v.length === 2) {
-    return v.every((n) => typeof n === 'number' && Number.isFinite(n));
+  if (Array.isArray(v)) {
+    if (v.length === 2 && v.every((n) => typeof n === 'number' && Number.isFinite(n))) return true;
+    if (v.every((n) => typeof n === 'string')) return true;
   }
   return false;
 }

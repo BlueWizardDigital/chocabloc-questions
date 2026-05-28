@@ -4,8 +4,7 @@ import type {
   MoneyQuestion,
   USDCoinName,
 } from '../types';
-import { buildChoicePool } from '../helpers/choice-builder';
-import { validateAnswer } from '../helpers/validators';
+import { syncChoicePad, handlePick } from './shared-pad';
 import { formatCoinCountForScreenReader } from '../helpers/formatters';
 import './ChocaChoicePad';
 
@@ -219,21 +218,7 @@ export class ChocaCoinPile extends HTMLElement {
 
   private _renderChoices(): void {
     if (!this._question) return;
-    const seedAttr = this.getAttribute('seed');
-    const seed = seedAttr !== null ? Number.parseInt(seedAttr, 10) : undefined;
-    const opts: { shuffle: boolean; seed?: number } = { shuffle: true };
-    if (typeof seed === 'number' && Number.isFinite(seed)) {
-      opts.seed = seed;
-    }
-    const pool: Choice[] = buildChoicePool(this._question, opts);
-    (this._defaultPad as HTMLElement & { choices: Choice[] }).choices = pool;
-    const mode = this.getAttribute('answer-mode') ?? 'mc';
-    this._defaultPad.setAttribute('mode', mode);
-    if (this.hasAttribute('disabled')) {
-      this._defaultPad.setAttribute('disabled', '');
-    } else {
-      this._defaultPad.removeAttribute('disabled');
-    }
+    syncChoicePad(this._question, this._defaultPad, this);
   }
 
   private _renderLiveRegion(): void {
@@ -251,26 +236,7 @@ export class ChocaCoinPile extends HTMLElement {
 
   private _onPicked(choice: Choice): void {
     if (!this._question) return;
-    const studentAnswer = choice.value;
-    void validateAnswer(this._question, studentAnswer).then((verdict) => {
-      const timeToAnswerMs = performance.now() - this._renderedAt;
-      this.dispatchEvent(
-        new CustomEvent('answered', {
-          detail: {
-            questionId: this._question!.id,
-            studentAnswer,
-            correct: verdict.correct,
-            distractorMatched: verdict.distractorMatched,
-            skillTags: verdict.skillTags,
-            expected: verdict.expected,
-            timeToAnswerMs,
-          },
-          bubbles: true,
-          composed: true,
-        }),
-      );
-      this._defaultPad.setAttribute('disabled', '');
-    });
+    handlePick(this, this._question, choice, this._renderedAt, this._defaultPad);
   }
 }
 

@@ -5,11 +5,12 @@ export type GradeBand = 'sprout' | 'adventure' | 'thunder';
 
 export type SkillId = string; // UPPER-KEBAB convention, e.g. 'MONEY-COIN-VALUE-USD'
 
-export type AnswerValue = number | string | [number, number];
+export type AnswerValue = number | string | [number, number] | string[];
 
 export type Distractor = {
   value: AnswerValue;
   errorType: string;
+  label?: string;
 };
 
 export type Choice = {
@@ -43,6 +44,7 @@ export type BaseQuestion = {
   // format-appropriate default if unset.
   prompt?: string;
   answerMode?: 'choice' | 'input';
+  answerDisplay?: string;
 };
 
 // USD / CAD content variants discriminated on currency

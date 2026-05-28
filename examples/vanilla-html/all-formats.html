@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>chocabloc-questions — ALL 99 Formats</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui; padding: 32px; max-width: 1200px; margin: 0 auto; background: #fafafa; }
+    h1 { margin-bottom: 4px; }
+    .intro { color: #555; margin-bottom: 16px; }
+    .stats { font-size: 0.85rem; color: #666; margin-bottom: 24px; padding: 8px 12px; background: #e8f5e9; border-radius: 8px; }
+    .stats .err { color: #c62828; }
+
+    .nav { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 24px; }
+    .nav a {
+      padding: 3px 8px; border-radius: 4px; font-size: 0.72rem;
+      background: #e3f2fd; color: #1565c0; text-decoration: none;
+    }
+    .nav a:hover { background: #bbdefb; }
+    .nav a.text-only { background: #fff3e0; color: #e65100; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px; }
+
+    .card {
+      border: 1px solid #ddd; border-radius: 10px; overflow: hidden; background: #fff;
+    }
+    .card-header {
+      padding: 6px 12px; background: #f5f5f5; font-size: 0.8rem;
+      font-weight: 600; color: #333; border-bottom: 1px solid #ddd;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .card-header code { font-weight: 400; color: #888; font-size: 0.7rem; }
+    .card-header .spacer { flex: 1; }
+    .card-header .counter { font-weight: 400; color: #999; font-size: 0.7rem; }
+    .nav-btn {
+      padding: 2px 8px; border-radius: 4px; border: 1px solid #ccc;
+      background: #fff; cursor: pointer; font-size: 0.7rem; color: #555;
+    }
+    .nav-btn:hover { background: #e3f2fd; }
+    .mode-btn {
+      padding: 2px 8px; border-radius: 4px; border: 1px solid #a5d6a7;
+      background: #e8f5e9; cursor: pointer; font-size: 0.65rem; color: #2e7d32;
+    }
+    .mode-btn:hover { background: #c8e6c9; }
+    .mode-btn.active { background: #2e7d32; color: #fff; }
+
+    chocabloc-question {
+      --cq-font: system-ui, sans-serif;
+      --cq-text: #1C2B45;
+      --cq-coin-size: 48px;
+      --cq-choice-bg: #D4881F;
+      --cq-choice-text: #FFF;
+      --cq-choice-radius: 8px;
+    }
+
+    .card-footer {
+      padding: 6px 12px; font-family: monospace; font-size: 0.7rem;
+      background: #fafafa; border-top: 1px solid #eee;
+    }
+    .result { color: #666; }
+  </style>
+</head>
+<body>
+  <h1>chocabloc-questions — all 99 formats</h1>
+  <p class="intro">Loads every question file from the mathSkills bank, groups by format, renders via &lt;chocabloc-question&gt;.</p>
+  <div class="stats" id="stats">Loading...</div>
+  <nav class="nav" id="nav"></nav>
+  <div class="grid" id="grid"></div>
+
+  <script type="module">
+    import '../../dist/full.mjs';
+    import { normalizeQuestion } from '../../dist/helpers-only.mjs';
+
+    const grid = document.getElementById('grid');
+    const nav = document.getElementById('nav');
+    const stats = document.getElementById('stats');
+
+    // Load all question files from the mathSkills question bank
+    const skillListResp = await fetch('../../../../public/data/skills/skills.json');
+    const skills = await skillListResp.json();
+    const skillIds = skills.map(s => s.skill_id || s.id);
+
+    const byFormat = new Map();
+    let totalQ = 0, okQ = 0, errQ = 0;
+
+    for (const sid of skillIds) {
+      try {
+        const resp = await fetch(`../../../../public/data/questions/questions/${sid}.json`);
+        if (!resp.ok) continue;
+        const rows = await resp.json();
+        for (const r of rows) {
+          totalQ++;
+          const fmt = r.format || 'unknown';
+          if (!byFormat.has(fmt)) byFormat.set(fmt, []);
+          byFormat.get(fmt).push(r);
+        }
+      } catch { /* skip */ }
+    }
+
+    // Sort formats: visual first, text-only second
+    const sorted = [...byFormat.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+
+    for (const [format, rows] of sorted) {
+      let idx = 0;
+
+      const slug = format.replace(/[^a-z0-9_]+/g, '-');
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.id = slug;
+
+      const header = document.createElement('div');
+      header.className = 'card-header';
+      const titleSpan = document.createElement('span');
+      titleSpan.textContent = format;
+      const codeSpan = document.createElement('code');
+      codeSpan.textContent = rows[0].image_type || 'text-only';
+      const spacer = document.createElement('span');
+      spacer.className = 'spacer';
+      const counter = document.createElement('span');
+      counter.className = 'counter';
+      const prevBtn = document.createElement('button');
+      prevBtn.className = 'nav-btn';
+      prevBtn.textContent = '◀';
+      const nextBtn = document.createElement('button');
+      nextBtn.className = 'nav-btn';
+      nextBtn.textContent = '▶';
+      const modeBtn = document.createElement('button');
+      modeBtn.className = 'mode-btn';
+      modeBtn.textContent = 'input';
+      modeBtn.style.display = 'none';
+      header.append(titleSpan, codeSpan, spacer, counter, modeBtn, prevBtn, nextBtn);
+
+      const el = document.createElement('chocabloc-question');
+      el.setAttribute('whiteboard', '');
+
+      const footer = document.createElement('div');
+      footer.className = 'card-footer';
+      const resultSpan = document.createElement('span');
+      resultSpan.className = 'result';
+      footer.appendChild(resultSpan);
+
+      card.append(header, el, footer);
+      grid.appendChild(card);
+
+      const link = document.createElement('a');
+      link.href = '#' + slug;
+      link.textContent = `${format} (${rows.length})`;
+      link.className = rows[0].image_type ? '' : 'text-only';
+      nav.appendChild(link);
+
+      let useInput = false;
+      let supportsInput = false;
+
+      function load(index) {
+        const raw = rows[index];
+        counter.textContent = `${index + 1}/${rows.length}`;
+        resultSpan.textContent = 'awaiting answer...';
+        resultSpan.style.color = '#666';
+        try {
+          const q = normalizeQuestion(raw);
+          supportsInput = q.answerMode === 'input';
+          modeBtn.style.display = supportsInput ? '' : 'none';
+          modeBtn.textContent = useInput ? 'mc' : 'input';
+          modeBtn.className = useInput ? 'mode-btn active' : 'mode-btn';
+          el.setAttribute('seed', String(Math.floor(Math.random() * 10000)));
+          el.setAttribute('answer-mode', useInput && supportsInput ? 'input' : 'mc');
+          el.question = q;
+          okQ++;
+        } catch (err) {
+          resultSpan.textContent = '❌ ' + err.message;
+          resultSpan.style.color = '#c62828';
+          errQ++;
+        }
+      }
+
+      el.addEventListener('answered', (e) => {
+        const d = e.detail;
+        resultSpan.textContent = d.correct
+          ? `✓ ${d.studentAnswer} (${Math.round(d.timeToAnswerMs)}ms)`
+          : `✗ picked ${d.studentAnswer}, expected ${d.expected}`;
+        resultSpan.style.color = d.correct ? '#2e7d32' : '#c62828';
+      });
+
+      modeBtn.onclick = () => { useInput = !useInput; load(idx); };
+      prevBtn.onclick = () => { idx = (idx - 1 + rows.length) % rows.length; load(idx); };
+      nextBtn.onclick = () => { idx = (idx + 1) % rows.length; load(idx); };
+
+      load(0);
+    }
+
+    stats.innerHTML = `<b>${sorted.length}</b> formats, <b>${totalQ}</b> questions loaded.` +
+      (errQ > 0 ? ` <span class="err">${errQ} errors.</span>` : ' All normalized successfully.');
+  </script>
+</body>
+</html>
