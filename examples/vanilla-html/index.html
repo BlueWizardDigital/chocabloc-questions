@@ -31,11 +31,11 @@
     .card-header .spacer { flex: 1; }
     .card-header .counter { font-weight: 400; color: #999; font-size: 0.75rem; }
 
-    .next-btn {
+    .nav-btn {
       padding: 2px 10px; border-radius: 4px; border: 1px solid #ccc;
       background: #fff; cursor: pointer; font-size: 0.75rem; color: #555;
     }
-    .next-btn:hover { background: #e3f2fd; border-color: #90caf9; }
+    .nav-btn:hover { background: #e3f2fd; border-color: #90caf9; }
 
     chocabloc-question {
       --cq-font: system-ui, sans-serif;
@@ -52,20 +52,30 @@
       padding: 20px;
     }
 
-    .result {
+    .card-footer {
       padding: 8px 14px; font-family: monospace; font-size: 0.75rem;
       background: #fafafa; border-top: 1px solid #eee;
-      min-height: 28px; color: #666;
-      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      display: flex; flex-direction: column; gap: 6px;
     }
-    .result .qid { color: #aaa; font-size: 0.65rem; text-align: right; flex-shrink: 0; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .footer-row {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      min-height: 24px;
+    }
+    .result { color: #666; }
+    .qid { color: #aaa; font-size: 0.65rem; text-align: right; flex-shrink: 0; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    .error { padding: 16px; color: #c62828; font-size: 0.85rem; }
+    .toggle-btn {
+      padding: 2px 8px; border-radius: 4px; border: 1px solid #ccc;
+      background: #fff; cursor: pointer; font-size: 0.7rem; color: #555;
+      font-family: system-ui;
+    }
+    .toggle-btn:hover { background: #e3f2fd; border-color: #90caf9; }
+    .toggle-btn.active { background: #1565c0; color: #fff; border-color: #1565c0; }
   </style>
 </head>
 <body>
   <h1>chocabloc-questions — all formats</h1>
-  <p class="intro">Every supported question format rendered from real data. Pick a choice to see the <code>answered</code> event. Hit <b>Next</b> to cycle through questions.</p>
+  <p class="intro">Every supported question format rendered from real data. Pick a choice or toggle <b>Input</b> to type answers. <b>Whiteboard</b> available on every card.</p>
   <nav class="nav" id="nav"></nav>
   <div class="grid" id="grid"></div>
 
@@ -79,11 +89,13 @@
     function mountCard(label, imageType, rows) {
       const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       let idx = 0;
+      let inputMode = false;
 
       const card = document.createElement('div');
       card.className = 'card';
       card.id = slug;
 
+      // --- Header ---
       const header = document.createElement('div');
       header.className = 'card-header';
       const titleSpan = document.createElement('span');
@@ -95,25 +107,40 @@
       const counter = document.createElement('span');
       counter.className = 'counter';
       const prevBtn = document.createElement('button');
-      prevBtn.className = 'next-btn';
+      prevBtn.className = 'nav-btn';
       prevBtn.textContent = '◀ Prev';
       const nextBtn = document.createElement('button');
-      nextBtn.className = 'next-btn';
+      nextBtn.className = 'nav-btn';
       nextBtn.textContent = 'Next ▶';
       if (rows.length <= 1) { prevBtn.style.display = 'none'; nextBtn.style.display = 'none'; }
       header.append(titleSpan, codeSpan, spacer, counter, prevBtn, nextBtn);
 
+      // --- Question element ---
       const el = document.createElement('chocabloc-question');
       el.setAttribute('answer-mode', 'mc');
+      el.setAttribute('whiteboard', '');
 
-      const result = document.createElement('div');
-      result.className = 'result';
+      // --- Footer ---
+      const footer = document.createElement('div');
+      footer.className = 'card-footer';
+
+      const resultRow = document.createElement('div');
+      resultRow.className = 'footer-row';
       const statusSpan = document.createElement('span');
+      statusSpan.className = 'result';
       const qidSpan = document.createElement('span');
       qidSpan.className = 'qid';
-      result.append(statusSpan, qidSpan);
+      resultRow.append(statusSpan, qidSpan);
 
-      card.append(header, el, result);
+      const controlsRow = document.createElement('div');
+      controlsRow.className = 'footer-row';
+      const inputToggle = document.createElement('button');
+      inputToggle.className = 'toggle-btn';
+      inputToggle.textContent = 'Input Mode';
+      controlsRow.appendChild(inputToggle);
+
+      footer.append(resultRow, controlsRow);
+      card.append(header, el, footer);
       grid.appendChild(card);
 
       const link = document.createElement('a');
@@ -157,10 +184,16 @@
         load(idx);
       });
 
+      inputToggle.addEventListener('click', () => {
+        inputMode = !inputMode;
+        el.setAttribute('answer-mode', inputMode ? 'input' : 'mc');
+        inputToggle.classList.toggle('active', inputMode);
+        load(idx);
+      });
+
       load(0);
     }
 
-    // Map image_type to snapshot filename and display label
     const formats = [
       { label: 'Money',               imageType: 'coins',            file: 'type-coins.json' },
       { label: 'Budget Table',         imageType: 'table',            file: 'type-table.json' },

@@ -96,20 +96,6 @@ export class ChocablocQuestion extends HTMLElement {
     if (tools.length > 0) this._addToolbar(tools);
     else this._panelContainer = null;
 
-    if (this._question.answerMode === 'input') {
-      this._renderInputMode();
-      return;
-    }
-
-    if (this._question.format === 'money') {
-      const inner = document.createElement('choca-coin-pile');
-      this._passAttrs(inner);
-      (inner as HTMLElement & { question: MoneyQuestion }).question = this._question as MoneyQuestion;
-      this._shadow.appendChild(inner);
-      this._tapAnswered(inner);
-      return;
-    }
-
     if (this._question.format === 'text') {
       const { fragment, promptEl } = buildFallback();
       promptEl.textContent = this._question.content.stem;
@@ -117,21 +103,33 @@ export class ChocablocQuestion extends HTMLElement {
       return;
     }
 
-    let tag: string;
-    if (this._question.format === 'money_budget_adjust') {
-      tag = 'choca-table-question';
-    } else if (this._question.format === 'pattern') {
-      tag = 'choca-pattern-question';
-    } else if (this._question.format === 'multiplication' && this._question.imageType === 'number_line') {
-      tag = 'choca-number-line-question';
+    const isInput = this.getAttribute('answer-mode') === 'input';
+    let inner: HTMLElement;
+
+    if (this._question.format === 'money') {
+      inner = document.createElement('choca-coin-pile');
+      this._passAttrs(inner);
+      (inner as HTMLElement & { question: MoneyQuestion }).question = this._question as MoneyQuestion;
     } else {
-      tag = 'choca-canvas-question';
+      let tag: string;
+      if (this._question.format === 'money_budget_adjust') {
+        tag = 'choca-table-question';
+      } else if (this._question.format === 'pattern') {
+        tag = 'choca-pattern-question';
+      } else if (this._question.format === 'multiplication' && this._question.imageType === 'number_line') {
+        tag = 'choca-number-line-question';
+      } else {
+        tag = 'choca-canvas-question';
+      }
+      inner = document.createElement(tag);
+      this._passAttrs(inner);
+      (inner as HTMLElement & { question: NormalizedQuestion }).question = this._question;
     }
-    const inner = document.createElement(tag);
-    this._passAttrs(inner);
-    (inner as HTMLElement & { question: NormalizedQuestion }).question = this._question;
+
     this._shadow.appendChild(inner);
-    this._tapAnswered(inner);
+    if (!isInput) this._tapAnswered(inner);
+
+    if (isInput) this._appendInputAnswer();
   }
 
   private _addToolbar(tools: ToolName[]): void {
@@ -182,24 +180,8 @@ export class ChocablocQuestion extends HTMLElement {
     if (el) el.style.display = 'none';
   }
 
-  private _renderInputMode(): void {
+  private _appendInputAnswer(): void {
     const q = this._question!;
-    const style = document.createElement('style');
-    style.textContent = `
-      :host { display: block; font-family: var(--cq-font, system-ui, sans-serif); }
-      [part="container"] {
-        display: flex; flex-direction: column; gap: var(--cq-section-gap, 16px);
-        padding: var(--cq-container-padding, 16px);
-      }
-      [part="prompt"] { font-size: var(--cq-prompt-size, 1rem); font-weight: var(--cq-prompt-weight, 600); }
-    `;
-    const container = document.createElement('div');
-    container.setAttribute('part', 'container');
-    container.setAttribute('role', 'group');
-    const prompt = document.createElement('div');
-    prompt.setAttribute('part', 'prompt');
-    prompt.textContent = q.prompt ?? 'Enter your answer:';
-
     const inputEl = document.createElement('choca-answer-input') as HTMLElement & {
       format: string;
       showFeedback: (correct: boolean, expected?: AnswerValue) => void;
@@ -224,8 +206,7 @@ export class ChocablocQuestion extends HTMLElement {
       });
     }) as EventListener);
 
-    container.append(prompt, inputEl);
-    this._shadow.append(style, container);
+    this._shadow.appendChild(inputEl);
   }
 }
 

@@ -7,6 +7,7 @@ const TEMPLATE = `
       font-family: var(--cq-font, system-ui, sans-serif);
       color: var(--cq-text, #222);
     }
+    :host([mode="input"]) { display: none; }
     [part="pad"] {
       display: flex;
       flex-wrap: wrap;
