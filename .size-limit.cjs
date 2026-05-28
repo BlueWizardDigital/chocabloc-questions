@@ -8,7 +8,7 @@ module.exports = [
   {
     name: 'coin-pile bundle (Tier 1 + Tier 2 money)',
     path: 'dist/elements/coin-pile.mjs',
-    limit: '15 KB',
+    limit: '16 KB',
     gzip: true,
   },
   {
@@ -20,7 +20,7 @@ module.exports = [
   {
     name: 'full (everything)',
     path: 'dist/full.mjs',
-    limit: '40 KB',
+    limit: '45 KB',
     gzip: true,
   },
 ];

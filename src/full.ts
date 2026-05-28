@@ -6,6 +6,8 @@ export { ChocaCanvasQuestion } from './elements/ChocaCanvasQuestion';
 export { ChocaTableQuestion } from './elements/ChocaTableQuestion';
 export { ChocaPatternQuestion } from './elements/ChocaPatternQuestion';
 export { ChocaNumberLineQuestion } from './elements/ChocaNumberLineQuestion';
+export { ChocaToolbar } from './elements/ChocaToolbar';
+export { ChocaAnswerInput } from './elements/ChocaAnswerInput';
 
 // Side-effect register all elements when consumer imports the full barrel
 import './elements/ChocablocQuestion';
@@ -15,3 +17,5 @@ import './elements/ChocaCanvasQuestion';
 import './elements/ChocaTableQuestion';
 import './elements/ChocaPatternQuestion';
 import './elements/ChocaNumberLineQuestion';
+import './elements/ChocaToolbar';
+import './elements/ChocaAnswerInput';
