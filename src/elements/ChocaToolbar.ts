@@ -32,6 +32,7 @@ export class ChocaToolbar extends HTMLElement {
         width: var(--cq-tool-icon-size, 32px); height: var(--cq-tool-icon-size, 32px);
         border: var(--cq-tool-border, 1px solid #ccc); border-radius: var(--cq-tool-radius, 6px);
         background-color: var(--cq-tool-icon-color, currentColor); cursor: pointer; padding: 4px;
+        mask-image: var(--_icon); -webkit-mask-image: var(--_icon);
         mask-size: 60%; mask-repeat: no-repeat; mask-position: center;
         -webkit-mask-size: 60%; -webkit-mask-repeat: no-repeat; -webkit-mask-position: center;
       }
@@ -45,8 +46,6 @@ export class ChocaToolbar extends HTMLElement {
     `;
     this._container = document.createElement('div');
     this._container.setAttribute('part', 'toolbar');
-    this._container.setAttribute('role', 'toolbar');
-    this._container.setAttribute('aria-label', 'Question tools');
     this._shadow.append(style, this._container);
   }
 
@@ -63,8 +62,7 @@ export class ChocaToolbar extends HTMLElement {
       btn.type = 'button';
       btn.setAttribute('aria-label', meta.label);
       btn.setAttribute('aria-pressed', String(this._active.has(tool)));
-      btn.style.setProperty('mask-image', meta.icon);
-      btn.style.setProperty('-webkit-mask-image', meta.icon);
+      btn.style.setProperty('--_icon', meta.icon);
       btn.addEventListener('click', () => {
         if (this._active.has(tool)) this._active.delete(tool);
         else this._active.add(tool);

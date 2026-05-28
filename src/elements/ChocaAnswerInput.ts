@@ -1,4 +1,5 @@
 import type { AnswerValue, QuestionFormat } from '../types';
+import { formatAnswerForDisplay } from '../helpers/formatters';
 import { parseInputAnswer } from '../helpers/input-parser';
 
 const PLACEHOLDERS: Partial<Record<QuestionFormat, string>> = {
@@ -84,13 +85,17 @@ export class ChocaAnswerInput extends HTMLElement {
     this._inputEl.disabled = d;
     this._submitBtn.disabled = d;
   }
-  connectedCallback(): void { this.attributeChangedCallback(); }
+  connectedCallback(): void {
+    this.attributeChangedCallback();
+    if (this.hasAttribute('autofocus') && !this.hasAttribute('disabled')) this._inputEl.focus();
+  }
 
   showFeedback(correct: boolean, expected?: AnswerValue): void {
     this._feedbackEl.className = correct ? 'correct' : 'incorrect';
+    const display = expected !== undefined ? formatAnswerForDisplay(expected, this._format) : undefined;
     this._feedbackEl.textContent = correct
       ? 'Correct!'
-      : expected !== undefined ? `Incorrect. The answer is ${String(expected)}.` : 'Incorrect.';
+      : display ? `Incorrect. The answer is ${display}.` : 'Incorrect.';
     this.setAttribute('disabled', '');
   }
 

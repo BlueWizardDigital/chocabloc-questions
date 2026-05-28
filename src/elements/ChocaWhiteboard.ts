@@ -1,7 +1,11 @@
 type Point = { x: number; y: number };
 type Stroke = { points: Point[]; color: string; width: number; tool: 'pen' | 'eraser' };
 
-const COLORS = ['#222', '#e74c3c', '#2980b9', '#27ae60', '#f39c12'];
+const COLORS: readonly { hex: string; name: string }[] = [
+  { hex: '#222', name: 'Black' }, { hex: '#e74c3c', name: 'Red' },
+  { hex: '#2980b9', name: 'Blue' }, { hex: '#27ae60', name: 'Green' },
+  { hex: '#f39c12', name: 'Orange' },
+];
 const WIDTHS = [2, 4, 8];
 
 export class ChocaWhiteboard extends HTMLElement {
@@ -10,8 +14,10 @@ export class ChocaWhiteboard extends HTMLElement {
   private _strokes: Stroke[] = [];
   private _current: Stroke | null = null;
   private _tool: 'pen' | 'eraser' = 'pen';
-  private _color = COLORS[0]!;
+  private _ctx: CanvasRenderingContext2D | null = null;
+  private _color = COLORS[0]!.hex;
   private _width = WIDTHS[1]!;
+  private _toolRow!: HTMLElement;
   private _clearPending = false;
 
   constructor() {
@@ -22,7 +28,7 @@ export class ChocaWhiteboard extends HTMLElement {
 
   get activeTool(): string { return this._tool; }
   get strokeCount(): number { return this._strokes.length; }
-  clear(): void { this._strokes = []; this._redraw(); }
+  clear(): void { this._strokes = []; this._current = null; this._redraw(); }
 
   private _build(): void {
     const style = document.createElement('style');
@@ -47,8 +53,9 @@ export class ChocaWhiteboard extends HTMLElement {
     const panel = document.createElement('div');
     panel.setAttribute('part', 'wb-panel');
 
-    const toolRow = document.createElement('div');
-    toolRow.className = 'row';
+    this._toolRow = document.createElement('div');
+    this._toolRow.className = 'row';
+    const toolRow = this._toolRow;
     for (const t of ['pen', 'eraser', 'undo', 'clear'] as const) {
       const btn = document.createElement('button');
       btn.setAttribute('part', 'wb-tool-btn');
@@ -63,15 +70,16 @@ export class ChocaWhiteboard extends HTMLElement {
 
     const colorRow = document.createElement('div');
     colorRow.className = 'row';
-    for (const c of COLORS) {
+    for (const { hex, name } of COLORS) {
       const btn = document.createElement('button');
       btn.setAttribute('part', 'wb-color-btn');
       btn.type = 'button';
-      btn.style.backgroundColor = c;
+      btn.style.backgroundColor = hex;
       btn.style.width = btn.style.height = btn.style.minWidth = '24px';
-      btn.setAttribute('aria-label', c);
-      btn.setAttribute('aria-pressed', String(this._color === c));
-      btn.addEventListener('click', () => { this._color = c; this._updatePressed(colorRow, c, 'backgroundColor'); });
+      btn.dataset.color = hex;
+      btn.setAttribute('aria-label', name);
+      btn.setAttribute('aria-pressed', String(this._color === hex));
+      btn.addEventListener('click', () => { this._color = hex; this._updatePressed(colorRow, hex, 'data-color'); });
       colorRow.appendChild(btn);
     }
     panel.appendChild(colorRow);
@@ -83,8 +91,9 @@ export class ChocaWhiteboard extends HTMLElement {
       btn.setAttribute('part', 'wb-width-btn');
       btn.type = 'button';
       btn.textContent = `${w}px`;
+      btn.dataset.width = String(w);
       btn.setAttribute('aria-pressed', String(this._width === w));
-      btn.addEventListener('click', () => { this._width = w; this._updatePressed(widthRow, `${w}px`, 'textContent'); });
+      btn.addEventListener('click', () => { this._width = w; this._updatePressed(widthRow, String(w), 'data-width'); });
       widthRow.appendChild(btn);
     }
     panel.appendChild(widthRow);
@@ -93,32 +102,33 @@ export class ChocaWhiteboard extends HTMLElement {
     this._canvas.setAttribute('part', 'wb-canvas');
     this._canvas.width = 400;
     this._canvas.height = 250;
+    this._ctx = this._canvas.getContext('2d');
     this._canvas.addEventListener('pointerdown', (e) => this._down(e));
     this._canvas.addEventListener('pointermove', (e) => this._move(e));
     this._canvas.addEventListener('pointerup', () => this._up());
+    this._canvas.addEventListener('pointercancel', () => this._up());
     this._canvas.addEventListener('pointerleave', () => this._up());
     panel.appendChild(this._canvas);
 
     this._shadow.append(style, panel);
   }
 
-  private _updatePressed(row: HTMLElement, match: string, prop: 'backgroundColor' | 'textContent'): void {
+  private _updatePressed(row: HTMLElement, match: string, prop: 'data-color' | 'data-width'): void {
+    const key = prop === 'data-color' ? 'color' : 'width';
     row.querySelectorAll('button').forEach((b) => {
-      const val = prop === 'backgroundColor' ? (b as HTMLElement).style.backgroundColor : b.textContent;
-      b.setAttribute('aria-pressed', String(val === match));
+      b.setAttribute('aria-pressed', String((b as HTMLElement).dataset[key] === match));
     });
   }
 
   private _onTool(t: 'pen' | 'eraser' | 'undo' | 'clear'): void {
     if (t === 'undo') { this._strokes.pop(); this._redraw(); return; }
     if (t === 'clear') {
-      if (this._clearPending) { this._strokes = []; this._redraw(); this._clearPending = false; }
+      if (this._clearPending) { this._strokes = []; this._current = null; this._redraw(); this._clearPending = false; }
       else { this._clearPending = true; setTimeout(() => { this._clearPending = false; }, 1000); }
       return;
     }
     this._tool = t;
-    const row = this._shadow.querySelector('.row') as HTMLElement;
-    row.querySelectorAll('[part~="wb-tool-btn"]').forEach((b) => {
+    this._toolRow.querySelectorAll('[part~="wb-tool-btn"]').forEach((b) => {
       const d = (b as HTMLElement).dataset.tool;
       if (d === 'pen' || d === 'eraser') b.setAttribute('aria-pressed', String(this._tool === d));
     });
@@ -148,14 +158,13 @@ export class ChocaWhiteboard extends HTMLElement {
   }
 
   private _redraw(): void {
-    const ctx = this._canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
+    if (!this._ctx) return;
+    this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
     for (const s of this._strokes) this._draw(s);
   }
 
   private _draw(s: Stroke): void {
-    const ctx = this._canvas.getContext('2d');
+    const ctx = this._ctx;
     if (!ctx || s.points.length < 2) return;
     ctx.save();
     ctx.lineWidth = s.width;
