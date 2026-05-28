@@ -23,7 +23,9 @@ function buildFallback(): { fragment: DocumentFragment; promptEl: HTMLElement } 
   container.setAttribute('role', 'group');
   const promptEl = document.createElement('div');
   promptEl.setAttribute('part', 'prompt');
-  container.append(promptEl);
+  const canvas = document.createElement('div');
+  canvas.setAttribute('part', 'canvas');
+  container.append(promptEl, canvas);
   fragment.append(style, container);
   return { fragment, promptEl };
 }
@@ -92,6 +94,7 @@ export class ChocablocQuestion extends HTMLElement {
 
     const tools = this._enabledTools();
     if (tools.length > 0) this._addToolbar(tools);
+    else this._panelContainer = null;
 
     if (this._question.answerMode === 'input') {
       this._renderInputMode();
