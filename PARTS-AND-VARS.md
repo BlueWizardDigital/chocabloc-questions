@@ -85,7 +85,9 @@ element via `getComputedStyle` and passed to the canvas draw function.
 |------|-----------------|
 | `pad` | Choice button row container |
 | `choice` | Every choice button |
-| `choice-correct` | The correct choice button (also has `choice`) |
+| `choice-correct` | Correct choice (review mode marks visually; retry mode post-answer) |
+| `choice-wrong` | Student's prior wrong pick (review mode only, requires `student-answer` attr) |
+| `choice-other` | Non-correct, non-picked choices (review mode only, dimmed) |
 
 | Var | Default | Purpose |
 |-----|---------|---------|
@@ -96,6 +98,20 @@ element via `getComputedStyle` and passed to the canvas draw function.
 | `--cq-choice-text` | `inherit` | Choice button text color |
 | `--cq-choice-border` | `1px solid #ccc` | Choice button border |
 | `--cq-choice-radius` | `8px` | Choice button border-radius |
+| `--cq-choice-correct-border` | `#10b981` | Border on correct choice in review mode |
+| `--cq-choice-wrong-border` | `#ef4444` | Border on student's wrong pick in review mode |
+| `--cq-choice-disabled-opacity` | `0.5` | Opacity for non-marked choices in review mode |
+
+### Review mode (`answer-mode="review"`) — v0.2.0+
+
+The parent `<chocabloc-question>` element accepts:
+
+| Attribute | Type | Purpose |
+|-----------|------|---------|
+| `answer-mode="review"` | string | Read-only display: all choices disabled, correct + wrong highlights applied |
+| `student-answer` | string | Optional. Marks the matching distractor with `choice-wrong`. String-coerced — `"5"` matches numeric `5` per PC-3. |
+
+`<chocabloc-question>` forwards both attributes through `_passAttrs` to the active visual wrapper (`<choca-canvas-question>`, `<choca-coin-pile>`, `<choca-pattern-question>`, `<choca-table-question>`, `<choca-number-line-question>`), which re-emits them onto the nested `<choca-choice-pad>` via internal `mode` attribute. Public API is `answer-mode` on the parent; consumers should not read child `mode` directly.
 
 ## Slots
 

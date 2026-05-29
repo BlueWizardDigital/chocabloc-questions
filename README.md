@@ -57,7 +57,10 @@ npm install chocabloc-questions
 import 'chocabloc-questions/full';  // registers all elements
 import { normalizeQuestion } from 'chocabloc-questions/helpers';
 
-const q = normalizeQuestion(rawBankRow);
+// v0.2.0+: lib accepts canonical chocabloc question shape directly:
+//   { id, skillIds, content, answer, distractors, format, imageType, difficulty, questionText }
+// No prompt, no correctIndex, no choices — lib builds choices from answer + distractors.
+const q = normalizeQuestion(canonicalBankRow);
 
 <chocabloc-question
   ref={(el) => el && (el.question = q)}
@@ -65,6 +68,18 @@ const q = normalizeQuestion(rawBankRow);
   seed="42"
 />
 ```
+
+### Review mode (v0.2.0+)
+
+```jsx
+<chocabloc-question
+  ref={(el) => el && (el.question = canonicalQuestion)}
+  answer-mode="review"
+  student-answer="3"  // optional — marks the prior wrong pick (string-coerced)
+/>
+```
+
+`answer-mode="review"` disables all choices, highlights the correct answer (`part="choice-correct"`), and if `student-answer` matches a distractor, marks it (`part="choice-wrong"`). Other choices get `part="choice-other"` (dimmed). Theme via `--cq-choice-correct-border`, `--cq-choice-wrong-border`, `--cq-choice-disabled-opacity`.
 
 The `sideEffects` field in `package.json` tells bundlers which entry points
 are safe to tree-shake. Importing from `chocabloc-questions` or
