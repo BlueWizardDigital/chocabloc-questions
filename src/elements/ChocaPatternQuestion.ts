@@ -108,7 +108,7 @@ export class ChocaPatternQuestion extends HTMLElement {
   private _container!: HTMLElement;
 
   static get observedAttributes(): string[] {
-    return ['answer-mode', 'disabled', 'seed'];
+    return ['answer-mode', 'disabled', 'seed', 'student-answer'];
   }
 
   constructor() {

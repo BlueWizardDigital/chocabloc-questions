@@ -115,7 +115,7 @@ export class ChocaCoinPile extends HTMLElement {
   private _container!: HTMLElement;
 
   static get observedAttributes(): string[] {
-    return ['answer-mode', 'disabled', 'locale', 'seed'];
+    return ['answer-mode', 'disabled', 'locale', 'seed', 'student-answer'];
   }
 
   constructor() {

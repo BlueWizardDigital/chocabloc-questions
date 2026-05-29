@@ -1,5 +1,17 @@
 import type { Choice } from '../types';
 
+/**
+ * v0.2.0 PC-3: choice values may be raw scalars OR `{value, error_type}` objects.
+ * Extract a comparable string regardless of shape so review-mode comparisons
+ * don't stringify the whole object as "[object Object]".
+ */
+function choiceValue(choice: unknown): string {
+  if (choice != null && typeof choice === 'object' && 'value' in choice) {
+    return String((choice as { value: unknown }).value);
+  }
+  return String(choice);
+}
+
 const TEMPLATE = `
   <style>
     :host {
@@ -41,6 +53,19 @@ const TEMPLATE = `
       cursor: not-allowed;
       opacity: 0.6;
     }
+    /* v0.2.0 review mode: read-only display with correct/wrong/other marks */
+    :host([mode="review"]) [part~="choice-correct"] {
+      border: 2px solid var(--cq-choice-correct-border, #10b981);
+    }
+    :host([mode="review"]) [part~="choice-wrong"] {
+      border: 2px solid var(--cq-choice-wrong-border, #ef4444);
+    }
+    :host([mode="review"]) [part~="choice-other"] {
+      opacity: var(--cq-choice-disabled-opacity, 0.5);
+    }
+    :host([mode="review"]) [part~="choice"] {
+      pointer-events: none;
+    }
   </style>
   <div part="pad" role="radiogroup"></div>
 `;
@@ -53,7 +78,7 @@ export class ChocaChoicePad extends HTMLElement {
   private _pickedValueKey: string | null = null;
 
   static get observedAttributes(): string[] {
-    return ['mode', 'disabled', 'aria-label'];
+    return ['mode', 'disabled', 'aria-label', 'student-answer'];
   }
 
   constructor() {
@@ -84,7 +109,11 @@ export class ChocaChoicePad extends HTMLElement {
   }
 
   private _render(): void {
-    const disabled = this.hasAttribute('disabled');
+    const mode = this.getAttribute('mode');
+    const isReview = mode === 'review';
+    const studentAnswer = this.getAttribute('student-answer');
+    // Review mode is always non-interactive regardless of `disabled` attr.
+    const disabled = this.hasAttribute('disabled') || isReview;
     this._pad.setAttribute('aria-disabled', String(disabled));
     if (this.hasAttribute('aria-label')) {
       this._pad.setAttribute('aria-label', this.getAttribute('aria-label')!);
@@ -92,17 +121,29 @@ export class ChocaChoicePad extends HTMLElement {
     this._pad.replaceChildren();
     this._choices.forEach((c, i) => {
       const btn = document.createElement('button');
-      btn.setAttribute('part', `choice${c.correct ? ' choice-correct' : ''}`);
+      let part = 'choice';
+      if (c.correct) part += ' choice-correct';
+      if (isReview) {
+        if (!c.correct) {
+          const asString = choiceValue(c.value);
+          if (studentAnswer != null && asString === studentAnswer) {
+            part += ' choice-wrong';
+          } else {
+            part += ' choice-other';
+          }
+        }
+      }
+      btn.setAttribute('part', part);
       btn.setAttribute('role', 'radio');
       btn.setAttribute('type', 'button');
-      btn.tabIndex = i === this._activeIndex ? 0 : -1;
+      btn.tabIndex = isReview ? -1 : (i === this._activeIndex ? 0 : -1);
       const key = JSON.stringify(c.value);
       const isChecked = this._pickedValueKey === key;
       btn.setAttribute('aria-checked', String(isChecked));
       btn.setAttribute('aria-disabled', String(disabled));
       // R2.8: textContent only, never innerHTML
       btn.textContent = c.label ?? String(c.value);
-      btn.addEventListener('click', () => this._pick(i));
+      if (!isReview) btn.addEventListener('click', () => this._pick(i));
       this._pad.appendChild(btn);
     });
   }

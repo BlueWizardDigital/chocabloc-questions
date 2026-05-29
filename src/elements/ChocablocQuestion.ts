@@ -40,7 +40,7 @@ export class ChocablocQuestion extends HTMLElement {
   private _panelContainer: HTMLElement | null = null;
 
   static get observedAttributes(): string[] {
-    return ['answer-mode', 'disabled', 'locale', 'seed', ...TOOL_ATTRS];
+    return ['answer-mode', 'disabled', 'locale', 'seed', 'student-answer', ...TOOL_ATTRS];
   }
 
   constructor() {
@@ -73,7 +73,7 @@ export class ChocablocQuestion extends HTMLElement {
 
   private _passAttrs(el: HTMLElement): void {
     el.setAttribute('answer-mode', this.getAttribute('answer-mode') ?? 'mc');
-    for (const a of ['seed', 'locale'] as const) {
+    for (const a of ['seed', 'locale', 'student-answer'] as const) {
       const v = this.getAttribute(a);
       if (v !== null) el.setAttribute(a, v);
     }

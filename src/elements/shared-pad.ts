@@ -17,6 +17,11 @@ export function syncChoicePad(
   pad.setAttribute('mode', mode);
   if (host.hasAttribute('disabled')) pad.setAttribute('disabled', '');
   else pad.removeAttribute('disabled');
+  // v0.2.0: forward student-answer attribute for review-mode marking.
+  // String-coerced comparison happens inside ChocaChoicePad._render (PC-3).
+  const studentAnswer = host.getAttribute('student-answer');
+  if (studentAnswer != null) pad.setAttribute('student-answer', studentAnswer);
+  else pad.removeAttribute('student-answer');
 }
 
 export function handlePick(
