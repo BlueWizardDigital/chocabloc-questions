@@ -143,7 +143,7 @@ export class ChocaPatternQuestion extends HTMLElement {
     const q = this._question;
     if (q.format !== 'pattern') return;
 
-    this._promptEl.textContent = q.prompt ?? 'What comes next in the pattern?';
+    this._promptEl.textContent = q.questionText || 'What comes next in the pattern?';
     this._container.setAttribute('aria-label', `Question: ${this._promptEl.textContent}`);
 
     this._sequenceEl.replaceChildren();

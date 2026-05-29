@@ -154,8 +154,8 @@ export class ChocaCoinPile extends HTMLElement {
     this._question = q;
     // Auto-bind prompt from the question if present. Caller can still
     // override via the `prompt` setter AFTER assigning question.
-    if (typeof q.prompt === 'string' && q.prompt.length > 0) {
-      this._prompt = q.prompt;
+    if (typeof q.questionText === 'string' && q.questionText.length > 0) {
+      this._prompt = q.questionText;
     }
     this._render();
   }

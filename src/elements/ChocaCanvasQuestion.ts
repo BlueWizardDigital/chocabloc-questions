@@ -116,7 +116,7 @@ export class ChocaCanvasQuestion extends HTMLElement {
 
   private _renderPrompt(): void {
     const q = this._question!;
-    let text = q.prompt ?? '';
+    let text = q.questionText ?? '';
     if (!text) {
       if (q.format === 'data_graph') text = q.content.question;
       else if (q.format === 'geometry_attributes') text = `Which shape has ${q.content.attribute}?`;

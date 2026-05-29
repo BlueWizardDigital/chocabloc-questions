@@ -124,7 +124,7 @@ export class ChocaTableQuestion extends HTMLElement {
     const c = q.content;
 
     this._promptEl.textContent =
-      q.prompt ?? `After the change, how much goes to ${c.solve_for}?`;
+      q.questionText || `After the change, how much goes to ${c.solve_for}?`;
     this._container.setAttribute('aria-label', `Question: ${this._promptEl.textContent}`);
 
     this._tableEl.replaceChildren();

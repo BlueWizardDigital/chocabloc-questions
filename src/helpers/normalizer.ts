@@ -138,21 +138,18 @@ function getNumberArray(r: Record<string, unknown>, key: string): number[] | und
 function extractBase(r: Record<string, unknown>): {
   id: string;
   skillIds: string[];
-  prompt?: string;
+  questionText: string;
   answerMode?: 'choice' | 'input';
   answerDisplay?: string;
 } {
   const id = getString(r, 'id', 'question_id');
   if (!id) throw new NormalizeError('Question missing id', r);
   const skillIds = getStringArray(r, 'skill_ids', 'skillIds');
-  const promptRaw =
-    getString(r, 'prompt') ||
-    (typeof (r['content'] as Record<string, unknown> | undefined)?.['question'] === 'string'
-      ? ((r['content'] as Record<string, unknown>)['question'] as string)
-      : undefined) ||
-    (typeof (r['content'] as Record<string, unknown> | undefined)?.['prompt'] === 'string'
-      ? ((r['content'] as Record<string, unknown>)['prompt'] as string)
-      : undefined);
+  // v0.2.0 canonical shape: strict read from questionText only. No fallback
+  // to legacy `prompt`, `content.question`, or `content.prompt`. Rows lacking
+  // questionText get an empty string default; format-specific normalizers may
+  // backfill via buildStem() if the format supports it.
+  const questionText = getString(r, 'questionText') || '';
   const rawMode = getString(r, 'answerMode', 'answer_mode');
   const rawType = getString(r, 'answer_type');
   const answerMode: 'choice' | 'input' | undefined =
@@ -162,8 +159,7 @@ function extractBase(r: Record<string, unknown>): {
     : undefined;
   const answerDisplay = getString(r, 'answer_display', 'answerDisplay');
   return {
-    id, skillIds,
-    ...(promptRaw ? { prompt: promptRaw } : {}),
+    id, skillIds, questionText,
     ...(answerMode ? { answerMode } : {}),
     ...(answerDisplay ? { answerDisplay } : {}),
   };
@@ -202,26 +198,24 @@ function resolveImageType(
 }
 
 function normalizeMoneyRow(r: Record<string, unknown>): MoneyQuestion {
-  const { id, skillIds, prompt: promptRaw, answerMode } = extractBase(r);
-  if (skillIds.length === 0) {
+  const base = extractBase(r);
+  if (base.skillIds.length === 0) {
     throw new NormalizeError('Money question missing skill_ids', r);
   }
-  const currency = inferCurrency(skillIds);
+  const currency = inferCurrency(base.skillIds);
   const content = normalizeMoneyContent(r['content'], currency);
   if (typeof r['answer'] !== 'number') {
     throw new NormalizeError('Money answer must be a number (cents)', r);
   }
   const out: MoneyQuestion = {
-    id, skillIds, format: 'money', imageType: 'coins',
+    ...base, format: 'money', imageType: 'coins',
     content, answer: r['answer'], distractors: normalizeDistractors(r['distractors']),
   };
-  if (promptRaw) out.prompt = promptRaw;
-  if (answerMode) out.answerMode = answerMode;
   return out;
 }
 
 function normalizeTextRow(r: Record<string, unknown>): TextOnlyQuestion {
-  const { id, skillIds, answerMode } = extractBase(r);
+  const base = extractBase(r);
   const c = requireContent(r);
   const stem = getString(c, 'stem');
   if (!stem) throw new NormalizeError('Text question missing stem', r);
@@ -234,10 +228,9 @@ function normalizeTextRow(r: Record<string, unknown>): TextOnlyQuestion {
     throw new NormalizeError('Text question answer must be number, string, or [n,n]', r);
   }
   return {
-    id, skillIds, format: 'text', content: { stem },
+    ...base, format: 'text', content: { stem },
     answer: answer as TextOnlyQuestion['answer'],
     distractors: normalizeDistractors(r['distractors']),
-    ...(answerMode ? { answerMode } : {}),
   };
 }
 
@@ -754,7 +747,10 @@ function normalizeWithStem(r: Record<string, unknown>): TextOnlyQuestion {
   const base = extractBase(r);
   const c = requireContent(r);
   const format = r['format'] as string;
-  const stem = base.prompt ?? buildStem(format, c);
+  // v0.2.0: prefer canonical questionText if present; fall back to format-derived
+  // stem for legacy bank rows that don't ship one. Once server-side recipe
+  // resolver always populates questionText, this OR becomes a noop.
+  const stem = base.questionText || buildStem(format, c);
   return {
     ...base, format: 'text', imageType: undefined,
     content: { stem },
@@ -841,6 +837,13 @@ export function normalizeQuestion(
   raw: unknown,
   opts: NormalizeOptions = {},
 ): NormalizedQuestion | null {
+  if (raw && typeof raw === 'object' && 'correctIndex' in raw) {
+    throw new Error(
+      "Received legacy question shape with 'correctIndex' field; " +
+      "expected canonical chocabloc question shape (use 'answer' + 'distractors' instead). " +
+      "See chocabloc-questions v0.2.0 migration notes.",
+    );
+  }
   try {
     return doNormalize(raw);
   } catch (err) {

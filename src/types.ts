@@ -40,9 +40,10 @@ export type BaseQuestion = {
   skillIds: SkillId[];
   gradeBand?: GradeBand;
   gradeLevel?: number;
-  // Human-readable question stem. Optional — renderers fall back to a
-  // format-appropriate default if unset.
-  prompt?: string;
+  // Canonical chocabloc question shape v0.2.0: camelCase mirror of DB
+  // question_text column. Required field; renderers ship an empty string
+  // when the bank row has no text (rare, but legal).
+  questionText: string;
   answerMode?: 'choice' | 'input';
   answerDisplay?: string;
 };

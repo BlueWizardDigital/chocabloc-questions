@@ -111,7 +111,7 @@ export class ChocaNumberLineQuestion extends HTMLElement {
     if (q.format !== 'multiplication') return;
 
     const [jumps, step] = q.content.operands;
-    this._promptEl.textContent = q.prompt ?? `What is ${jumps} × ${step}?`;
+    this._promptEl.textContent = q.questionText || `What is ${jumps} × ${step}?`;
     this._container.setAttribute('aria-label', `Question: ${this._promptEl.textContent}`);
 
     const effectiveStep = jumps < 0 ? -step : step;
