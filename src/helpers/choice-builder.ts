@@ -53,13 +53,13 @@ export function buildChoicePool(
   const correct: Choice = {
     value: question.answer,
     correct: true,
-    label: labelFor(question.answer, question),
+    label: question.answerDisplay ?? labelFor(question.answer, question),
   };
   const wrong: Choice[] = question.distractors.map((d) => ({
     value: d.value,
     correct: false,
     errorType: d.errorType,
-    label: labelFor(d.value, question),
+    label: d.label ?? labelFor(d.value, question),
   }));
   const seen = new Set<string>([JSON.stringify(question.answer)]);
   const deduped: Choice[] = [];

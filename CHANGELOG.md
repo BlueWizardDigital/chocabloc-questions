@@ -3,6 +3,40 @@
 All notable changes to chocabloc-questions are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0] — 2026-05-29
+
+This release graduates the lib from alpha. Input contract conforms to the canonical chocabloc DB question shape — no shim adapters required by consumers. Monkey Money, brainbites, and assignment surfaces all consume the same spec. Includes the full 99-format mathSkills expansion that landed on `feat/mathskills-full-coverage`.
+
+### BREAKING CHANGES
+
+- **`BaseQuestion.prompt` renamed to `questionText`** to match canonical chocabloc DB question shape (mirrors `questions.question_text` column). `questionText` is now required (was optional). Migrate consumers: replace `question.prompt` reads with `question.questionText`.
+- **`normalizeQuestion()` throws on `correctIndex` input.** Legacy bank-row shape (`{ id, prompt, choices, correctIndex, choiceMeta }`) is no longer accepted. Pass `answer` + `distractors` and let the lib build choices internally via `choice-builder`.
+- **Legacy fallback chain in `extractBase` removed.** Now reads ONLY `questionText`. Removed silent reads of `prompt`, `content.question`, `content.prompt`. Rows lacking `questionText` ship empty string; format-specific normalizers may compute a stem via `buildStem()`.
+
+### Added
+
+- **`<chocabloc-question answer-mode="review">`** — read-only display with correct-answer highlight. All choice buttons disabled (`aria-disabled="true"`, `tabIndex=-1`). Pointer events suppressed.
+- **`student-answer` attribute** on `<chocabloc-question>` — string-coerced comparison against `answer` and `distractor.value`. Per PC-3, the underlying `choiceValue()` helper extracts `.value` from object-shaped choices so `"5"` correctly matches numeric `5` (no `"[object Object]"` stringify trap).
+- **Review-mode forwarding** through dispatcher (`ChocablocQuestion._passAttrs`) → visual wrappers → `<choca-choice-pad>` via `shared-pad.syncChoicePad`. All 5 visual wrappers observe `student-answer`.
+- **New parts:** `choice-correct`, `choice-wrong`, `choice-other`.
+- **New theming vars:** `--cq-choice-correct-border` (default `#10b981`), `--cq-choice-wrong-border` (default `#ef4444`), `--cq-choice-disabled-opacity` (default `0.5`).
+
+### Removed
+
+- `prompt` field from public types (renamed to `questionText`).
+- `correctIndex` input path on `normalizeQuestion()`.
+- Legacy fallback reads (`prompt`, `content.question`, `content.prompt`) in `extractBase`.
+
+### Internal
+
+- `<chocabloc-question answer-mode="X">` public API translates to internal `<choca-choice-pad mode="X">`. Consumers should not read child `mode` directly; the public surface is the parent attribute.
+
+### Tests
+
+- 204 unit specs passing (Vitest), including 2 new `correctIndex` rejection specs.
+- 111 browser specs passing (web-test-runner + Playwright Chromium), including 10 new `review-mode` specs covering correct/wrong marking, PC-3 string-vs-number coercion, PC-3 object-shape choice handling, full aria-disabled coverage, student-answer absent fallback, and per-wrapper forwarding.
+- Smoke test: **21,415/21,415 real mathSkills bank questions normalize, 0 malformed.**
+
 ## [Unreleased]
 
 ### Added

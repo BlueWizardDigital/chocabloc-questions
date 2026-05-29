@@ -1,10 +1,12 @@
 import type { AnswerValue, MoneyQuestion, NormalizedQuestion, ToolName } from '../types';
 import { validateAnswer } from '../helpers/validators';
+import { syncChoicePad, handlePick } from './shared-pad';
 import './ChocaCoinPile';
 import './ChocaCanvasQuestion';
 import './ChocaTableQuestion';
 import './ChocaPatternQuestion';
 import './ChocaNumberLineQuestion';
+import './ChocaChoicePad';
 import './ChocaToolbar';
 import './ChocaAnswerInput';
 
@@ -38,7 +40,7 @@ export class ChocablocQuestion extends HTMLElement {
   private _panelContainer: HTMLElement | null = null;
 
   static get observedAttributes(): string[] {
-    return ['answer-mode', 'disabled', 'locale', 'seed', ...TOOL_ATTRS];
+    return ['answer-mode', 'disabled', 'locale', 'seed', 'student-answer', ...TOOL_ATTRS];
   }
 
   constructor() {
@@ -71,7 +73,7 @@ export class ChocablocQuestion extends HTMLElement {
 
   private _passAttrs(el: HTMLElement): void {
     el.setAttribute('answer-mode', this.getAttribute('answer-mode') ?? 'mc');
-    for (const a of ['seed', 'locale'] as const) {
+    for (const a of ['seed', 'locale', 'student-answer'] as const) {
       const v = this.getAttribute(a);
       if (v !== null) el.setAttribute(a, v);
     }
@@ -96,14 +98,33 @@ export class ChocablocQuestion extends HTMLElement {
     if (tools.length > 0) this._addToolbar(tools);
     else this._panelContainer = null;
 
+    const isInput = this.getAttribute('answer-mode') === 'input';
+
     if (this._question.format === 'text') {
       const { fragment, promptEl } = buildFallback();
       promptEl.textContent = this._question.content.stem;
+
+      if (!isInput) {
+        const pad = document.createElement('choca-choice-pad');
+        pad.setAttribute('part', 'choices');
+        const container = fragment.querySelector('[part="container"]')!;
+        container.appendChild(pad);
+        syncChoicePad(this._question, pad, this);
+
+        const renderedAt = performance.now();
+        const toolsUsed = this._toolsUsed;
+        pad.addEventListener('picked', (e) => {
+          const choice = (e as CustomEvent).detail as import('../types').Choice;
+          handlePick(this, this._question!, choice, renderedAt, pad,
+            toolsUsed.size > 0 ? { toolsUsed: [...toolsUsed] } : undefined);
+        });
+      }
+
       this._shadow.appendChild(fragment);
+      if (isInput) this._appendInputAnswer();
       return;
     }
 
-    const isInput = this.getAttribute('answer-mode') === 'input';
     let inner: HTMLElement;
 
     if (this._question.format === 'money') {

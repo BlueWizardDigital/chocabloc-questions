@@ -45,6 +45,7 @@ export type NormalizeOptions = {
 
 const USD_COIN_KEYS: readonly USDCoinName[] = ['penny', 'nickel', 'dime', 'quarter'];
 const CAD_COIN_KEYS: readonly CADCoinName[] = ['nickel', 'dime', 'quarter', 'loonie', 'toonie'];
+const INPUT_ANSWER_TYPES: ReadonlySet<string> = new Set(['numeric', 'text', 'expression']);
 
 function inferCurrency(skillIds: string[]): Currency {
   let usdFound = false;
@@ -77,7 +78,8 @@ function normalizeDistractors(raw: unknown): Distractor[] {
         : typeof dd['error_type'] === 'string'
           ? dd['error_type']
           : 'unknown';
-    out.push({ value: dd['value'] as Distractor['value'], errorType });
+    const label = typeof dd['value_display'] === 'string' ? dd['value_display'] : undefined;
+    out.push({ value: dd['value'] as Distractor['value'], errorType, ...(label ? { label } : {}) });
   }
   return out;
 }
@@ -136,26 +138,30 @@ function getNumberArray(r: Record<string, unknown>, key: string): number[] | und
 function extractBase(r: Record<string, unknown>): {
   id: string;
   skillIds: string[];
-  prompt?: string;
+  questionText: string;
   answerMode?: 'choice' | 'input';
+  answerDisplay?: string;
 } {
   const id = getString(r, 'id', 'question_id');
   if (!id) throw new NormalizeError('Question missing id', r);
   const skillIds = getStringArray(r, 'skill_ids', 'skillIds');
-  const promptRaw =
-    getString(r, 'prompt') ||
-    (typeof (r['content'] as Record<string, unknown> | undefined)?.['question'] === 'string'
-      ? ((r['content'] as Record<string, unknown>)['question'] as string)
-      : undefined) ||
-    (typeof (r['content'] as Record<string, unknown> | undefined)?.['prompt'] === 'string'
-      ? ((r['content'] as Record<string, unknown>)['prompt'] as string)
-      : undefined);
+  // v0.2.0 canonical shape: strict read from questionText only. No fallback
+  // to legacy `prompt`, `content.question`, or `content.prompt`. Rows lacking
+  // questionText get an empty string default; format-specific normalizers may
+  // backfill via buildStem() if the format supports it.
+  const questionText = getString(r, 'questionText') || '';
   const rawMode = getString(r, 'answerMode', 'answer_mode');
-  const answerMode = rawMode === 'input' || rawMode === 'choice' ? rawMode : undefined;
+  const rawType = getString(r, 'answer_type');
+  const answerMode: 'choice' | 'input' | undefined =
+    rawMode === 'input' || rawMode === 'choice' ? rawMode
+    : rawType === 'mc_only' || rawType === 'money' ? 'choice'
+    : rawType && INPUT_ANSWER_TYPES.has(rawType) ? 'input'
+    : undefined;
+  const answerDisplay = getString(r, 'answer_display', 'answerDisplay');
   return {
-    id, skillIds,
-    ...(promptRaw ? { prompt: promptRaw } : {}),
+    id, skillIds, questionText,
     ...(answerMode ? { answerMode } : {}),
+    ...(answerDisplay ? { answerDisplay } : {}),
   };
 }
 
@@ -163,10 +169,15 @@ function extractAnswer(r: Record<string, unknown>): AnswerValue {
   const a = r['answer'];
   if (typeof a === 'number') return a;
   if (typeof a === 'string') return a;
-  if (Array.isArray(a) && a.length === 2 && a.every((x) => typeof x === 'number')) {
-    return a as [number, number];
+  if (Array.isArray(a)) {
+    if (a.length === 2 && a.every((x) => typeof x === 'number')) {
+      return a as [number, number];
+    }
+    if (a.every((x) => typeof x === 'string')) {
+      return a as string[];
+    }
   }
-  throw new NormalizeError('Answer must be number, string, or [n,n]', r);
+  throw new NormalizeError('Answer must be number, string, [n,n], or string[]', r);
 }
 
 function requireContent(r: Record<string, unknown>): Record<string, unknown> {
@@ -187,26 +198,24 @@ function resolveImageType(
 }
 
 function normalizeMoneyRow(r: Record<string, unknown>): MoneyQuestion {
-  const { id, skillIds, prompt: promptRaw, answerMode } = extractBase(r);
-  if (skillIds.length === 0) {
+  const base = extractBase(r);
+  if (base.skillIds.length === 0) {
     throw new NormalizeError('Money question missing skill_ids', r);
   }
-  const currency = inferCurrency(skillIds);
+  const currency = inferCurrency(base.skillIds);
   const content = normalizeMoneyContent(r['content'], currency);
   if (typeof r['answer'] !== 'number') {
     throw new NormalizeError('Money answer must be a number (cents)', r);
   }
   const out: MoneyQuestion = {
-    id, skillIds, format: 'money', imageType: 'coins',
+    ...base, format: 'money', imageType: 'coins',
     content, answer: r['answer'], distractors: normalizeDistractors(r['distractors']),
   };
-  if (promptRaw) out.prompt = promptRaw;
-  if (answerMode) out.answerMode = answerMode;
   return out;
 }
 
 function normalizeTextRow(r: Record<string, unknown>): TextOnlyQuestion {
-  const { id, skillIds, answerMode } = extractBase(r);
+  const base = extractBase(r);
   const c = requireContent(r);
   const stem = getString(c, 'stem');
   if (!stem) throw new NormalizeError('Text question missing stem', r);
@@ -219,10 +228,9 @@ function normalizeTextRow(r: Record<string, unknown>): TextOnlyQuestion {
     throw new NormalizeError('Text question answer must be number, string, or [n,n]', r);
   }
   return {
-    id, skillIds, format: 'text', content: { stem },
+    ...base, format: 'text', content: { stem },
     answer: answer as TextOnlyQuestion['answer'],
     distractors: normalizeDistractors(r['distractors']),
-    ...(answerMode ? { answerMode } : {}),
   };
 }
 
@@ -334,8 +342,9 @@ function normalizeGeometryPerimeterRow(r: Record<string, unknown>): GeometryPeri
 function normalizeGeometryCircumferenceRow(r: Record<string, unknown>): GeometryCircumferenceQuestion {
   const base = extractBase(r);
   const c = requireContent(r);
-  const radius = getNumber(c, 'radius');
-  if (radius === undefined) throw new NormalizeError('geometry_circumference missing radius', r);
+  const diameter = getNumber(c, 'diameter');
+  const radius = getNumber(c, 'radius') ?? (diameter !== undefined ? diameter / 2 : undefined);
+  if (radius === undefined) throw new NormalizeError('geometry_circumference missing radius or diameter', r);
   return {
     ...base, format: 'geometry_circumference', imageType: undefined,
     content: { radius }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
@@ -432,11 +441,12 @@ function normalizePatternRow(r: Record<string, unknown>): PatternQuestion {
   const base = extractBase(r);
   const c = requireContent(r);
   const sequence = c['sequence'];
-  if (!Array.isArray(sequence) || !sequence.every((x) => typeof x === 'string'))
-    throw new NormalizeError('pattern missing string[] sequence', r);
+  if (!Array.isArray(sequence))
+    throw new NormalizeError('pattern missing sequence array', r);
+  const strSeq = sequence.map((x) => String(x));
   return {
     ...base, format: 'pattern', imageType: 'pattern_visual',
-    content: { sequence: sequence as string[] },
+    content: { sequence: strSeq },
     answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
   };
 }
@@ -541,8 +551,216 @@ function normalizeBase10BlocksRow(r: Record<string, unknown>): Base10BlocksQuest
   };
 }
 
+// -- Stem builder for text-only formats --
+
+function fmtInt(v: unknown): string {
+  const n = v as number;
+  return n < 0 ? `(−${Math.abs(n)})` : String(n);
+}
+
+function fmtSigned(n: number): string {
+  return n < 0 ? `−${Math.abs(n)}` : String(n);
+}
+
+function fmtFrac(v: unknown): string {
+  if (typeof v === 'number') return String(v);
+  if (Array.isArray(v) && v.length === 2) return `${v[0]}/${v[1]}`;
+  return String(v);
+}
+
+const BINARY_OPS: Record<string, { sym: string; fmt?: (v: unknown) => string }> = {
+  addition: { sym: '+' },
+  subtraction: { sym: '−' },
+  division: { sym: '÷' },
+  integer_addition: { sym: '+', fmt: fmtInt },
+  integer_subtraction: { sym: '−', fmt: fmtInt },
+  decimal_addition: { sym: '+' },
+  decimal_multiplication: { sym: '×' },
+  decimal_division: { sym: '÷' },
+  fraction_addition: { sym: '+', fmt: fmtFrac },
+  fraction_subtraction: { sym: '−', fmt: fmtFrac },
+  fraction_multiplication: { sym: '×', fmt: fmtFrac },
+  fraction_division: { sym: '÷', fmt: fmtFrac },
+};
+
+function buildStem(format: string, c: Record<string, unknown>): string {
+  const ops = c['operands'] as number[] | unknown[] | undefined;
+
+  const binOp = BINARY_OPS[format];
+  if (binOp && ops) {
+    const f = binOp.fmt ?? String;
+    return `${f(ops[0])} ${binOp.sym} ${f(ops[1])} = ?`;
+  }
+
+  switch (format) {
+    case 'addition_three':
+      return `${ops![0]} + ${ops![1]} + ${ops![2]} = ?`;
+    case 'missing_addend':
+      return `${ops![0]} + ___ = ${c['result']}`;
+    case 'missing_subtrahend':
+      return `${ops![0]} − ___ = ${c['result']}`;
+    case 'comparison':
+      return `${ops![0]} ___ ${ops![1]}  (< > =)`;
+    case 'integer_comparison':
+      return `${fmtSigned(ops![0] as number)} ___ ${fmtSigned(ops![1] as number)}  (< > =)`;
+    case 'order_of_operations':
+      return `${c['expression']} = ?`;
+    case 'algebra_eval':
+      return `Evaluate ${c['expression']} when ${c['var']} = ${c['var_value']}`;
+    case 'algebra_solve':
+      return `Solve: ${c['equation']}`;
+    case 'algebra_write':
+      return `Write an expression: ${c['words']}`;
+    case 'fraction_of_quantity':
+      return `${fmtFrac(ops![0])} of ${ops![1]} = ?`;
+    case 'fraction_to_decimal':
+      return `Convert ${c['value']} to a decimal`;
+    case 'decimal_to_fraction':
+      return `Convert ${c['value']} to a fraction`;
+    case 'decimal_to_percent':
+      return `Convert ${c['value']} to a percent`;
+    case 'percent_to_decimal':
+      return `Convert ${c['value']}% to a decimal`;
+    case 'conversion':
+      return `Convert ${c['value']} ${c['from_unit']} to ${c['to_unit']}`;
+    case 'exponent': {
+      const exp = c['exp'] as number;
+      const sup = exp === 2 ? '²' : exp === 3 ? '³' : `^${exp}`;
+      return `${c['base']}${sup} = ?`;
+    }
+    case 'square_root':
+      return `√${c['number']} = ?`;
+    case 'gcf':
+      return `GCF of ${ops![0]} and ${ops![1]}`;
+    case 'lcm':
+      return `LCM of ${ops![0]} and ${ops![1]}`;
+    case 'prime_composite':
+      return `Is ${c['number']} prime or composite?`;
+    case 'odd_even':
+      return `Is ${c['number']} odd or even?`;
+    case 'absolute_value': {
+      const num = (c['number'] as number) ?? ops?.[0];
+      return `|${fmtSigned(num as number)}| = ?`;
+    }
+    case 'place_value':
+      return `What digit is in the ${c['place']} place of ${c['number']}?`;
+    case 'rounding':
+      return `Round ${c['number']} to the nearest ${c['round_to']}`;
+    case 'ratio':
+      return `Simplify ${ops![0]} : ${ops![1]}`;
+    case 'proportion': {
+      const ratio = c['ratio'] as number[];
+      return `${ratio[0]} ${c['item'] ?? 'items'} per ${ratio[1]} ${c['unit'] ?? 'units'}. How many ${c['unit'] ?? 'units'} for ${c['known']} ${c['item'] ?? 'items'}?`;
+    }
+    case 'unit_rate':
+      return `${c['total']} in ${c['units']} = ? ${c['rate_name'] ?? 'per unit'}`;
+    case 'percent_of':
+      return `${c['percent']}% of ${c['whole']} = ?`;
+    case 'statistics_mean':
+    case 'statistics_median':
+    case 'statistics_mode': {
+      const stat = (c['stat_type'] as string) ?? format.split('_')[1];
+      const dataset = c['data_set'] as number[];
+      return `Find the ${stat}: [${dataset.join(', ')}]`;
+    }
+    case 'skip_count': {
+      const seq = c['sequence'] as (number | string)[];
+      return `${seq.join(', ')}, ___`;
+    }
+    case 'pythagorean_converse':
+      return `Do sides ${(ops as number[]).join(', ')} form a right triangle?`;
+    case 'geometry_angle_pairs': {
+      const rel = c['relationship'] as string | undefined;
+      return `The ${rel === 'complement' ? 'complement' : 'supplement'} of ${ops![0]}° is ___`;
+    }
+    case 'geometry_classify_quad':
+      return `${c['properties']} → ?`;
+    case 'geometry_formula_identify':
+      return `Formula for ${c['concept']}?`;
+    case 'geometry_interior_angles':
+      return `Sum of interior angles of a ${c['shape']}?`;
+    case 'money_best_buy':
+      return `${c['a_count']} ${c['item_plural'] ?? 'items'} for ${c['a_total_display']} or ${c['b_count']} ${c['item_plural'] ?? 'items'} for ${c['b_total_display']}. Unit price of cheaper?`;
+    case 'money_compare_buys':
+      return `${c['a_count']} ${c['item_plural'] ?? 'items'} at ${c['a_total_display']} vs ${c['b_count']} at ${c['b_list_display']} (${c['b_discount']}% off). Cheaper unit price?`;
+    case 'money_compare_savings':
+      return `${c['principal_display']} at ${c['a_rate']}% for ${c['a_time']}yr vs ${c['b_rate']}% for ${c['b_time']}yr. Which earns more?`;
+    case 'money_decimal_calc':
+      return `${c['a_display']} ${c['operator'] === '+' ? '+' : '−'} ${c['b_display']} = ?`;
+    case 'money_round':
+      return `Round ${c['value_display']} to the nearest ${c['round_to_display']}`;
+    case 'money_unit_price':
+      return `${c['count']} ${c['item_plural'] ?? 'items'} for ${c['total_display']}. Price per ${c['item'] ?? 'item'}?`;
+    case 'money_simple_interest_amount':
+      return `Simple interest on ${c['principal_display']} at ${c['rate']}% for ${c['time_years']} years?`;
+    case 'money_simple_interest_final_balance':
+      return `Final balance: ${c['principal_display']} at ${c['rate']}% for ${c['time_years']} years?`;
+    case 'money_count_single':
+      return `How much is ${c['count']} ${c['coin']}${(c['count'] as number) !== 1 ? 's' : ''}?`;
+    case 'money_make_change':
+      return `Pay ${c['payment_display']} for an item costing ${c['item_price_display']}. How much change?`;
+    case 'money_purchase_find_difference':
+      return `You have coins worth some amount. Item costs ${c['price_display']}. What is the ${c['direction'] ?? 'difference'}?`;
+    case 'money_coin_colour':
+    case 'money_coin_denomination':
+    case 'money_coin_name':
+    case 'money_coin_size':
+      return `Which coin matches: ${c['attribute']} = ${c['target_value']}?`;
+    case 'money_budget_balance': {
+      const dir = c['direction'] ?? 'surplus';
+      return `What is the ${dir} in this budget?`;
+    }
+    case 'money_budget_plan':
+      return `How much goes to ${c['solve_for']}?`;
+    case 'money_financial_records':
+      return 'What is the final balance?';
+    case 'money_price_list':
+      return 'What is the total cost?';
+    case 'geometry_identify':
+      return `What shape is this? (${c['shape']})`;
+    case 'geometry_classify_triangle':
+      return `Classify triangle with sides ${(ops as number[]).join(', ')} by ${c['classify_by']}.`;
+    case 'geometry_face_identify':
+      return `What shape is the face of a ${c['shape']}?`;
+    case 'geometry_circle_convert':
+      return `${c['given_type']} = ${c['value']}. Find the ${c['find_type']}.`;
+    case 'geometry_symmetry':
+      return `How many lines of symmetry does a ${c['shape']} have?`;
+    case 'geometry_surface_area': {
+      const shape = c['shape'] ?? 'shape';
+      return `Find the surface area of the ${shape} (${(ops as number[]).join(' × ')}).`;
+    }
+    case 'geometry_volume': {
+      const shape = c['shape'] ?? 'shape';
+      return `Find the volume of the ${shape} (${(ops as number[]).join(' × ')}).`;
+    }
+    case 'coordinate':
+      return `What are the coordinates of the point?`;
+    case 'number_line':
+      return `What number is shown on the number line?`;
+    default:
+      return 'Solve:';
+  }
+}
+
+function normalizeWithStem(r: Record<string, unknown>): TextOnlyQuestion {
+  const base = extractBase(r);
+  const c = requireContent(r);
+  const format = r['format'] as string;
+  // v0.2.0: prefer canonical questionText if present; fall back to format-derived
+  // stem for legacy bank rows that don't ship one. Once server-side recipe
+  // resolver always populates questionText, this OR becomes a noop.
+  const stem = base.questionText || buildStem(format, c);
+  return {
+    ...base, format: 'text', imageType: undefined,
+    content: { stem },
+    answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+  };
+}
+
 const FORMAT_NORMALIZERS: Record<string, (r: Record<string, unknown>) => NormalizedQuestion> = {
   money: normalizeMoneyRow,
+  money_count_mixed: normalizeMoneyRow,
   text: normalizeTextRow,
   geometry_attributes: normalizeGeometryAttributesRow,
   geometry_classify: normalizeGeometryClassifyRow,
@@ -555,7 +773,11 @@ const FORMAT_NORMALIZERS: Record<string, (r: Record<string, unknown>) => Normali
   geometry_angle_classify: normalizeGeometryAngleClassifyRow,
   geometry_circle_parts: normalizeGeometryCirclePartsRow,
   data_graph: normalizeDataGraphRow,
-  multiplication: normalizeMultiplicationRow,
+  multiplication: (r) => {
+    const imageType = resolveImageType(r, ['array', 'number_line']);
+    if (imageType) return normalizeMultiplicationRow(r);
+    return normalizeWithStem(r);
+  },
   fraction_concept: normalizeFractionConceptRow,
   time: normalizeTimeRow,
   pattern: normalizePatternRow,
@@ -567,6 +789,36 @@ const FORMAT_NORMALIZERS: Record<string, (r: Record<string, unknown>) => Normali
   base10_regroup: normalizeBase10BlocksRow,
   base10_compare: normalizeBase10BlocksRow,
 };
+
+const STEM_FORMATS = [
+  'addition', 'addition_three', 'subtraction', 'division',
+  'integer_addition', 'integer_subtraction',
+  'decimal_addition', 'decimal_multiplication', 'decimal_division',
+  'missing_addend', 'missing_subtrahend',
+  'comparison', 'integer_comparison',
+  'order_of_operations',
+  'algebra_eval', 'algebra_solve', 'algebra_write',
+  'fraction_addition', 'fraction_subtraction', 'fraction_multiplication',
+  'fraction_division', 'fraction_of_quantity',
+  'fraction_to_decimal', 'decimal_to_fraction', 'decimal_to_percent', 'percent_to_decimal',
+  'conversion', 'exponent', 'square_root', 'gcf', 'lcm',
+  'prime_composite', 'odd_even', 'absolute_value', 'place_value', 'rounding',
+  'ratio', 'proportion', 'unit_rate', 'percent_of',
+  'statistics_mean', 'statistics_median', 'statistics_mode',
+  'skip_count', 'pythagorean_converse',
+  'geometry_angle_pairs', 'geometry_classify_quad', 'geometry_formula_identify',
+  'geometry_interior_angles', 'geometry_identify', 'geometry_classify_triangle',
+  'geometry_face_identify', 'geometry_circle_convert', 'geometry_symmetry',
+  'geometry_surface_area', 'geometry_volume',
+  'money_best_buy', 'money_compare_buys', 'money_compare_savings',
+  'money_decimal_calc', 'money_round', 'money_unit_price',
+  'money_simple_interest_amount', 'money_simple_interest_final_balance',
+  'money_count_single', 'money_make_change', 'money_purchase_find_difference',
+  'money_coin_colour', 'money_coin_denomination', 'money_coin_name', 'money_coin_size',
+  'money_budget_balance', 'money_budget_plan', 'money_financial_records', 'money_price_list',
+  'coordinate', 'number_line',
+] as const;
+for (const f of STEM_FORMATS) FORMAT_NORMALIZERS[f] = normalizeWithStem;
 
 function doNormalize(raw: unknown): NormalizedQuestion {
   if (!isQuestionLike(raw)) {
@@ -585,6 +837,13 @@ export function normalizeQuestion(
   raw: unknown,
   opts: NormalizeOptions = {},
 ): NormalizedQuestion | null {
+  if (raw && typeof raw === 'object' && 'correctIndex' in raw) {
+    throw new Error(
+      "Received legacy question shape with 'correctIndex' field; " +
+      "expected canonical chocabloc question shape (use 'answer' + 'distractors' instead). " +
+      "See chocabloc-questions v0.2.0 migration notes.",
+    );
+  }
   try {
     return doNormalize(raw);
   } catch (err) {

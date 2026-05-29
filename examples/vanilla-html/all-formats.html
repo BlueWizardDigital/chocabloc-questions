@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>chocabloc-questions — Format Explorer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f5; color: #1a1a1a; }
+
+    .toolbar {
+      position: sticky; top: 0; z-index: 100;
+      background: #fff; border-bottom: 1px solid #e0e0e0;
+      padding: 10px 24px;
+      display: flex; align-items: center; gap: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .toolbar h1 { font-size: 1rem; font-weight: 700; white-space: nowrap; }
+    .search-box {
+      flex: 1; max-width: 360px;
+      padding: 6px 12px; border: 1px solid #ddd; border-radius: 6px;
+      font-size: 0.85rem; outline: none; font-family: inherit;
+    }
+    .search-box:focus { border-color: #90caf9; box-shadow: 0 0 0 2px rgba(66,165,245,0.2); }
+    .search-box::placeholder { color: #aaa; }
+
+    .group-toggle {
+      display: flex; border: 1px solid #ddd; border-radius: 6px; overflow: hidden;
+    }
+    .group-toggle button {
+      padding: 5px 12px; border: none; background: #fff; cursor: pointer;
+      font-size: 0.78rem; color: #666; font-family: inherit;
+    }
+    .group-toggle button + button { border-left: 1px solid #ddd; }
+    .group-toggle button:hover { background: #f5f5f5; }
+    .group-toggle button.active { background: #1565c0; color: #fff; }
+
+    .stats-bar { font-size: 0.78rem; color: #888; white-space: nowrap; margin-left: auto; }
+    .stats-bar b { color: #333; }
+
+    .filters {
+      padding: 8px 24px; background: #fff; border-bottom: 1px solid #eee;
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    }
+    .filter-group { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+    .filter-group label {
+      font-size: 0.68rem; font-weight: 600; color: #999; text-transform: uppercase;
+      letter-spacing: 0.03em; margin-right: 2px;
+    }
+    .chip {
+      padding: 2px 9px; border-radius: 12px; font-size: 0.72rem;
+      cursor: pointer; border: 1px solid transparent;
+      transition: all 0.12s; user-select: none;
+      display: inline-flex; align-items: center; gap: 3px;
+    }
+    .chip.off { background: #eee; color: #888; }
+    .chip.on { color: #fff; }
+    .chip:hover { opacity: 0.85; }
+    .chip .ct { font-size: 0.6rem; opacity: 0.7; }
+    .filter-sep { width: 1px; height: 20px; background: #e0e0e0; }
+    .clear-btn {
+      font-size: 0.7rem; color: #c62828; cursor: pointer; background: none;
+      border: none; font-family: inherit; padding: 2px 6px;
+    }
+    .clear-btn:hover { text-decoration: underline; }
+    .clear-btn.hidden { display: none; }
+
+    .content { padding: 20px 24px; }
+
+    .group-section { margin-bottom: 24px; }
+    .group-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 0; margin-bottom: 12px;
+      border-bottom: 2px solid #e0e0e0; cursor: pointer; user-select: none;
+    }
+    .group-header:hover { border-bottom-color: #90caf9; }
+    .group-header h2 { font-size: 0.95rem; font-weight: 700; }
+    .group-header .gh-badge {
+      font-size: 0.7rem; padding: 1px 8px; border-radius: 10px;
+    }
+    .group-header .collapse-icon {
+      font-size: 0.65rem; color: #aaa; margin-left: auto; transition: transform 0.2s;
+    }
+    .group-section.collapsed .collapse-icon { transform: rotate(-90deg); }
+    .group-section.collapsed .grid { display: none; }
+
+    .grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 16px;
+    }
+
+    .card {
+      border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;
+      background: #fff; transition: box-shadow 0.15s;
+    }
+    .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+    .card-header {
+      padding: 5px 10px; background: #fafafa; font-size: 0.78rem;
+      font-weight: 600; color: #333; border-bottom: 1px solid #eee;
+      display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+    }
+    .fmt-name { flex-shrink: 0; }
+    .img-badge, .ans-badge, .skill-badge {
+      font-size: 0.62rem; padding: 1px 6px; border-radius: 8px; font-weight: 400;
+    }
+    .skill-badge { background: #f5f5f5; color: #999; }
+    .spacer { flex: 1; }
+    .counter { font-weight: 400; color: #999; font-size: 0.7rem; }
+
+    .nav-btn {
+      padding: 2px 8px; border-radius: 4px; border: 1px solid #ddd;
+      background: #fff; cursor: pointer; font-size: 0.7rem; color: #666; font-family: inherit;
+    }
+    .nav-btn:hover { background: #e3f2fd; border-color: #90caf9; }
+    .mode-btn {
+      padding: 2px 8px; border-radius: 4px; border: 1px solid #a5d6a7;
+      background: #e8f5e9; cursor: pointer; font-size: 0.62rem; color: #2e7d32; font-family: inherit;
+    }
+    .mode-btn:hover { background: #c8e6c9; }
+    .mode-btn.active { background: #2e7d32; color: #fff; }
+
+    chocabloc-question {
+      --cq-font: system-ui, sans-serif;
+      --cq-text: #1C2B45;
+      --cq-coin-size: 48px;
+      --cq-choice-bg: #D4881F;
+      --cq-choice-text: #FFF;
+      --cq-choice-radius: 8px;
+    }
+
+    .card-footer {
+      padding: 5px 10px; font-family: ui-monospace, monospace; font-size: 0.7rem;
+      background: #fafafa; border-top: 1px solid #eee;
+    }
+    .result { color: #888; }
+
+    .no-results { padding: 48px; text-align: center; color: #999; font-size: 0.9rem; }
+
+    .loading { padding: 60px; text-align: center; color: #999; }
+    .loading-bar {
+      width: 200px; height: 3px; background: #eee; border-radius: 2px;
+      margin: 12px auto; overflow: hidden;
+    }
+    .loading-fill {
+      height: 100%; background: #42a5f5; border-radius: 2px; transition: width 0.3s;
+    }
+  </style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>Format Explorer</h1>
+  <input type="search" class="search-box" id="search" placeholder="Search format, image type, skill…">
+  <div class="group-toggle" id="groupToggle">
+    <button data-group="format" class="active">Format</button>
+    <button data-group="image_type">Image Type</button>
+  </div>
+  <div class="stats-bar" id="stats">Loading…</div>
+</div>
+
+<div class="filters" id="filters"></div>
+
+<div class="content" id="content">
+  <div class="loading" id="loading">
+    <div>Loading question bank…</div>
+    <div class="loading-bar"><div class="loading-fill" id="loadFill" style="width:0%"></div></div>
+  </div>
+</div>
+
+<script type="module">
+  import '../../dist/full.mjs';
+  import { normalizeQuestion } from '../../dist/helpers-only.mjs';
+
+  const IT_COLORS = {
+    coins:            ['#fff8e1','#f57f17'],
+    analog_clock:     ['#e3f2fd','#1565c0'],
+    shape_2d:         ['#f3e5f5','#7b1fa2'],
+    shape_3d:         ['#f3e5f5','#6a1b9a'],
+    compound_shape:   ['#ede7f6','#4527a0'],
+    bar_graph:        ['#e8f5e9','#2e7d32'],
+    pictograph:       ['#e8f5e9','#1b5e20'],
+    fraction_visual:  ['#fff3e0','#e65100'],
+    coordinate_grid:  ['#e0f7fa','#00695c'],
+    coordinate_plane: ['#e0f7fa','#00838f'],
+    number_line:      ['#e8eaf6','#283593'],
+    pattern_visual:   ['#fce4ec','#ad1457'],
+    table:            ['#eceff1','#455a64'],
+    base10_blocks:    ['#efebe9','#4e342e'],
+    right_triangle:   ['#f3e5f5','#6a1b9a'],
+    circle_parts:     ['#e3f2fd','#0d47a1'],
+    angle:            ['#ede7f6','#311b92'],
+    array:            ['#e8eaf6','#1a237e'],
+    shape_shaded:     ['#f3e5f5','#4a148c'],
+    'text-only':      ['#f5f5f5','#9e9e9e'],
+  };
+  const AT_COLORS = {
+    numeric:    ['#e3f2fd','#1565c0'],
+    money:      ['#fff8e1','#f57f17'],
+    mc_only:    ['#fce4ec','#c62828'],
+    expression: ['#e8f5e9','#2e7d32'],
+    text:       ['#f3e5f5','#7b1fa2'],
+  };
+
+  function itColor(v) { return IT_COLORS[v] || ['#eee','#666']; }
+  function atColor(v) { return AT_COLORS[v] || ['#eee','#666']; }
+
+  // ── State ──
+  let groupBy = 'format';
+  const activeIT = new Set();
+  const activeAT = new Set();
+  let search = '';
+  const allRows = [];
+  const byFormat = new Map();
+
+  // ── Load ──
+  const fillEl = document.getElementById('loadFill');
+  const skillResp = await fetch('../../../../public/data/skills/skills.json');
+  const skills = await skillResp.json();
+  const sids = skills.map(s => s.skill_id || s.id);
+
+  let loaded = 0;
+  const BATCH = 20;
+  for (let i = 0; i < sids.length; i += BATCH) {
+    const batch = sids.slice(i, i + BATCH);
+    const results = await Promise.allSettled(batch.map(async sid => {
+      const r = await fetch(`../../../../public/data/questions/questions/${sid}.json`);
+      if (!r.ok) return null;
+      return { sid, rows: await r.json() };
+    }));
+    for (const res of results) {
+      if (res.status !== 'fulfilled' || !res.value) continue;
+      const { sid, rows } = res.value;
+      for (const row of rows) {
+        row._sid = sid;
+        allRows.push(row);
+        const fmt = row.format || 'unknown';
+        if (!byFormat.has(fmt)) byFormat.set(fmt, []);
+        byFormat.get(fmt).push(row);
+      }
+    }
+    loaded += batch.length;
+    fillEl.style.width = `${Math.min(100, (loaded / sids.length) * 100)}%`;
+  }
+
+  document.getElementById('loading').remove();
+  document.getElementById('stats').innerHTML =
+    `<b>${byFormat.size}</b> formats · <b>${allRows.length.toLocaleString()}</b> questions · <b>${sids.length}</b> skills`;
+
+  // ── Filters ──
+  const filtersEl = document.getElementById('filters');
+  let clearBtn;
+
+  function buildFilters() {
+    filtersEl.textContent = '';
+    const itCounts = {}, atCounts = {};
+    for (const r of allRows) {
+      const it = r.image_type || 'text-only';
+      const at = r.answer_type || 'unknown';
+      itCounts[it] = (itCounts[it] || 0) + 1;
+      atCounts[at] = (atCounts[at] || 0) + 1;
+    }
+
+    const makeGroup = (label, entries, colorFn, activeSet, type) => {
+      const g = document.createElement('div');
+      g.className = 'filter-group';
+      const lbl = document.createElement('label');
+      lbl.textContent = label;
+      g.appendChild(lbl);
+      for (const [val, count] of Object.entries(entries).sort((a,b) => a[0].localeCompare(b[0]))) {
+        const chip = document.createElement('span');
+        chip.className = 'chip off';
+        chip.dataset.value = val;
+        const [bg, fg] = colorFn(val);
+        chip.textContent = val + ' ';
+        const ct = document.createElement('span');
+        ct.className = 'ct';
+        ct.textContent = count;
+        chip.appendChild(ct);
+        chip.onclick = () => {
+          if (activeSet.has(val)) {
+            activeSet.delete(val);
+            chip.className = 'chip off';
+            chip.style.background = '';
+            chip.style.color = '';
+          } else {
+            activeSet.add(val);
+            chip.className = 'chip on';
+            chip.style.background = fg;
+            chip.style.color = '#fff';
+          }
+          updateClearBtn();
+          render();
+        };
+        g.appendChild(chip);
+      }
+      return g;
+    };
+
+    filtersEl.appendChild(makeGroup('Image', itCounts, itColor, activeIT, 'it'));
+    const sep = document.createElement('div');
+    sep.className = 'filter-sep';
+    filtersEl.appendChild(sep);
+    filtersEl.appendChild(makeGroup('Answer', atCounts, atColor, activeAT, 'at'));
+
+    clearBtn = document.createElement('button');
+    clearBtn.className = 'clear-btn hidden';
+    clearBtn.textContent = 'clear';
+    clearBtn.onclick = () => {
+      activeIT.clear();
+      activeAT.clear();
+      filtersEl.querySelectorAll('.chip.on').forEach(c => {
+        c.className = 'chip off';
+        c.style.background = '';
+        c.style.color = '';
+      });
+      updateClearBtn();
+      render();
+    };
+    filtersEl.appendChild(clearBtn);
+  }
+
+  function updateClearBtn() {
+    if (clearBtn) clearBtn.className = (activeIT.size || activeAT.size) ? 'clear-btn' : 'clear-btn hidden';
+  }
+
+  buildFilters();
+
+  // ── Card cache ──
+  const cache = new Map();
+
+  function getCard(fmt, rows) {
+    if (cache.has(fmt)) return cache.get(fmt);
+
+    let idx = 0, useInput = false;
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'card-header';
+    const fmtSpan = document.createElement('span');
+    fmtSpan.className = 'fmt-name';
+    fmtSpan.textContent = fmt;
+    const imgBadge = document.createElement('span');
+    imgBadge.className = 'img-badge';
+    const ansBadge = document.createElement('span');
+    ansBadge.className = 'ans-badge';
+    const skillBadge = document.createElement('span');
+    skillBadge.className = 'skill-badge';
+    const sp = document.createElement('span');
+    sp.className = 'spacer';
+    const ctr = document.createElement('span');
+    ctr.className = 'counter';
+    const modeBtn = document.createElement('button');
+    modeBtn.className = 'mode-btn';
+    modeBtn.style.display = 'none';
+    const prev = document.createElement('button');
+    prev.className = 'nav-btn';
+    prev.textContent = '◀';
+    const next = document.createElement('button');
+    next.className = 'nav-btn';
+    next.textContent = '▶';
+    hdr.append(fmtSpan, imgBadge, ansBadge, skillBadge, sp, ctr, modeBtn, prev, next);
+
+    const el = document.createElement('chocabloc-question');
+    el.setAttribute('whiteboard', '');
+
+    const ftr = document.createElement('div');
+    ftr.className = 'card-footer';
+    const res = document.createElement('span');
+    res.className = 'result';
+    ftr.appendChild(res);
+
+    card.append(hdr, el, ftr);
+
+    function load(i) {
+      idx = i;
+      const raw = rows[i];
+      ctr.textContent = `${i + 1}/${rows.length}`;
+      res.textContent = 'awaiting answer…';
+      res.style.color = '#888';
+
+      const it = raw.image_type || 'text-only';
+      imgBadge.textContent = it;
+      const [ibg, ifg] = itColor(it);
+      imgBadge.style.background = ibg;
+      imgBadge.style.color = ifg;
+
+      const at = raw.answer_type || '';
+      ansBadge.textContent = at;
+      const [abg, afg] = atColor(at);
+      ansBadge.style.background = abg;
+      ansBadge.style.color = afg;
+
+      skillBadge.textContent = raw._sid || '';
+
+      try {
+        const q = normalizeQuestion(raw);
+        const canInput = q.answerMode === 'input';
+        modeBtn.style.display = canInput ? '' : 'none';
+        modeBtn.textContent = useInput ? 'mc' : 'input';
+        modeBtn.className = useInput ? 'mode-btn active' : 'mode-btn';
+        el.setAttribute('seed', String(Math.floor(Math.random() * 10000)));
+        el.setAttribute('answer-mode', useInput && canInput ? 'input' : 'mc');
+        el.question = q;
+      } catch (err) {
+        res.textContent = '❌ ' + err.message;
+        res.style.color = '#c62828';
+      }
+    }
+
+    el.addEventListener('answered', (e) => {
+      const d = e.detail;
+      res.textContent = d.correct
+        ? `✓ ${d.studentAnswer} (${Math.round(d.timeToAnswerMs)}ms)`
+        : `✗ picked ${d.studentAnswer}, expected ${d.expected}`;
+      res.style.color = d.correct ? '#2e7d32' : '#c62828';
+    });
+
+    modeBtn.onclick = () => { useInput = !useInput; load(idx); };
+    prev.onclick = () => load((idx - 1 + rows.length) % rows.length);
+    next.onclick = () => load((idx + 1) % rows.length);
+
+    load(0);
+
+    const entry = { card, fmt, rows };
+    cache.set(fmt, entry);
+    return entry;
+  }
+
+  // ── Render ──
+  function render() {
+    const content = document.getElementById('content');
+    content.textContent = '';
+
+    const visible = [...byFormat.entries()].filter(([fmt, rows]) => {
+      if (search) {
+        const t = search.toLowerCase();
+        if (!fmt.toLowerCase().includes(t)
+          && !rows.some(r => (r.image_type || '').toLowerCase().includes(t))
+          && !rows.some(r => (r._sid || '').toLowerCase().includes(t))
+          && !rows.some(r => (r.answer_type || '').toLowerCase().includes(t)))
+          return false;
+      }
+      if (activeIT.size) {
+        const its = new Set(rows.map(r => r.image_type || 'text-only'));
+        if (![...activeIT].some(v => its.has(v))) return false;
+      }
+      if (activeAT.size) {
+        const ats = new Set(rows.map(r => r.answer_type || 'unknown'));
+        if (![...activeAT].some(v => ats.has(v))) return false;
+      }
+      return true;
+    });
+
+    if (!visible.length) {
+      const nr = document.createElement('div');
+      nr.className = 'no-results';
+      nr.textContent = 'No formats match current filters.';
+      content.appendChild(nr);
+      return;
+    }
+
+    if (groupBy === 'format') {
+      const grid = document.createElement('div');
+      grid.className = 'grid';
+      for (const [fmt, rows] of visible.sort((a, b) => a[0].localeCompare(b[0]))) {
+        grid.appendChild(getCard(fmt, rows).card);
+      }
+      content.appendChild(grid);
+      return;
+    }
+
+    // group by image_type
+    const groups = new Map();
+    for (const [fmt, rows] of visible) {
+      const counts = {};
+      for (const r of rows) {
+        const it = r.image_type || 'text-only';
+        counts[it] = (counts[it] || 0) + 1;
+      }
+      const primary = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+      if (!groups.has(primary)) groups.set(primary, []);
+      groups.get(primary).push([fmt, rows]);
+    }
+
+    for (const [it, fmts] of [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+      const sec = document.createElement('div');
+      sec.className = 'group-section';
+
+      const gh = document.createElement('div');
+      gh.className = 'group-header';
+      const h2 = document.createElement('h2');
+      h2.textContent = it;
+      const badge = document.createElement('span');
+      badge.className = 'gh-badge';
+      const [bg, fg] = itColor(it);
+      badge.style.background = bg;
+      badge.style.color = fg;
+      badge.textContent = `${fmts.length} format${fmts.length > 1 ? 's' : ''}`;
+      const icon = document.createElement('span');
+      icon.className = 'collapse-icon';
+      icon.textContent = '▼';
+      gh.append(h2, badge, icon);
+      gh.onclick = () => sec.classList.toggle('collapsed');
+      sec.appendChild(gh);
+
+      const grid = document.createElement('div');
+      grid.className = 'grid';
+      for (const [fmt, rows] of fmts.sort((a, b) => a[0].localeCompare(b[0]))) {
+        grid.appendChild(getCard(fmt, rows).card);
+      }
+      sec.appendChild(grid);
+      content.appendChild(sec);
+    }
+  }
+
+  render();
+
+  // ── Wiring ──
+  document.getElementById('search').oninput = (e) => {
+    search = e.target.value.trim();
+    render();
+  };
+
+  document.getElementById('groupToggle').onclick = (e) => {
+    const btn = e.target.closest('button');
+    if (!btn || btn.classList.contains('active')) return;
+    document.querySelectorAll('#groupToggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    groupBy = btn.dataset.group;
+    render();
+  };
+</script>
+</body>
+</html>

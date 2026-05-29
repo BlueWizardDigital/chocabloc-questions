@@ -1,6 +1,5 @@
 import type { Choice, NormalizedQuestion } from '../types';
-import { buildChoicePool } from '../helpers/choice-builder';
-import { validateAnswer } from '../helpers/validators';
+import { syncChoicePad, handlePick } from './shared-pad';
 import './ChocaChoicePad';
 
 function centsToDisplay(cents: number): string {
@@ -88,7 +87,7 @@ export class ChocaTableQuestion extends HTMLElement {
   private _container!: HTMLElement;
 
   static get observedAttributes(): string[] {
-    return ['answer-mode', 'disabled', 'seed'];
+    return ['answer-mode', 'disabled', 'seed', 'student-answer'];
   }
 
   constructor() {
@@ -125,7 +124,7 @@ export class ChocaTableQuestion extends HTMLElement {
     const c = q.content;
 
     this._promptEl.textContent =
-      q.prompt ?? `After the change, how much goes to ${c.solve_for}?`;
+      q.questionText || `After the change, how much goes to ${c.solve_for}?`;
     this._container.setAttribute('aria-label', `Question: ${this._promptEl.textContent}`);
 
     this._tableEl.replaceChildren();
@@ -196,40 +195,12 @@ export class ChocaTableQuestion extends HTMLElement {
 
   private _renderChoices(): void {
     if (!this._question) return;
-    const seedAttr = this.getAttribute('seed');
-    const seed = seedAttr !== null ? Number.parseInt(seedAttr, 10) : undefined;
-    const opts: { shuffle: boolean; seed?: number } = { shuffle: true };
-    if (typeof seed === 'number' && Number.isFinite(seed)) opts.seed = seed;
-    const pool: Choice[] = buildChoicePool(this._question, opts);
-    (this._pad as HTMLElement & { choices: Choice[] }).choices = pool;
-    const mode = this.getAttribute('answer-mode') ?? 'mc';
-    this._pad.setAttribute('mode', mode);
-    if (this.hasAttribute('disabled')) this._pad.setAttribute('disabled', '');
-    else this._pad.removeAttribute('disabled');
+    syncChoicePad(this._question, this._pad, this);
   }
 
   private _onPicked(choice: Choice): void {
     if (!this._question) return;
-    const studentAnswer = choice.value;
-    void validateAnswer(this._question, studentAnswer).then((verdict) => {
-      const timeToAnswerMs = performance.now() - this._renderedAt;
-      this.dispatchEvent(
-        new CustomEvent('answered', {
-          detail: {
-            questionId: this._question!.id,
-            studentAnswer,
-            correct: verdict.correct,
-            distractorMatched: verdict.distractorMatched,
-            skillTags: verdict.skillTags,
-            expected: verdict.expected,
-            timeToAnswerMs,
-          },
-          bubbles: true,
-          composed: true,
-        }),
-      );
-      this._pad.setAttribute('disabled', '');
-    });
+    handlePick(this, this._question, choice, this._renderedAt, this._pad);
   }
 }
 

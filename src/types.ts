@@ -5,11 +5,12 @@ export type GradeBand = 'sprout' | 'adventure' | 'thunder';
 
 export type SkillId = string; // UPPER-KEBAB convention, e.g. 'MONEY-COIN-VALUE-USD'
 
-export type AnswerValue = number | string | [number, number];
+export type AnswerValue = number | string | [number, number] | string[];
 
 export type Distractor = {
   value: AnswerValue;
   errorType: string;
+  label?: string;
 };
 
 export type Choice = {
@@ -39,10 +40,12 @@ export type BaseQuestion = {
   skillIds: SkillId[];
   gradeBand?: GradeBand;
   gradeLevel?: number;
-  // Human-readable question stem. Optional — renderers fall back to a
-  // format-appropriate default if unset.
-  prompt?: string;
+  // Canonical chocabloc question shape v0.2.0: camelCase mirror of DB
+  // question_text column. Required field; renderers ship an empty string
+  // when the bank row has no text (rare, but legal).
+  questionText: string;
   answerMode?: 'choice' | 'input';
+  answerDisplay?: string;
 };
 
 // USD / CAD content variants discriminated on currency

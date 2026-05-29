@@ -284,3 +284,38 @@ describe('answerMode passthrough', () => {
     expect(q?.answerMode).toBeUndefined();
   });
 });
+
+describe('normalizeQuestion — legacy correctIndex rejection (v0.2.0)', () => {
+  it('throws explicit error when correctIndex is present', () => {
+    const legacy = {
+      id: 'LEGACY-1',
+      questionText: 'p',
+      choices: [1, 2, 3],
+      correctIndex: 0,
+      format: 'text',
+      difficulty: 'easy',
+      content: { stem: 'p' },
+      skill_ids: [],
+    };
+    expect(() => normalizeQuestion(legacy)).toThrow(
+      /Received legacy question shape with 'correctIndex'/,
+    );
+  });
+
+  it('rejects correctIndex even in prod mode (does not silently drop)', () => {
+    vi.spyOn(env, 'isProd').mockReturnValue(true);
+    const legacy = {
+      id: 'LEGACY-2',
+      questionText: 'p',
+      choices: [1, 2, 3],
+      correctIndex: 0,
+      format: 'text',
+      content: { stem: 'p' },
+      skill_ids: [],
+    };
+    // The guard runs BEFORE try/catch so it always throws (signal for caller bug)
+    expect(() => normalizeQuestion(legacy)).toThrow(
+      /Received legacy question shape with 'correctIndex'/,
+    );
+  });
+});
