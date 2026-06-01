@@ -37,10 +37,21 @@ export function handlePick(
   // format element) exposes a `validateAnswer` property, use it instead of
   // the built-in client compare. Lets a host route validation through
   // Phase F6's POST /answer/validate without forking the element.
+  //
+  // If the host validator rejects (network failure, malformed response,
+  // etc.) fall back to the built-in helper so the pad doesn't lock up and
+  // the kid still sees a verdict. Hosts that want a different recovery
+  // path should wrap their own logic.
   const customValidate = (host as HTMLElement & { validateAnswer?: ValidateAnswer })
     .validateAnswer;
-  const validate = typeof customValidate === 'function' ? customValidate : validateAnswer;
-  void validate(question, studentAnswer).then((verdict) => {
+  const verdictPromise =
+    typeof customValidate === 'function'
+      ? customValidate(question, studentAnswer).catch((err) => {
+          console.warn('[chocabloc-question] host validateAnswer rejected — falling back:', err);
+          return validateAnswer(question, studentAnswer);
+        })
+      : validateAnswer(question, studentAnswer);
+  void verdictPromise.then((verdict) => {
     pad.setAttribute('disabled', '');
     host.dispatchEvent(
       new CustomEvent('answered', {

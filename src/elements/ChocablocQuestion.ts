@@ -5,7 +5,11 @@ import type {
   ToolName,
   ValidateAnswer,
 } from '../types';
-import { validateAnswer } from '../helpers/validators';
+// Aliased so the public `validateAnswer` class field below doesn't shadow
+// the import inside class methods. Without the alias a future refactor
+// that drops the `this.` prefix from a method body would silently pick
+// up the import instead of the host-provided override.
+import { validateAnswer as defaultValidate } from '../helpers/validators';
 import { syncChoicePad, handlePick } from './shared-pad';
 import './ChocaCoinPile';
 import './ChocaCanvasQuestion';
@@ -44,14 +48,29 @@ export class ChocablocQuestion extends HTMLElement {
   private _toolsUsed = new Set<ToolName>();
   private _toolPanels = new Map<ToolName, HTMLElement>();
   private _panelContainer: HTMLElement | null = null;
+  private _innerFormatEl: HTMLElement | null = null;
+  private _validateAnswer: ValidateAnswer | undefined = undefined;
+
   /**
    * Optional host-provided validator (v0.3.0+). When set, replaces the
-   * built-in client-side compare for every pick + every input submission.
-   * Must return Promise<ValidationResult>. Forwarded to inner format
-   * elements on render so `handlePick` finds it regardless of which inner
-   * element it's called from.
+   * built-in client-side compare for every MC pick + every input submission.
+   * Must return `Promise<ValidationResult>`; rejections are swallowed and
+   * routed through the built-in helper as a fail-safe so the choice pad
+   * doesn't lock up.
+   *
+   * Can be set before OR after `question` — the setter forwards the
+   * current value to whichever inner format element is rendered.
    */
-  public validateAnswer?: ValidateAnswer;
+  public get validateAnswer(): ValidateAnswer | undefined {
+    return this._validateAnswer;
+  }
+  public set validateAnswer(fn: ValidateAnswer | undefined) {
+    this._validateAnswer = fn;
+    if (this._innerFormatEl) {
+      (this._innerFormatEl as HTMLElement & { validateAnswer: ValidateAnswer | undefined })
+        .validateAnswer = fn;
+    }
+  }
 
   static get observedAttributes(): string[] {
     return ['answer-mode', 'disabled', 'locale', 'seed', 'student-answer', ...TOOL_ATTRS];
@@ -106,6 +125,9 @@ export class ChocablocQuestion extends HTMLElement {
 
   private _render(): void {
     if (!this._question) return;
+    // Reset the inner-element handle — a stale reference would let the
+    // validateAnswer setter forward to a detached element.
+    this._innerFormatEl = null;
     while (this._shadow.firstChild) this._shadow.removeChild(this._shadow.firstChild);
 
     const tools = this._enabledTools();
@@ -161,11 +183,11 @@ export class ChocablocQuestion extends HTMLElement {
       (inner as HTMLElement & { question: NormalizedQuestion }).question = this._question;
     }
 
-    // v0.3.0+: forward the host-provided validator to the inner element so
-    // shared-pad.handlePick — which receives `inner` as host — can find it.
-    // No-op when not set.
-    if (this.validateAnswer) {
-      (inner as HTMLElement & { validateAnswer?: ValidateAnswer }).validateAnswer = this.validateAnswer;
+    // v0.3.0+: track the inner element so the validateAnswer setter can
+    // propagate later assignments, and forward the current value if any.
+    this._innerFormatEl = inner;
+    if (this._validateAnswer) {
+      (inner as HTMLElement & { validateAnswer?: ValidateAnswer }).validateAnswer = this._validateAnswer;
     }
 
     this._shadow.appendChild(inner);
@@ -232,12 +254,20 @@ export class ChocablocQuestion extends HTMLElement {
     if (this.hasAttribute('disabled')) inputEl.setAttribute('disabled', '');
 
     const t0 = performance.now();
-    // v0.3.0+: prefer the host-provided validator if set. Falls back to the
-    // built-in helper. Matches the MC-path behavior in shared-pad.handlePick.
-    const validate: ValidateAnswer = this.validateAnswer ?? validateAnswer;
     inputEl.addEventListener('submitted', ((e: CustomEvent) => {
       const { parsedValue, rawInput } = e.detail as { parsedValue: AnswerValue; rawInput: string };
-      void validate(q, parsedValue).then((v) => {
+      // Read at submit time so a host that assigns `validateAnswer` after
+      // `question` still takes effect for the input-mode path. If a host
+      // validator rejects, fall back to the built-in helper so the input
+      // doesn't appear hung.
+      const hostValidate = this.validateAnswer;
+      const verdictPromise = hostValidate
+        ? hostValidate(q, parsedValue).catch((err) => {
+            console.warn('[chocabloc-question] host validateAnswer rejected — falling back:', err);
+            return defaultValidate(q, parsedValue);
+          })
+        : defaultValidate(q, parsedValue);
+      void verdictPromise.then((v) => {
         inputEl.showFeedback(v.correct, v.expected);
         this.dispatchEvent(new CustomEvent('answered', {
           detail: {

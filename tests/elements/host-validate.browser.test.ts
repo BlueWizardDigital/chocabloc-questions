@@ -150,6 +150,77 @@ describe('<chocabloc-question> validateAnswer hook (v0.3.0)', () => {
     expect(called).to.equal(true);
   });
 
+  it('propagates a late-assigned validateAnswer to the inner format element', async () => {
+    const el = mount(`<chocabloc-question seed="1"></chocabloc-question>`) as HTMLElement & {
+      question: NormalizedQuestion;
+      validateAnswer?: (q: NormalizedQuestion, sa: AnswerValue) => Promise<ValidationResult>;
+    };
+
+    // Set question FIRST, validateAnswer SECOND — the legacy ordering bug
+    // would leave the inner element with no validator.
+    el.question = {
+      id: 'MONEY-LATE',
+      skillIds: ['MONEY-COIN-VALUE-USD'],
+      questionText: 'How much?',
+      format: 'money',
+      imageType: 'coins',
+      content: { coins: { quarter: 1 }, currency: 'USD' },
+      answer: 25,
+      distractors: [{ value: 10, errorType: 'misc' }],
+    } as NormalizedQuestion;
+    await waitFrame();
+
+    let called = false;
+    el.validateAnswer = async (q, _sa) => {
+      called = true;
+      return { correct: true, expected: q.answer, distractorMatched: null, skillTags: q.skillIds };
+    };
+
+    const inner = el.shadowRoot!.querySelector('choca-coin-pile') as HTMLElement & {
+      validateAnswer?: unknown;
+    };
+    expect(typeof inner.validateAnswer).to.equal('function');
+
+    const pad = inner.shadowRoot!.querySelector('choca-choice-pad') as HTMLElement;
+    const answered = new Promise<CustomEvent>((resolve) => {
+      el.addEventListener('answered', (e) => resolve(e as CustomEvent), { once: true });
+    });
+    pad.dispatchEvent(new CustomEvent('picked', {
+      detail: { value: 25, label: '25', correct: true },
+      bubbles: true,
+      composed: true,
+    }));
+    await answered;
+    expect(called).to.equal(true);
+  });
+
+  it('falls back to built-in compare when host validator rejects', async () => {
+    const el = mount(`<chocabloc-question></chocabloc-question>`) as HTMLElement & {
+      question: NormalizedQuestion;
+      validateAnswer?: (q: NormalizedQuestion, sa: AnswerValue) => Promise<ValidationResult>;
+    };
+
+    el.validateAnswer = async () => {
+      throw new Error('simulated network failure');
+    };
+    el.question = TEXT_Q;
+    await waitFrame();
+
+    const answered = new Promise<CustomEvent>((resolve) => {
+      el.addEventListener('answered', (e) => resolve(e as CustomEvent), { once: true });
+    });
+    const pad = el.shadowRoot!.querySelector('choca-choice-pad') as HTMLElement;
+    pad.dispatchEvent(new CustomEvent('picked', {
+      detail: { value: 'Paris', label: 'Paris', correct: true },
+      bubbles: true,
+      composed: true,
+    }));
+
+    const ev = await answered;
+    // Built-in compare correctly marks "Paris" as the answer
+    expect(ev.detail.correct).to.equal(true);
+  });
+
   it('uses host validator on input-mode submissions', async () => {
     const el = mount(`<chocabloc-question answer-mode="input"></chocabloc-question>`) as HTMLElement & {
       question: NormalizedQuestion;
