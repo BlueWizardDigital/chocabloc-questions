@@ -46,6 +46,15 @@ export type BaseQuestion = {
   questionText: string;
   answerMode?: 'choice' | 'input';
   answerDisplay?: string;
+  /**
+   * v0.4.0+: pre-shuffled, server-built choice list. When present, the lib
+   * skips its own `answer + distractors` choice-pool construction and
+   * renders these values directly. `correct` is unknown client-side; the
+   * host MUST set `validateAnswer` to route validation through the server
+   * (Phase F6 server-validated path). When absent, lib falls back to the
+   * legacy `answer + distractors` path.
+   */
+  choices?: { value: AnswerValue }[];
 };
 
 // USD / CAD content variants discriminated on currency
@@ -65,16 +74,19 @@ export type MoneyQuestion = BaseQuestion & {
   format: 'money';
   imageType: 'coins';
   content: MoneyContent;
-  answer: number; // cents
-  distractors: Distractor[];
+  // v0.4.0+: optional — server-validated mode emits `choices` only (no
+  // `answer`/`distractors`). Lib's built-in validator returns
+  // `correct: false` in that case so a host validateAnswer MUST be set.
+  answer?: number; // cents
+  distractors?: Distractor[];
 };
 
 export type TextOnlyQuestion = BaseQuestion & {
   format: 'text';
   imageType?: undefined;
   content: { stem: string };
-  answer: AnswerValue;
-  distractors: Distractor[];
+  answer?: AnswerValue;
+  distractors?: Distractor[];
 };
 
 type VisualQuestion<
@@ -85,8 +97,8 @@ type VisualQuestion<
   format: F;
   imageType: I;
   content: C;
-  answer: AnswerValue;
-  distractors: Distractor[];
+  answer?: AnswerValue;
+  distractors?: Distractor[];
 };
 
 // — Geometry family —

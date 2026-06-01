@@ -3,6 +3,61 @@
 All notable changes to chocabloc-questions are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0-beta.0] — 2026-06-01
+
+Pre-release for chocabloc's Phase F6 stage 5 (server-validated question delivery). The lib now accepts a new "choices-only" wire shape that lets a server emit pre-shuffled choice values WITHOUT shipping the correct `answer` field or per-distractor metadata. Builds on v0.3.0's `validateAnswer` hook — a host MUST wire that hook for choices-only questions, since the built-in client validator can't determine correctness without `answer`.
+
+### Added
+
+- **`BaseQuestion.choices?: { value: AnswerValue }[]`** — optional, server-emitted choice pool. When present, `buildChoicePool` returns these entries verbatim (all `correct: false`); the lib does not shuffle, dedupe, or relabel. Server is the source of truth for pool composition + ordering.
+- **`normalizeQuestion` accepts the choices-only shape for any format**. When `choices` is in the input, the per-format normalizer is bypassed entirely — no per-format `answer` / `distractors` validation runs. Malformed choice entries (non-object, missing `value`, non-AnswerValue `value`) are dropped silently so a partial server glitch degrades to fewer choices rather than a blank screen.
+- **`validateLocal` returns `{correct: false, distractorMatched: null, expected: undefined}`** when `question.answer` is missing, with a one-time `console.warn` per call to surface the misconfiguration. Hosts MUST set `validateAnswer` to determine correctness in choices-only mode.
+
+### Changed (breaking type-shape)
+
+- **`MoneyQuestion.answer`, `TextOnlyQuestion.answer`, `VisualQuestion<>.answer` are now optional.** Same for `distractors`. Existing consumers reading these fields without an `undefined` guard need to add one. The legacy shape (server emits both `answer + distractors`) continues to work end-to-end; only TypeScript projects with `strict` mode see the breaking surface.
+
+### Tests
+
+- New `tests/helpers/choices-only.test.ts` — 8 cases covering normalize, buildChoicePool fallback, validate fail-safe warning.
+
+### Migration
+
+Server emits the new shape:
+
+```json
+{
+  "id": "Q-001",
+  "format": "multiplication",
+  "imageType": "array",
+  "skillIds": ["MULT-SINGLE-3X"],
+  "questionText": "What is 3 x 4?",
+  "content": { "operands": [3, 4] },
+  "choices": [{ "value": 12 }, { "value": 7 }, { "value": 11 }, { "value": 15 }],
+  "answerToken": "..."
+}
+```
+
+Wire the host validator on the element:
+
+```ts
+el.validateAnswer = async (q, sa) => {
+  const res = await fetch('/api/v1/answer/validate', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+    body: JSON.stringify({ answerToken: q.answerToken, studentAnswer: sa }),
+  }).then(r => r.json());
+  return {
+    correct: res.isCorrect, expected: res.expected,
+    distractorMatched: res.distractorMatched, skillTags: q.skillIds,
+  };
+};
+```
+
+Review-mode painting in choices-only mode: the lib won't paint the correct choice green (no `answer` to compare against). Use the `expected` field returned in the `answered` event detail for custom post-pick feedback.
+
+---
+
 ## [0.3.0-beta.0] — 2026-06-01
 
 Pre-release for chocabloc's Phase F6 (server-side answer validation). Adds an opt-in host-provided validator hook so a chocabloc host can route validation through `POST /api/v1/answer/validate` without forking the element. Default behavior unchanged — every existing consumer keeps working with no flag flip.

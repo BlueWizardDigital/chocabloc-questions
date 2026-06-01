@@ -229,7 +229,11 @@ function normalizeTextRow(r: Record<string, unknown>): TextOnlyQuestion {
   }
   return {
     ...base, format: 'text', content: { stem },
-    answer: answer as TextOnlyQuestion['answer'],
+    // v0.4.0+: TextOnlyQuestion.answer is optional, but at this branch we
+    // proved above that `answer` is one of (number | string | [n, n]).
+    // Cast to AnswerValue (the non-undefined union) to satisfy
+    // exactOptionalPropertyTypes.
+    answer: answer as AnswerValue,
     distractors: normalizeDistractors(r['distractors']),
   };
 }
@@ -826,11 +830,60 @@ function doNormalize(raw: unknown): NormalizedQuestion {
   }
   const r = raw as Record<string, unknown>;
   const format = r['format'] as string;
+
+  // v0.4.0+: server-validated path. When `choices` is present, skip the
+  // per-format normalizer (which would throw on missing `answer`) and build
+  // the shape directly from the base fields + content + choices. The
+  // resulting NormalizedQuestion has `choices` set and `answer`/`distractors`
+  // omitted; buildChoicePool uses `choices`, and the lib's built-in validator
+  // returns `correct: false` so a host validateAnswer is required.
+  const rawChoices = r['choices'];
+  if (Array.isArray(rawChoices)) {
+    const choices = normalizeChoicesField(rawChoices);
+    const base = extractBase(r);
+    const content =
+      typeof r['content'] === 'object' && r['content'] !== null
+        ? (r['content'] as Record<string, unknown>)
+        : {};
+    const imageType = typeof r['imageType'] === 'string' ? r['imageType']
+      : typeof r['image_type'] === 'string' ? r['image_type']
+      : undefined;
+    const out: Record<string, unknown> = {
+      ...base, format, content, choices,
+      ...(imageType ? { imageType } : {}),
+    };
+    return out as NormalizedQuestion;
+  }
+
   const normalizer = FORMAT_NORMALIZERS[format];
   if (!normalizer) {
     throw new NormalizeError(`Unsupported format: ${format}`, raw, format);
   }
   return parseQuestion(normalizer(r));
+}
+
+/**
+ * v0.4.0+: validate + coerce the wire-shape `choices` array. Each entry must
+ * carry a `value` of a valid AnswerValue. Drops invalid entries silently so
+ * server emission glitches degrade rather than blank-screen the kid.
+ */
+function normalizeChoicesField(raw: unknown[]): { value: AnswerValue }[] {
+  const out: { value: AnswerValue }[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== 'object' || entry === null) continue;
+    const e = entry as Record<string, unknown>;
+    const v = e['value'];
+    if (typeof v === 'number' || typeof v === 'string') {
+      out.push({ value: v });
+    } else if (Array.isArray(v)) {
+      if (v.length === 2 && v.every((n) => typeof n === 'number')) {
+        out.push({ value: v as [number, number] });
+      } else if (v.every((s) => typeof s === 'string')) {
+        out.push({ value: v as string[] });
+      }
+    }
+  }
+  return out;
 }
 
 export function normalizeQuestion(

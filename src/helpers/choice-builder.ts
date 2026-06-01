@@ -49,13 +49,35 @@ export function buildChoicePool(
   question: NormalizedQuestion,
   opts: ChoiceBuilderOptions = {},
 ): Choice[] {
+  // v0.4.0+: server-validated path. When the wire carries a pre-shuffled
+  // `choices` field, use it directly — server is the source of truth for
+  // pool composition and ordering. All choices marked `correct: false`
+  // since correctness is host-validator-determined. Caller is responsible
+  // for wiring `validateAnswer` on `<chocabloc-question>`; without it the
+  // built-in validator will treat every pick as wrong.
+  if (question.choices) {
+    return question.choices.map((c) => ({
+      value: c.value,
+      correct: false,
+      label: labelFor(c.value, question),
+    }));
+  }
+
+  // Legacy path: build pool from `answer + distractors`. Required when the
+  // server still ships the v0.2.0/v0.3.0 shape.
+  if (question.answer === undefined) {
+    // Defensive — shape has neither `choices` nor `answer`. Return empty
+    // pool so the renderer shows nothing rather than crashing.
+    return [];
+  }
+  const distractorsList = question.distractors ?? [];
   const count = opts.count ?? 4;
   const correct: Choice = {
     value: question.answer,
     correct: true,
     label: question.answerDisplay ?? labelFor(question.answer, question),
   };
-  const wrong: Choice[] = question.distractors.map((d) => ({
+  const wrong: Choice[] = distractorsList.map((d) => ({
     value: d.value,
     correct: false,
     errorType: d.errorType,
