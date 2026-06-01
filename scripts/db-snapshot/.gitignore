@@ -1,0 +1,2 @@
+# DB snapshots are local-only — regenerate via ./snapshot.sh
+*.json
