@@ -1,4 +1,4 @@
-import type { Choice, NormalizedQuestion } from '../types';
+import type { Choice, NormalizedQuestion, ValidateAnswer } from '../types';
 import { buildChoicePool } from '../helpers/choice-builder';
 import { validateAnswer } from '../helpers/validators';
 
@@ -33,7 +33,14 @@ export function handlePick(
   extras?: Record<string, unknown>,
 ): void {
   const studentAnswer = choice.value;
-  void validateAnswer(question, studentAnswer).then((verdict) => {
+  // v0.3.0+: if the host (root <chocabloc-question> or a forwarding inner
+  // format element) exposes a `validateAnswer` property, use it instead of
+  // the built-in client compare. Lets a host route validation through
+  // Phase F6's POST /answer/validate without forking the element.
+  const customValidate = (host as HTMLElement & { validateAnswer?: ValidateAnswer })
+    .validateAnswer;
+  const validate = typeof customValidate === 'function' ? customValidate : validateAnswer;
+  void validate(question, studentAnswer).then((verdict) => {
     pad.setAttribute('disabled', '');
     host.dispatchEvent(
       new CustomEvent('answered', {

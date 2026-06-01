@@ -1,4 +1,10 @@
-import type { AnswerValue, MoneyQuestion, NormalizedQuestion, ToolName } from '../types';
+import type {
+  AnswerValue,
+  MoneyQuestion,
+  NormalizedQuestion,
+  ToolName,
+  ValidateAnswer,
+} from '../types';
 import { validateAnswer } from '../helpers/validators';
 import { syncChoicePad, handlePick } from './shared-pad';
 import './ChocaCoinPile';
@@ -38,6 +44,14 @@ export class ChocablocQuestion extends HTMLElement {
   private _toolsUsed = new Set<ToolName>();
   private _toolPanels = new Map<ToolName, HTMLElement>();
   private _panelContainer: HTMLElement | null = null;
+  /**
+   * Optional host-provided validator (v0.3.0+). When set, replaces the
+   * built-in client-side compare for every pick + every input submission.
+   * Must return Promise<ValidationResult>. Forwarded to inner format
+   * elements on render so `handlePick` finds it regardless of which inner
+   * element it's called from.
+   */
+  public validateAnswer?: ValidateAnswer;
 
   static get observedAttributes(): string[] {
     return ['answer-mode', 'disabled', 'locale', 'seed', 'student-answer', ...TOOL_ATTRS];
@@ -147,6 +161,13 @@ export class ChocablocQuestion extends HTMLElement {
       (inner as HTMLElement & { question: NormalizedQuestion }).question = this._question;
     }
 
+    // v0.3.0+: forward the host-provided validator to the inner element so
+    // shared-pad.handlePick — which receives `inner` as host — can find it.
+    // No-op when not set.
+    if (this.validateAnswer) {
+      (inner as HTMLElement & { validateAnswer?: ValidateAnswer }).validateAnswer = this.validateAnswer;
+    }
+
     this._shadow.appendChild(inner);
     if (!isInput) this._tapAnswered(inner);
 
@@ -211,9 +232,12 @@ export class ChocablocQuestion extends HTMLElement {
     if (this.hasAttribute('disabled')) inputEl.setAttribute('disabled', '');
 
     const t0 = performance.now();
+    // v0.3.0+: prefer the host-provided validator if set. Falls back to the
+    // built-in helper. Matches the MC-path behavior in shared-pad.handlePick.
+    const validate: ValidateAnswer = this.validateAnswer ?? validateAnswer;
     inputEl.addEventListener('submitted', ((e: CustomEvent) => {
       const { parsedValue, rawInput } = e.detail as { parsedValue: AnswerValue; rawInput: string };
-      void validateAnswer(q, parsedValue).then((v) => {
+      void validate(q, parsedValue).then((v) => {
         inputEl.showFeedback(v.correct, v.expected);
         this.dispatchEvent(new CustomEvent('answered', {
           detail: {

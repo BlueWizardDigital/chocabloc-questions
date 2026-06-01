@@ -3,6 +3,48 @@
 All notable changes to chocabloc-questions are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0-beta.0] — 2026-06-01
+
+Pre-release for chocabloc's Phase F6 (server-side answer validation). Adds an opt-in host-provided validator hook so a chocabloc host can route validation through `POST /api/v1/answer/validate` without forking the element. Default behavior unchanged — every existing consumer keeps working with no flag flip.
+
+### Added
+
+- **`<chocabloc-question>` `validateAnswer` property** (`ValidateAnswer` type exported from `chocabloc-questions`). When set, replaces the built-in client-side compare for every MC pick and every input-mode submission. Same `Promise<ValidationResult>` contract as the built-in `validateAnswer` helper. Host is responsible for preserving the existing `answered` event-detail shape so analytics + review-mode painting don't need to branch.
+- Forwarding: when the host assigns `validateAnswer` to the root element, the dispatcher copies the function reference to whatever inner format element renders (`<choca-coin-pile>`, `<choca-canvas-question>`, `<choca-table-question>`, `<choca-pattern-question>`, `<choca-number-line-question>`). `shared-pad.handlePick` reads it off the immediate host — no shadow-DOM hops required.
+- `ValidateAnswer` type export in `src/types.ts`.
+
+### Tests
+
+- New `tests/elements/host-validate.browser.test.ts` — 4 cases covering MC pick with host validator, fallback to built-in when absent, validator forwarding to inner format elements, input-mode submissions.
+
+### Migration
+
+No required migration. Existing consumers continue to use the built-in client-validate path. To opt into server-validate:
+
+```ts
+import 'chocabloc-questions/full';
+const el = document.querySelector('chocabloc-question') as HTMLElement & {
+  validateAnswer?: (q, sa) => Promise<{ correct, expected?, distractorMatched? }>;
+};
+el.validateAnswer = async (q, sa) => {
+  const res = await fetch('/api/v1/answer/validate', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+    body: JSON.stringify({ answerToken: q.answerToken, studentAnswer: sa }),
+  }).then(r => r.json());
+  return {
+    correct: res.isCorrect,
+    expected: res.expected,
+    distractorMatched: res.distractorMatched,
+    skillTags: q.skillIds,
+  };
+};
+```
+
+`answerToken` ships on the canonical wire shape (chocabloc server v0.2.0+ when called with a user session).
+
+---
+
 ## [0.2.0] — 2026-05-29
 
 This release graduates the lib from alpha. Input contract conforms to the canonical chocabloc DB question shape — no shim adapters required by consumers. Monkey Money, brainbites, and assignment surfaces all consume the same spec. Includes the full 99-format mathSkills expansion that landed on `feat/mathskills-full-coverage`.

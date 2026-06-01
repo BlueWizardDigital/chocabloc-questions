@@ -328,3 +328,21 @@ export type AnsweredDetail = {
   toolsUsed?: ToolName[];
   rawInput?: string;
 };
+
+/**
+ * Optional host-provided answer validator (v0.3.0+).
+ *
+ * When assigned to the `validateAnswer` property of `<chocabloc-question>`,
+ * replaces the built-in client-side compare. Lets a host swap to server-side
+ * validation (Phase F6) without forking the element. Same
+ * `Promise<ValidationResult>` contract as the built-in `validateAnswer`
+ * helper exported from `chocabloc-questions/helpers`.
+ *
+ * The host is responsible for preserving the existing event-detail shape
+ * — `correct`, `distractorMatched`, `expected`, `skillTags` — so downstream
+ * consumers (analytics, review-mode painting) don't need to branch.
+ */
+export type ValidateAnswer = (
+  question: NormalizedQuestion,
+  studentAnswer: AnswerValue,
+) => Promise<ValidationResult>;
