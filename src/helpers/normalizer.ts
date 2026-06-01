@@ -883,6 +883,17 @@ function normalizeChoicesField(raw: unknown[]): { value: AnswerValue }[] {
       }
     }
   }
+  // Operational signal — silent-drop of a malformed `choices` entry is the
+  // intentional pre-launch posture (kid sees a degraded pad, not a blank
+  // screen), but a quiet warn surfaces server data-quality regressions
+  // during burn-in. Matches the warn pattern in validators.ts.
+  if (out.length !== raw.length) {
+    console.warn(
+      `[chocabloc-questions] normalizeChoicesField: dropped ${
+        raw.length - out.length
+      } malformed choice entr${raw.length - out.length === 1 ? 'y' : 'ies'}`,
+    );
+  }
   return out;
 }
 

@@ -1,0 +1,53 @@
+{
+  "_comment": "Cross-repo contract fixture. Captured shape that chocabloc server's recipeResolver.serializeQuestionForGame emits when F6_DROP_ANSWER=true and a userId is in scope. If this fixture stops normalizing cleanly, the wire contract has drifted between server and lib — flag before flipping the env in prod.",
+  "_source": "chocabloc/server-new commit b721ec5 — services/recipeResolver.js choices-only branch",
+  "questions": [
+    {
+      "id": "MM-CAD-Q-001",
+      "format": "money",
+      "imageType": "coins",
+      "skillIds": ["MONEY-COIN-VALUE-CAD"],
+      "questionText": "How much money is shown?",
+      "content": { "coins": { "dime": 1, "quarter": 1 }, "currency": "CAD" },
+      "choices": [
+        { "value": 40 },
+        { "value": 30 },
+        { "value": 35 },
+        { "value": 45 }
+      ],
+      "difficulty": "easy",
+      "answerToken": "eyJxaWQiOiJNTS1DQUQtUS0wMDEiLCJ1aWQiOjQyLCJleHAiOjE3MTkzMjQ4MDB9.fakehexsig0123456789abcdef0123456789abcdef0123456789abcdef0123"
+    },
+    {
+      "id": "GEO-IDENT-TRIANGLE-007",
+      "format": "geometry_attributes",
+      "imageType": "shape_2d",
+      "skillIds": ["GEOM-2D-ATTRIBUTES"],
+      "questionText": "How many sides does a triangle have?",
+      "content": { "attribute": "sides", "shape": "triangle" },
+      "choices": [
+        { "value": "3" },
+        { "value": "4" },
+        { "value": "5" }
+      ],
+      "difficulty": "easy",
+      "answerToken": "eyJxaWQiOiJHRU8tSURFTlQtVFJJQU5HTEUtMDA3IiwidWlkIjo0MiwiZXhwIjoxNzE5MzI0ODAwfQ.fakehexsig0123456789abcdef0123456789abcdef0123456789abcdef0123"
+    },
+    {
+      "id": "MULT-3X-Q-042",
+      "format": "multiplication",
+      "imageType": "array",
+      "skillIds": ["MULT-SINGLE-3X"],
+      "questionText": "What is 3 x 4?",
+      "content": { "operands": [3, 4] },
+      "choices": [
+        { "value": 12 },
+        { "value": 7 },
+        { "value": 11 },
+        { "value": 15 }
+      ],
+      "difficulty": "medium",
+      "answerToken": "eyJxaWQiOiJNVUxULTNYLVEtMDQyIiwidWlkIjo0MiwiZXhwIjoxNzE5MzI0ODAwfQ.fakehexsig0123456789abcdef0123456789abcdef0123456789abcdef0123"
+    }
+  ]
+}

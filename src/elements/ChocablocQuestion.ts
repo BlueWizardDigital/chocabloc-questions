@@ -261,6 +261,17 @@ export class ChocablocQuestion extends HTMLElement {
       // validator rejects, fall back to the built-in helper so the input
       // doesn't appear hung.
       const hostValidate = this.validateAnswer;
+      // v0.4.0+: same misconfigured signal as shared-pad.handlePick — a
+      // choices-only question with no host validator cannot be graded.
+      if (!hostValidate && q.answer === undefined) {
+        this.dispatchEvent(new CustomEvent('chocabloc-misconfigured', {
+          detail: {
+            reason: 'choices-only-without-host-validator',
+            questionId: q.id,
+          },
+          bubbles: true, composed: true,
+        }));
+      }
       const verdictPromise = hostValidate
         ? hostValidate(q, parsedValue).catch((err) => {
             console.warn('[chocabloc-question] host validateAnswer rejected — falling back:', err);

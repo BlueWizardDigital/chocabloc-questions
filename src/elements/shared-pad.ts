@@ -42,8 +42,26 @@ export function handlePick(
   // etc.) fall back to the built-in helper so the pad doesn't lock up and
   // the kid still sees a verdict. Hosts that want a different recovery
   // path should wrap their own logic.
+  //
+  // v0.4.0+: choices-only questions (no `answer` field) REQUIRE a host
+  // validator. If we fall through to the built-in here, every pick will
+  // be marked wrong (validateLocal returns correct:false + warn). Dispatch
+  // a misconfigured event so the host page can surface the issue
+  // (Sentry, banner, refuse-to-render) instead of silently regressing.
   const customValidate = (host as HTMLElement & { validateAnswer?: ValidateAnswer })
     .validateAnswer;
+  if (typeof customValidate !== 'function' && question.answer === undefined) {
+    host.dispatchEvent(
+      new CustomEvent('chocabloc-misconfigured', {
+        detail: {
+          reason: 'choices-only-without-host-validator',
+          questionId: question.id,
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
   const verdictPromise =
     typeof customValidate === 'function'
       ? customValidate(question, studentAnswer).catch((err) => {
