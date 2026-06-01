@@ -108,6 +108,20 @@ import 'chocabloc-questions/elements/canvas-question';  // visual formats
 See `examples/vanilla-html/` for a working demo that renders all formats
 from DB snapshot data with per-card cycling.
 
+## Use inside ChocaBLOC iframe games
+
+The lib works inside iframe-sandboxed games the same as anywhere else —
+install, register the element, render with a canonical question. The only
+extra piece is **how the game receives questions from the host**: via
+`postMessage` using the `chocabloc:questions:deliver` protocol.
+
+That protocol (request payload, deliver payload, attempt reporting) is
+documented in one place: the ChocaBLOC iframe integration guide →
+https://github.com/jasonbluewizard/Chocabloc/blob/develop/docs/games/IFRAME-GAME-INTEGRATION-GUIDE.md#phase-2--curated-question-delivery-chocabloc-questions-lib
+
+Don't reinvent the bridge or the canonical shape per game. Both live in
+chocabloc's docs; this README is the element + helpers reference only.
+
 ## Supported formats
 
 20-member discriminated union on `format`:
