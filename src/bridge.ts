@@ -12,7 +12,12 @@
 //   - explicit switch allow-list (no fallthrough default)
 //   - 2-second standalone fallback timer
 
-import type { AnswerValue } from './types';
+import type {
+  AnswerValue,
+  NormalizedQuestion,
+  ValidateAnswer,
+  ValidationResult,
+} from './types';
 
 const INIT_TIMEOUT_MS = 2000;
 const REQUEST_TIMEOUT_MS = 3000;
@@ -150,6 +155,24 @@ export class MalformedResponseError extends Error {
   }
 }
 
+/**
+ * Minimal structural shape for the lib's `<chocabloc-question>` element. Used
+ * by attachValidator without importing the concrete class, so the bridge stays
+ * DOM-free at the type level.
+ */
+export interface ChocablocQuestionLike {
+  validateAnswer?: ValidateAnswer | undefined;
+}
+
+/**
+ * F6 question shape accepted by attachValidator. Structural subset of
+ * NormalizedQuestion + the wire-only `answerToken` field, which the lib's
+ * NormalizedQuestion type does not formally declare today.
+ */
+export interface AttachValidatorQuestion {
+  answerToken?: string;
+}
+
 export interface Bridge {
   readonly ctx: BridgeContext | null;
   onReady(cb: ReadyCallback): void;
@@ -160,6 +183,10 @@ export interface Bridge {
   exit(): void;
   requestNextQuestion(opts?: RequestNextQuestionOptions): Promise<unknown | null>;
   validateAnswer(opts: ValidateAnswerOptions): Promise<ValidateAnswerResult>;
+  attachValidator(
+    el: ChocablocQuestionLike,
+    question: AttachValidatorQuestion
+  ): void;
 }
 
 const inIframe: boolean = (() => {
@@ -396,6 +423,57 @@ function validateAnswer(
   });
 }
 
+/**
+ * Convenience sugar over the existing v0.4.0-beta.0 `el.validateAnswer`
+ * property setter. When `question.answerToken` is present (F6 payload),
+ * assigns a validator function that proxies via `bridge.validateAnswer()`
+ * and adapts the server response to the lib's ValidationResult shape:
+ *
+ *   isCorrect          → correct
+ *   expected           → expected
+ *   distractorMatched  → distractorMatched (errorType null coerced to '')
+ *   q.skillIds         → skillTags
+ *
+ * When `answerToken` is absent (pre-F6 payload), no-op — the lib's pure
+ * helper handles validation as before.
+ *
+ * This is NOT a new validation capability — it's a 1-line replacement for
+ *   el.validateAnswer = (q, sa) => bridge.validateAnswer({...}).then(...)
+ * so iframe-game consumers don't hand-roll the conversion. Safe to call on
+ * any pick — same token, same closure.
+ */
+function attachValidator(
+  el: ChocablocQuestionLike,
+  question: AttachValidatorQuestion
+): void {
+  if (
+    typeof question.answerToken !== 'string' ||
+    question.answerToken.length === 0
+  ) {
+    return; // pre-F6 question — lib falls back to pure helper
+  }
+  const token = question.answerToken;
+  el.validateAnswer = async (
+    q: NormalizedQuestion,
+    studentAnswer: AnswerValue
+  ): Promise<ValidationResult> => {
+    const result = await validateAnswer({ answerToken: token, studentAnswer });
+    return {
+      correct: result.isCorrect,
+      expected: result.expected,
+      distractorMatched: result.distractorMatched
+        ? {
+            value: result.distractorMatched.value,
+            // Lib's Distractor.errorType is required string; server may
+            // return null when no error-type tag exists for the distractor.
+            errorType: result.distractorMatched.errorType ?? '',
+          }
+        : null,
+      skillTags: q.skillIds,
+    };
+  };
+}
+
 // Request the next adaptive question from the bank. Server emits the canonical
 // chocabloc question shape (camelCase: skillIds, imageType, questionText, plus
 // answer + distractors[]) directly — same shape the chocabloc-questions lib
@@ -468,6 +546,9 @@ export const bridge: Bridge = {
   },
   validateAnswer(opts: ValidateAnswerOptions) {
     return validateAnswer(opts);
+  },
+  attachValidator(el: ChocablocQuestionLike, question: AttachValidatorQuestion) {
+    attachValidator(el, question);
   },
 };
 
