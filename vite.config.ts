@@ -22,6 +22,7 @@ export default defineConfig({
         index: resolve(__dirname, 'src/index.ts'),
         'helpers-only': resolve(__dirname, 'src/helpers-only.ts'),
         full: resolve(__dirname, 'src/full.ts'),
+        bridge: resolve(__dirname, 'src/bridge.ts'),
         'elements/coin-pile': resolve(__dirname, 'src/elements/coin-pile.ts'),
         'elements/canvas-question': resolve(__dirname, 'src/elements/canvas-question.ts'),
       },

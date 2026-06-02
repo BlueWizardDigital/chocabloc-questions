@@ -27,13 +27,20 @@
     "./elements/coin-pile": {
       "types": "./dist/elements/coin-pile.d.ts",
       "import": "./dist/elements/coin-pile.mjs"
+    },
+    "./bridge": {
+      "types": "./dist/bridge.d.ts",
+      "import": "./dist/bridge.mjs",
+      "require": "./dist/bridge.cjs"
     }
   },
   "sideEffects": [
     "./dist/full.mjs",
     "./dist/full.cjs",
     "./dist/elements/coin-pile.mjs",
-    "./dist/elements/canvas-question.mjs"
+    "./dist/elements/canvas-question.mjs",
+    "./dist/bridge.mjs",
+    "./dist/bridge.cjs"
   ],
   "files": [
     "dist",
