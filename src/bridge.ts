@@ -51,6 +51,13 @@ export interface RequestNextQuestionOptions {
 /**
  * Attempt payload sent to host. Shape matches GamePageWrapper.tsx's
  * handleQuestionAttempt expectations.
+ *
+ * v0.5.0-beta.2: `answerToken` is the F6 cross-check field. When present,
+ * the server re-derives `isCorrect` from the canonical answer and ignores
+ * the client-supplied flag (security fix P1-4 — closes the
+ * `chocabloc:attempt` channel that previously let any iframe forge
+ * `isCorrect: true` and corrupt mastery/XP). Optional during F6 rollout;
+ * once all SDK consumers forward tokens, server will require it.
  */
 export interface AttemptPayload {
   questionId: string;
@@ -58,6 +65,7 @@ export interface AttemptPayload {
   skillIds?: string[];
   timeToAnswerMs?: number;
   studentAnswer?: unknown;
+  answerToken?: string;
 }
 
 /**
@@ -250,6 +258,10 @@ window.addEventListener('message', (e: MessageEvent) => {
   // subsequent bridge.score / bridge.attempt / bridge.save-notify posts to
   // the attacker's origin.
   if (e.source !== window.parent) return;
+  // Same-origin only in v0.5: reject messages from a different origin. Allow
+  // empty string (Edge/legacy same-origin quirk) since we already gated on
+  // window.parent. Cross-origin support is future work — see handoff doc.
+  if (e.origin !== '' && e.origin !== window.location.origin) return;
 
   const msg = e.data;
   if (

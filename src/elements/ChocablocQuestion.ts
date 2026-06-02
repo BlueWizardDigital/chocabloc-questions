@@ -272,13 +272,34 @@ export class ChocablocQuestion extends HTMLElement {
           bubbles: true, composed: true,
         }));
       }
-      const verdictPromise = hostValidate
+      // v0.5.0-beta.2: don't fall through to defaultValidate when the question
+      // is choices-only AND the host validator rejects. See shared-pad.ts for
+      // the full rationale — fall-through silently marks correct answers wrong
+      // during a validate-endpoint outage.
+      const choicesOnly = q.answer === undefined;
+      const verdictPromise: Promise<Awaited<ReturnType<typeof defaultValidate>> | null> = hostValidate
         ? hostValidate(q, parsedValue).catch((err) => {
+            if (choicesOnly) {
+              console.warn(
+                '[chocabloc-question] host validateAnswer rejected and no local answer to fall back on:',
+                err,
+              );
+              this.dispatchEvent(new CustomEvent('chocabloc-validation-unavailable', {
+                detail: {
+                  reason: 'host-validator-rejected',
+                  questionId: q.id,
+                  error: err,
+                },
+                bubbles: true, composed: true,
+              }));
+              return null;
+            }
             console.warn('[chocabloc-question] host validateAnswer rejected — falling back:', err);
             return defaultValidate(q, parsedValue);
           })
         : defaultValidate(q, parsedValue);
       void verdictPromise.then((v) => {
+        if (v === null) return; // validation unavailable: no feedback, no `answered` event
         inputEl.showFeedback(v.correct, v.expected);
         this.dispatchEvent(new CustomEvent('answered', {
           detail: {

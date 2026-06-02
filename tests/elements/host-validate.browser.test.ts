@@ -221,6 +221,101 @@ describe('<chocabloc-question> validateAnswer hook (v0.3.0)', () => {
     expect(ev.detail.correct).to.equal(true);
   });
 
+  it('does NOT fall back to built-in when choices-only question + host validator rejects (MC path)', async () => {
+    // v0.5.0-beta.2: choices-only canonical (no `answer`) + host validator
+    // rejection must NOT call the local helper. The helper would mark every
+    // pick wrong. Instead emit `chocabloc-validation-unavailable` and leave
+    // the pad enabled.
+    const el = mount(`<chocabloc-question></chocabloc-question>`) as HTMLElement & {
+      question: NormalizedQuestion;
+      validateAnswer?: (q: NormalizedQuestion, sa: AnswerValue) => Promise<ValidationResult>;
+    };
+
+    el.validateAnswer = async () => {
+      throw new Error('simulated validate outage');
+    };
+    el.question = {
+      id: 'CHOICES-ONLY-1',
+      skillIds: ['MISC'],
+      questionText: 'What is the capital of France?',
+      format: 'text',
+      content: { stem: 'What is the capital of France?' },
+      // No `answer` — choices-only canonical
+      choices: [
+        { value: 'Paris' },
+        { value: 'London' },
+        { value: 'Rome' },
+      ],
+      distractors: [],
+    } as unknown as NormalizedQuestion;
+    await waitFrame();
+
+    let answeredFired = false;
+    el.addEventListener('answered', () => {
+      answeredFired = true;
+    }, { once: true });
+
+    const unavailable = new Promise<CustomEvent>((resolve) => {
+      el.addEventListener('chocabloc-validation-unavailable', (e) => resolve(e as CustomEvent), { once: true });
+    });
+
+    const pad = el.shadowRoot!.querySelector('choca-choice-pad') as HTMLElement;
+    pad.dispatchEvent(new CustomEvent('picked', {
+      detail: { value: 'Paris', label: 'Paris', correct: true },
+      bubbles: true,
+      composed: true,
+    }));
+
+    const ev = await unavailable;
+    expect(ev.detail.reason).to.equal('host-validator-rejected');
+    expect(ev.detail.questionId).to.equal('CHOICES-ONLY-1');
+    // Wait a couple frames to confirm `answered` does NOT fire
+    await waitFrame();
+    await waitFrame();
+    expect(answeredFired).to.equal(false);
+    // Pad remains enabled (no disabled attr set)
+    expect(pad.hasAttribute('disabled')).to.equal(false);
+  });
+
+  it('does NOT fall back to built-in when choices-only question + host validator rejects (input path)', async () => {
+    const el = mount(`<chocabloc-question answer-mode="input"></chocabloc-question>`) as HTMLElement & {
+      question: NormalizedQuestion;
+      validateAnswer?: (q: NormalizedQuestion, sa: AnswerValue) => Promise<ValidationResult>;
+    };
+
+    el.validateAnswer = async () => {
+      throw new Error('simulated validate outage');
+    };
+    el.question = {
+      id: 'CHOICES-ONLY-INPUT-1',
+      skillIds: ['MISC'],
+      questionText: 'What is 2 + 2?',
+      format: 'text',
+      content: { stem: 'What is 2 + 2?' },
+      distractors: [],
+    } as unknown as NormalizedQuestion;
+    await waitFrame();
+
+    let answeredFired = false;
+    el.addEventListener('answered', () => { answeredFired = true; }, { once: true });
+
+    const unavailable = new Promise<CustomEvent>((resolve) => {
+      el.addEventListener('chocabloc-validation-unavailable', (e) => resolve(e as CustomEvent), { once: true });
+    });
+
+    const input = el.shadowRoot!.querySelector('choca-answer-input') as HTMLElement;
+    input.dispatchEvent(new CustomEvent('submitted', {
+      detail: { parsedValue: '4', rawInput: '4' },
+    }));
+
+    const ev = await unavailable;
+    expect(ev.detail.reason).to.equal('host-validator-rejected');
+    expect(ev.detail.questionId).to.equal('CHOICES-ONLY-INPUT-1');
+    await waitFrame();
+    await waitFrame();
+    expect(answeredFired).to.equal(false);
+  });
+
   it('uses host validator on input-mode submissions', async () => {
     const el = mount(`<chocabloc-question answer-mode="input"></chocabloc-question>`) as HTMLElement & {
       question: NormalizedQuestion;

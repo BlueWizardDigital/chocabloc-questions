@@ -1,4 +1,9 @@
-import type { Choice, NormalizedQuestion, ValidateAnswer } from '../types';
+import type {
+  Choice,
+  NormalizedQuestion,
+  ValidateAnswer,
+  ValidationResult,
+} from '../types';
 import { buildChoicePool } from '../helpers/choice-builder';
 import { validateAnswer } from '../helpers/validators';
 
@@ -62,14 +67,40 @@ export function handlePick(
       }),
     );
   }
-  const verdictPromise =
+  // v0.5.0-beta.2: when the question is choices-only (no `answer`) AND the
+  // host validator rejects, do NOT fall through to the built-in helper. The
+  // built-in returns `correct: false` for every studentAnswer when `answer`
+  // is undefined, which would silently mark a correct kid wrong during a
+  // validate-endpoint outage. Surface a `chocabloc-validation-unavailable`
+  // event and leave the pad interactive so the host can render a retry UX.
+  const choicesOnly = question.answer === undefined;
+  const verdictPromise: Promise<ValidationResult | null> =
     typeof customValidate === 'function'
       ? customValidate(question, studentAnswer).catch((err) => {
+          if (choicesOnly) {
+            console.warn(
+              '[chocabloc-question] host validateAnswer rejected and no local answer to fall back on:',
+              err,
+            );
+            host.dispatchEvent(
+              new CustomEvent('chocabloc-validation-unavailable', {
+                detail: {
+                  reason: 'host-validator-rejected',
+                  questionId: question.id,
+                  error: err,
+                },
+                bubbles: true,
+                composed: true,
+              }),
+            );
+            return null;
+          }
           console.warn('[chocabloc-question] host validateAnswer rejected — falling back:', err);
           return validateAnswer(question, studentAnswer);
         })
       : validateAnswer(question, studentAnswer);
   void verdictPromise.then((verdict) => {
+    if (verdict === null) return; // validation unavailable: leave pad enabled, no `answered` event
     pad.setAttribute('disabled', '');
     host.dispatchEvent(
       new CustomEvent('answered', {
