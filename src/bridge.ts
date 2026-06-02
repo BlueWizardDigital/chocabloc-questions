@@ -12,8 +12,11 @@
 //   - explicit switch allow-list (no fallthrough default)
 //   - 2-second standalone fallback timer
 
+import type { AnswerValue } from './types';
+
 const INIT_TIMEOUT_MS = 2000;
 const REQUEST_TIMEOUT_MS = 3000;
+const VALIDATE_TIMEOUT_MS = 5000;
 
 /**
  * Bridge context delivered by the host on boot, or synthesized for standalone.
@@ -62,6 +65,91 @@ export interface ScorePayload {
   xp?: number;
 }
 
+/**
+ * F6 server-side validation request payload. Sent to host via postMessage;
+ * host POSTs to /api/v1/answer/validate using its own session + CSRF setup
+ * and replies via chocabloc:validate:deliver.
+ */
+export interface ValidateAnswerOptions {
+  answerToken: string;
+  studentAnswer: AnswerValue;
+}
+
+/**
+ * F6 server-side validation result. Mirrors /api/v1/answer/validate response
+ * shape. `errorType` may be null even when distractor matched (server may not
+ * have an error-type tag for some distractors).
+ */
+export interface ValidateAnswerResult {
+  isCorrect: boolean;
+  expected: AnswerValue;
+  distractorMatched: { value: AnswerValue; errorType: string | null } | null;
+}
+
+/**
+ * Local timeout — host never replied within VALIDATE_TIMEOUT_MS. Indicates
+ * a transport problem (host crashed, postMessage dropped, parent gone).
+ * Distinct from BridgeStandaloneError: here a host EXISTS but did not answer.
+ * Consumers should NOT treat this as "answer was wrong"; surface a retry UX
+ * or fail visibly to the operator.
+ */
+export class BridgeTimeoutError extends Error {
+  constructor(public readonly requestId: string) {
+    super(`bridge.validateAnswer timed out after ${VALIDATE_TIMEOUT_MS}ms`);
+    this.name = 'BridgeTimeoutError';
+  }
+}
+
+/**
+ * No host present — game is running standalone (not in an iframe, or host
+ * never responded with chocabloc:init). Validation is impossible because
+ * there is no party to POST /api/v1/answer/validate on the game's behalf.
+ * Distinct from BridgeTimeoutError so telemetry + debugging can tell apart
+ * "host crashed" from "no host at all".
+ */
+export class BridgeStandaloneError extends Error {
+  constructor() {
+    super('bridge.validateAnswer called in standalone mode (no host present)');
+    this.name = 'BridgeStandaloneError';
+  }
+}
+
+/**
+ * Server returned { error: { code: "INVALID_TOKEN" } } — token signature
+ * failed verification, token bound to a different question/user, or token
+ * format invalid. Consumer should refetch the question and retry.
+ */
+export class InvalidTokenError extends Error {
+  constructor(public readonly requestId: string, message?: string) {
+    super(message ?? 'answerToken rejected by server');
+    this.name = 'InvalidTokenError';
+  }
+}
+
+/**
+ * Server returned { error: { code: "EXPIRED_TOKEN" } } — token's 15-min TTL
+ * has elapsed. Consumer should refetch the question and retry.
+ */
+export class ExpiredTokenError extends Error {
+  constructor(public readonly requestId: string, message?: string) {
+    super(message ?? 'answerToken expired');
+    this.name = 'ExpiredTokenError';
+  }
+}
+
+/**
+ * Server reply did not match the expected ValidateAnswerResult shape. Should
+ * be impossible in well-behaved deployments; signals a protocol drift between
+ * server and lib. Consumer should NOT treat this as "answer was wrong";
+ * surface visibly to the operator.
+ */
+export class MalformedResponseError extends Error {
+  constructor(public readonly requestId: string, message?: string) {
+    super(message ?? 'chocabloc:validate:deliver payload malformed');
+    this.name = 'MalformedResponseError';
+  }
+}
+
 export interface Bridge {
   readonly ctx: BridgeContext | null;
   onReady(cb: ReadyCallback): void;
@@ -71,6 +159,7 @@ export interface Bridge {
   saveNotify(): void;
   exit(): void;
   requestNextQuestion(opts?: RequestNextQuestionOptions): Promise<unknown | null>;
+  validateAnswer(opts: ValidateAnswerOptions): Promise<ValidateAnswerResult>;
 }
 
 const inIframe: boolean = (() => {
@@ -88,6 +177,16 @@ let initTimer: ReturnType<typeof setTimeout> | null = null;
 // that exact origin instead of wildcard '*'. Falls back to '*' if unknown
 // (pre-init / parent gone).
 let parentOrigin: string | null = null;
+
+// In-flight chocabloc:validate:request promises keyed by requestId. Entries
+// are removed on resolve / reject / timeout. Map (not object) so iteration
+// order is preserved and `delete` is O(1).
+interface PendingValidate {
+  resolve: (result: ValidateAnswerResult) => void;
+  reject: (err: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
+}
+const pendingValidates = new Map<string, PendingValidate>();
 
 function deliverReady(payload: BridgeContext): void {
   if (ctx) return;
@@ -154,10 +253,76 @@ window.addEventListener('message', (e: MessageEvent) => {
       });
       return;
     }
+    case 'chocabloc:validate:deliver': {
+      handleValidateDeliver(msg.payload);
+      return;
+    }
     default:
       return;
   }
 });
+
+function handleValidateDeliver(payload: unknown): void {
+  // Defensive: ignore any deliver we can't tie to a pending request. Avoids
+  // unhandled-rejection on duplicate / late / malformed replies.
+  if (!payload || typeof payload !== 'object') return;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.requestId !== 'string') return;
+
+  const pending = pendingValidates.get(p.requestId);
+  if (!pending) return; // already timed out, or duplicate delivery
+
+  clearTimeout(pending.timer);
+  pendingValidates.delete(p.requestId);
+
+  // Server error envelope path.
+  const err = p.error;
+  if (err && typeof err === 'object') {
+    const errObj = err as { code?: unknown; message?: unknown };
+    const code = typeof errObj.code === 'string' ? errObj.code : null;
+    const message =
+      typeof errObj.message === 'string' ? errObj.message : undefined;
+    if (code === 'INVALID_TOKEN') {
+      pending.reject(new InvalidTokenError(p.requestId, message));
+    } else if (code === 'EXPIRED_TOKEN') {
+      pending.reject(new ExpiredTokenError(p.requestId, message));
+    } else {
+      pending.reject(
+        new MalformedResponseError(
+          p.requestId,
+          message ?? `server error (code=${code ?? 'unknown'})`
+        )
+      );
+    }
+    return;
+  }
+
+  // Success envelope: validate shape before resolving.
+  if (typeof p.isCorrect !== 'boolean') {
+    pending.reject(
+      new MalformedResponseError(p.requestId, 'isCorrect missing or wrong type')
+    );
+    return;
+  }
+  if (p.expected === undefined) {
+    pending.reject(
+      new MalformedResponseError(p.requestId, 'expected field missing')
+    );
+    return;
+  }
+  if (p.distractorMatched !== null && typeof p.distractorMatched !== 'object') {
+    pending.reject(
+      new MalformedResponseError(p.requestId, 'distractorMatched malformed')
+    );
+    return;
+  }
+
+  pending.resolve({
+    isCorrect: p.isCorrect,
+    expected: p.expected as AnswerValue,
+    distractorMatched: p.distractorMatched as ValidateAnswerResult['distractorMatched'],
+  });
+}
 
 function send(type: string, payload?: unknown): void {
   if (!inIframe) return;
@@ -169,6 +334,66 @@ function send(type: string, payload?: unknown): void {
   } catch {
     /* parent gone, silent */
   }
+}
+
+/**
+ * F6 server-side answer validation. Posts the token + student answer to host
+ * via chocabloc:validate:request; host hits /api/v1/answer/validate using its
+ * existing auth/CSRF setup and replies with chocabloc:validate:deliver.
+ *
+ * Throws (never resolves) when:
+ *   - game is standalone (no host) → BridgeStandaloneError (rejects immediately)
+ *   - host doesn't reply in VALIDATE_TIMEOUT_MS → BridgeTimeoutError
+ *   - server rejects token → InvalidTokenError | ExpiredTokenError
+ *   - reply shape is malformed → MalformedResponseError
+ *
+ * The lib element's host-validator catch turns a rejection into a fall-through
+ * to the built-in pure helper. For pre-F6 payloads (canonical.answer present)
+ * that's a safe degradation; for choices-only F6 payloads it produces a silent
+ * wrong-mark + fires `chocabloc-misconfigured`. See Risk 4 in v0.5 plan.
+ */
+function validateAnswer(
+  opts: ValidateAnswerOptions
+): Promise<ValidateAnswerResult> {
+  return new Promise<ValidateAnswerResult>((resolve, reject) => {
+    if (!inIframe) {
+      reject(new BridgeStandaloneError());
+      return;
+    }
+    const requestId =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `vr-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const timer = setTimeout(() => {
+      // Late delivery after timeout: handleValidateDeliver skips the entry
+      // already because we delete here first.
+      pendingValidates.delete(requestId);
+      reject(new BridgeTimeoutError(requestId));
+    }, VALIDATE_TIMEOUT_MS);
+
+    pendingValidates.set(requestId, { resolve, reject, timer });
+
+    try {
+      window.parent.postMessage(
+        {
+          type: 'chocabloc:validate:request',
+          payload: {
+            requestId,
+            answerToken: opts.answerToken,
+            studentAnswer: opts.studentAnswer,
+          },
+        },
+        parentOrigin || '*'
+      );
+    } catch (err) {
+      // Parent gone or postMessage threw — clean up + reject so caller knows
+      // the request never left.
+      clearTimeout(timer);
+      pendingValidates.delete(requestId);
+      reject(new BridgeTimeoutError(requestId));
+    }
+  });
 }
 
 // Request the next adaptive question from the bank. Server emits the canonical
@@ -240,6 +465,9 @@ export const bridge: Bridge = {
   },
   requestNextQuestion(opts?: RequestNextQuestionOptions) {
     return requestNextQuestion(opts);
+  },
+  validateAnswer(opts: ValidateAnswerOptions) {
+    return validateAnswer(opts);
   },
 };
 
