@@ -204,12 +204,17 @@ function normalizeMoneyRow(r: Record<string, unknown>): MoneyQuestion {
   }
   const currency = inferCurrency(base.skillIds);
   const content = normalizeMoneyContent(r['content'], currency);
-  if (typeof r['answer'] !== 'number') {
+  const rawAns = r['answer'];
+  const answer =
+    typeof rawAns === 'string' && /^-?\d+(\.\d+)?$/.test(rawAns)
+      ? Number(rawAns)
+      : rawAns;
+  if (typeof answer !== 'number') {
     throw new NormalizeError('Money answer must be a number (cents)', r);
   }
   const out: MoneyQuestion = {
     ...base, format: 'money', imageType: 'coins',
-    content, answer: r['answer'], distractors: normalizeDistractors(r['distractors']),
+    content, answer, distractors: normalizeDistractors(r['distractors']),
   };
   return out;
 }

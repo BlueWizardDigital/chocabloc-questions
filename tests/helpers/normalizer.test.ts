@@ -89,6 +89,50 @@ describe('normalizeQuestion (dev mode - strict)', () => {
     const q = normalizeQuestion(raw) as MoneyQuestion;
     expect(q.distractors[0]?.errorType).toBe('already-camelCase');
   });
+
+  it('coerces numeric-string answer to number for money format', () => {
+    const raw = {
+      id: 'X',
+      skill_ids: ['MONEY-COIN-VALUE-USD'],
+      content: { coins: { quarter: 1 } },
+      answer: '25',
+      distractors: [],
+      format: 'money',
+      image_type: 'coins',
+    };
+    const q = normalizeQuestion(raw) as MoneyQuestion;
+    expect(q.answer).toBe(25);
+    expect(typeof q.answer).toBe('number');
+  });
+
+  it('coerces numeric-string answer to number for money_count_mixed format', () => {
+    const raw = {
+      id: 'X',
+      skill_ids: ['MONEY-COIN-VALUE-USD'],
+      content: { coins: { penny: 1, dime: 1 } },
+      answer: '11',
+      distractors: [],
+      format: 'money_count_mixed',
+      image_type: 'coins',
+    };
+    const q = normalizeQuestion(raw) as MoneyQuestion;
+    expect(q.answer).toBe(11);
+    expect(typeof q.answer).toBe('number');
+  });
+
+  it('throws on non-numeric string answer for money format', () => {
+    expect(() =>
+      normalizeQuestion({
+        id: 'X',
+        skill_ids: ['MONEY-COIN-VALUE-USD'],
+        content: { coins: { penny: 1 } },
+        answer: 'abc',
+        distractors: [],
+        format: 'money',
+        image_type: 'coins',
+      }),
+    ).toThrow(/Money answer must be a number/);
+  });
 });
 
 describe('normalizeQuestion (prod mode - lenient)', () => {
