@@ -14,6 +14,13 @@ module.exports = {
   rules: {
     '@typescript-eslint/no-explicit-any': 'error',
     '@typescript-eslint/explicit-module-boundary-types': 'warn',
+    // Treat `_`-prefixed identifiers as intentionally unused. Matches
+    // common project convention (e.g. `(q, _sa) => ...`) where a callback
+    // signature is fixed by a type contract but the test only needs one arg.
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+    ],
     'no-console': ['warn', { allow: ['warn', 'error'] }],
     // Forbid innerHTML / outerHTML / insertAdjacentHTML assignment in src/.
     // Element template strings in src/elements/* are exempted via override below.
