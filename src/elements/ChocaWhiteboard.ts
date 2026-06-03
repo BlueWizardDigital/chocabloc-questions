@@ -1,3 +1,5 @@
+import { parseMathExpression, type MathLayout, type StackedMathLayout } from '../helpers/stacked-math';
+
 type Point = { x: number; y: number };
 type Stroke = { points: Point[]; color: string; width: number; tool: 'pen' | 'eraser' };
 
@@ -9,6 +11,8 @@ const COLORS: readonly { hex: string; name: string }[] = [
 const WIDTHS = [2, 4, 8];
 
 export class ChocaWhiteboard extends HTMLElement {
+  static observedAttributes = ['math-expression'];
+
   private _shadow: ShadowRoot;
   private _canvas!: HTMLCanvasElement;
   private _strokes: Stroke[] = [];
@@ -19,6 +23,9 @@ export class ChocaWhiteboard extends HTMLElement {
   private _width = WIDTHS[1]!;
   private _toolRow!: HTMLElement;
   private _clearPending = false;
+  private _mathLayout: MathLayout | null = null;
+  private _mathVisible = false;
+  private _mathBtn!: HTMLButtonElement;
 
   constructor() {
     super();
@@ -28,7 +35,53 @@ export class ChocaWhiteboard extends HTMLElement {
 
   get activeTool(): string { return this._tool; }
   get strokeCount(): number { return this._strokes.length; }
+  get hasMathTemplate(): boolean { return this._mathLayout !== null; }
   clear(): void { this._strokes = []; this._current = null; this._redraw(); }
+
+  setMathExpression(expr: string): void {
+    try {
+      if (!expr) {
+        this._dispatchMathError(expr, 'empty-expression');
+        return;
+      }
+      const layout = parseMathExpression(expr);
+      if (!layout) {
+        this._dispatchMathError(expr, 'parse-failed');
+        return;
+      }
+      if (layout.kind !== 'stacked' || (layout.operator !== '+' && layout.operator !== '-')) {
+        this._dispatchMathError(expr, 'unsupported-layout');
+        return;
+      }
+      this._mathLayout = layout;
+      this._mathVisible = true;
+      this._mathBtn.style.display = '';
+      this._mathBtn.setAttribute('aria-pressed', 'true');
+      this._redraw();
+      this.dispatchEvent(new CustomEvent('choca-whiteboard-math-set', {
+        detail: { expression: expr, layout },
+        bubbles: true,
+        composed: true,
+      }));
+    } catch {
+      this._dispatchMathError(expr, 'unexpected-error');
+    }
+  }
+
+  clearMathTemplate(): void {
+    this._mathLayout = null;
+    this._mathVisible = false;
+    this._mathBtn.style.display = 'none';
+    this._mathBtn.setAttribute('aria-pressed', 'false');
+    this._redraw();
+  }
+
+  attributeChangedCallback(name: string, _old: string | null, val: string | null): void {
+    if (name === 'math-expression') {
+      if (val === null || val === '') this.clearMathTemplate();
+      else this.setMathExpression(val);
+    }
+  }
 
   private _build(): void {
     const style = document.createElement('style');
@@ -66,6 +119,15 @@ export class ChocaWhiteboard extends HTMLElement {
       btn.addEventListener('click', () => this._onTool(t));
       toolRow.appendChild(btn);
     }
+    this._mathBtn = document.createElement('button');
+    this._mathBtn.setAttribute('part', 'wb-tool-btn');
+    this._mathBtn.type = 'button';
+    this._mathBtn.dataset.tool = 'math';
+    this._mathBtn.textContent = 'Math';
+    this._mathBtn.style.display = 'none';
+    this._mathBtn.setAttribute('aria-pressed', 'false');
+    this._mathBtn.addEventListener('click', () => this._toggleMath());
+    toolRow.appendChild(this._mathBtn);
     panel.appendChild(toolRow);
 
     const colorRow = document.createElement('div');
@@ -160,6 +222,7 @@ export class ChocaWhiteboard extends HTMLElement {
   private _redraw(): void {
     if (!this._ctx) return;
     this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
+    this._drawMathTemplate();
     for (const s of this._strokes) this._draw(s);
   }
 
@@ -175,6 +238,62 @@ export class ChocaWhiteboard extends HTMLElement {
     ctx.moveTo(s.points[0]!.x, s.points[0]!.y);
     for (let i = 1; i < s.points.length; i++) ctx.lineTo(s.points[i]!.x, s.points[i]!.y);
     ctx.stroke();
+    ctx.restore();
+  }
+  private _dispatchMathError(expression: string, reason: string): void {
+    this.dispatchEvent(new CustomEvent('choca-whiteboard-math-error', {
+      detail: { expression, reason },
+      bubbles: true,
+      composed: true,
+    }));
+  }
+
+  private _toggleMath(): void {
+    this._mathVisible = !this._mathVisible;
+    this._mathBtn.setAttribute('aria-pressed', String(this._mathVisible));
+    this._redraw();
+  }
+
+  private _drawMathTemplate(): void {
+    if (!this._ctx || !this._mathLayout || !this._mathVisible) return;
+    if (this._mathLayout.kind === 'stacked') this._drawStackedLayout(this._mathLayout);
+  }
+
+  private _drawStackedLayout(layout: StackedMathLayout): void {
+    const ctx = this._ctx!;
+    ctx.save();
+
+    const fontSize = 24;
+    ctx.font = `${fontSize}px monospace`;
+    ctx.fillStyle = '#333';
+    ctx.textBaseline = 'top';
+
+    const charWidth = ctx.measureText('0').width;
+    const lineHeight = fontSize + 8;
+    const carrySpace = 40;
+    const opWidth = charWidth * 2;
+    const digitWidth = charWidth * layout.maxDigits;
+    const rightEdge = (this._canvas.width + opWidth + digitWidth) / 2;
+    const ruleLeft = rightEdge - opWidth - digitWidth - charWidth;
+
+    for (let i = 0; i < layout.operands.length; i++) {
+      const y = carrySpace + i * lineHeight;
+      ctx.textAlign = 'right';
+      ctx.fillText(layout.operands[i]!, rightEdge, y);
+      if (i === 1) {
+        ctx.textAlign = 'left';
+        ctx.fillText(layout.operator, rightEdge - digitWidth - opWidth, y);
+      }
+    }
+
+    const ruleY = carrySpace + layout.operands.length * lineHeight;
+    ctx.beginPath();
+    ctx.moveTo(ruleLeft, ruleY);
+    ctx.lineTo(rightEdge + charWidth * 0.5, ruleY);
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
     ctx.restore();
   }
 }

@@ -213,7 +213,7 @@
 
   // ── Load ──
   const fillEl = document.getElementById('loadFill');
-  const skillResp = await fetch('../../../../public/data/skills/skills.json');
+  const skillResp = await fetch('./data/skills.json');
   const skills = await skillResp.json();
   const sids = skills.map(s => s.skill_id || s.id);
 
@@ -222,7 +222,7 @@
   for (let i = 0; i < sids.length; i += BATCH) {
     const batch = sids.slice(i, i + BATCH);
     const results = await Promise.allSettled(batch.map(async sid => {
-      const r = await fetch(`../../../../public/data/questions/questions/${sid}.json`);
+      const r = await fetch(`./data/questions/${sid}.json`);
       if (!r.ok) return null;
       return { sid, rows: await r.json() };
     }));
@@ -418,6 +418,23 @@
     modeBtn.onclick = () => { useInput = !useInput; load(idx); };
     prev.onclick = () => load((idx - 1 + rows.length) % rows.length);
     next.onclick = () => load((idx + 1) % rows.length);
+
+    el.addEventListener('tool-used', (e) => {
+      const d = e.detail;
+      if (d.tool !== 'whiteboard' || d.action !== 'opened') return;
+      const raw = rows[idx];
+      const c = raw.content;
+      if (!c || !c.operands || c.operands.length < 2) return;
+      const ops = { addition: '+', subtraction: '-' };
+      const op = ops[c.operation];
+      if (!op) return;
+      const trySet = () => {
+        const wb = el.shadowRoot && el.shadowRoot.querySelector('choca-whiteboard');
+        if (wb) wb.setMathExpression(c.operands.join(' ' + op + ' '));
+        else setTimeout(trySet, 50);
+      };
+      trySet();
+    });
 
     load(0);
 

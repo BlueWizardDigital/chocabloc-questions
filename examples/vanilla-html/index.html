@@ -137,6 +137,7 @@
       const inputToggle = document.createElement('button');
       inputToggle.className = 'toggle-btn';
       inputToggle.textContent = 'Input Mode';
+
       controlsRow.appendChild(inputToggle);
 
       footer.append(resultRow, controlsRow);
@@ -189,6 +190,23 @@
         el.setAttribute('answer-mode', inputMode ? 'input' : 'mc');
         inputToggle.classList.toggle('active', inputMode);
         load(idx);
+      });
+
+      el.addEventListener('tool-used', (e) => {
+        const d = e.detail;
+        if (d.tool !== 'whiteboard' || d.action !== 'opened') return;
+        const raw = rows[idx];
+        const c = typeof raw.content === 'object' ? raw.content : null;
+        if (!c || !c.operands || c.operands.length < 2) return;
+        const ops = { addition: '+', subtraction: '-' };
+        const op = ops[c.operation];
+        if (!op) return;
+        const trySet = () => {
+          const wb = el.shadowRoot && el.shadowRoot.querySelector('choca-whiteboard');
+          if (wb) wb.setMathExpression(c.operands.join(' ' + op + ' '));
+          else setTimeout(trySet, 50);
+        };
+        trySet();
       });
 
       load(0);

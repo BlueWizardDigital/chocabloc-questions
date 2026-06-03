@@ -44,6 +44,13 @@ export {
 
 export { parseInputAnswer } from './helpers/input-parser';
 
+export {
+  parseMathExpression,
+  type MathLayout,
+  type StackedMathLayout,
+  type LongDivisionLayout,
+} from './helpers/stacked-math';
+
 export type {
   NormalizedQuestion,
   MoneyQuestion,
