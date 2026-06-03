@@ -29,3 +29,4 @@ npm-debug.log*
 
 # DB snapshot data (regenerate via scripts/db-snapshot/snapshot.sh)
 scripts/db-snapshot/*.json
+examples/vanilla-html/data/
