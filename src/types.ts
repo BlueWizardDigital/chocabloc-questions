@@ -188,6 +188,71 @@ export type GeometryCirclePartsQuestion = VisualQuestion<
   GeometryCirclePartsContent
 >;
 
+export type GeometryFaceIdentifyContent = { shape: string; face_shape: string };
+export type GeometryFaceIdentifyQuestion = VisualQuestion<
+  'geometry_face_identify',
+  'shape_3d',
+  GeometryFaceIdentifyContent
+>;
+
+export type GeometryIdentifyContent = { shape: string };
+export type GeometryIdentifyQuestion = VisualQuestion<
+  'geometry_identify',
+  'shape_2d' | 'shape_3d',
+  GeometryIdentifyContent
+>;
+
+export type GeometrySymmetryContent = { shape: string; lines_of_symmetry: number };
+export type GeometrySymmetryQuestion = VisualQuestion<
+  'geometry_symmetry',
+  'shape_2d',
+  GeometrySymmetryContent
+>;
+
+export type GeometryClassifyTriangleContent = { operands: number[]; classify_by: string };
+export type GeometryClassifyTriangleQuestion = VisualQuestion<
+  'geometry_classify_triangle',
+  'shape_2d',
+  GeometryClassifyTriangleContent
+>;
+
+export type GeometryVolumeContent = {
+  shape: string;
+  operands: number[];
+  dimensions?: string;
+  radius?: number;
+  height?: number;
+};
+export type GeometryVolumeQuestion = VisualQuestion<
+  'geometry_volume',
+  'shape_3d',
+  GeometryVolumeContent
+>;
+
+export type GeometrySurfaceAreaContent = {
+  shape: string;
+  operands: number[];
+  radius?: number;
+  height?: number;
+  slant?: number;
+};
+export type GeometrySurfaceAreaQuestion = VisualQuestion<
+  'geometry_surface_area',
+  'shape_3d',
+  GeometrySurfaceAreaContent
+>;
+
+export type GeometryCircleConvertContent = {
+  value: number;
+  given_type: string;
+  find_type: string;
+};
+export type GeometryCircleConvertQuestion = VisualQuestion<
+  'geometry_circle_convert',
+  'shape_2d',
+  GeometryCircleConvertContent
+>;
+
 // — Data family —
 
 export type DataGraphContent = {
@@ -296,6 +361,13 @@ export type NormalizedQuestion =
   | GeometryCircumferenceQuestion
   | GeometryAngleClassifyQuestion
   | GeometryCirclePartsQuestion
+  | GeometryFaceIdentifyQuestion
+  | GeometryIdentifyQuestion
+  | GeometrySymmetryQuestion
+  | GeometryClassifyTriangleQuestion
+  | GeometryVolumeQuestion
+  | GeometrySurfaceAreaQuestion
+  | GeometryCircleConvertQuestion
   | DataGraphQuestion
   | MultiplicationVisualQuestion
   | FractionConceptQuestion

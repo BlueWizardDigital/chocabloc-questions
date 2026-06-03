@@ -213,5 +213,102 @@
       { "value": "300", "error_type": "unchanged-original" },
       { "value": "", "error_type": "zeroed-cell" }
     ]
+  },
+  "geometry_face_identify": {
+    "id": "GEOM-3D-FACES-IDENTIFY-cube-square",
+    "format": "geometry_face_identify",
+    "image_type": "shape_3d",
+    "content": { "shape": "cube", "face_shape": "square", "operation": "geometry_face_identify" },
+    "answer": "square",
+    "skill_ids": ["GEOM-3D-FACES-IDENTIFY"],
+    "distractors": [
+      { "value": "rectangle", "error_type": "wrong-classification" },
+      { "value": "circle", "error_type": "wrong-classification" },
+      { "value": "triangle", "error_type": "wrong-classification" }
+    ]
+  },
+  "geometry_identify_2d": {
+    "id": "GEOM-2D-NAME-BASIC-circle",
+    "format": "geometry_identify",
+    "image_type": "shape_2d",
+    "content": { "shape": "circle", "operation": "geometry_identify" },
+    "answer": "circle",
+    "skill_ids": ["GEOM-2D-NAME-BASIC"],
+    "distractors": [
+      { "value": "square", "error_type": "wrong-classification" },
+      { "value": "triangle", "error_type": "wrong-classification" }
+    ]
+  },
+  "geometry_identify_3d": {
+    "id": "GEOM-3D-NAME-cube",
+    "format": "geometry_identify",
+    "image_type": "shape_3d",
+    "content": { "shape": "cube", "operation": "geometry_identify" },
+    "answer": "cube",
+    "skill_ids": ["GEOM-3D-NAME"],
+    "distractors": [
+      { "value": "pyramid", "error_type": "wrong-classification" },
+      { "value": "cylinder", "error_type": "wrong-classification" }
+    ]
+  },
+  "geometry_symmetry": {
+    "id": "GEOM-SYMMETRY-BASIC-triangle",
+    "format": "geometry_symmetry",
+    "image_type": "shape_2d",
+    "content": { "shape": "triangle", "lines_of_symmetry": 3, "operation": "geometry_symmetry" },
+    "answer": 3,
+    "skill_ids": ["GEOM-SYMMETRY-BASIC"],
+    "distractors": [
+      { "value": 4, "error_type": "confused-with-square" },
+      { "value": 2, "error_type": "confused-with-rectangle" }
+    ]
+  },
+  "geometry_classify_triangle": {
+    "id": "GEOM-CLASSIFY-TRIANGLES-sides-3-4-5",
+    "format": "geometry_classify_triangle",
+    "image_type": "shape_2d",
+    "content": { "operands": [3, 4, 5], "classify_by": "sides", "operation": "geometry_classify_triangle" },
+    "answer": "scalene",
+    "skill_ids": ["GEOM-CLASSIFY-TRIANGLES"],
+    "distractors": [
+      { "value": "equilateral", "error_type": "wrong-classification" },
+      { "value": "isosceles", "error_type": "wrong-classification" }
+    ]
+  },
+  "geometry_volume": {
+    "id": "GEOM-VOLUME-RECT-PRISM-11-18-14",
+    "format": "geometry_volume",
+    "image_type": "shape_3d",
+    "content": { "shape": "rectangular prism", "operands": [11, 18, 14], "dimensions": "length 11, width 18, and height 14", "operation": "geometry_volume" },
+    "answer": 2772,
+    "skill_ids": ["GEOM-VOLUME-RECT-PRISM"],
+    "distractors": [
+      { "value": 1208, "error_type": "computed-surface-area" },
+      { "value": 43, "error_type": "added-instead" }
+    ]
+  },
+  "geometry_surface_area": {
+    "id": "GEOM-SURFACE-AREA-RECT-PRISM-6-5-9",
+    "format": "geometry_surface_area",
+    "image_type": "shape_3d",
+    "content": { "shape": "rectangular prism", "operands": [6, 5, 9], "operation": "geometry_surface_area" },
+    "answer": 258,
+    "skill_ids": ["GEOM-SURFACE-AREA-RECT-PRISM"],
+    "distractors": [
+      { "value": 270, "error_type": "computed-volume" },
+      { "value": 129, "error_type": "forgot-multiply-by-2" }
+    ]
+  },
+  "geometry_circle_convert": {
+    "id": "GEOM-CIRCLE-RADIUS-DIAMETER-r17",
+    "format": "geometry_circle_convert",
+    "image_type": "shape_2d",
+    "content": { "value": 17, "given_type": "radius", "find_type": "diameter", "operation": "geometry_circle_convert" },
+    "answer": 34,
+    "skill_ids": ["GEOM-CIRCLE-RADIUS-DIAMETER"],
+    "distractors": [
+      { "value": 17, "error_type": "gave-same-value" },
+      { "value": 35, "error_type": "off-by-1" }
+    ]
   }
 }

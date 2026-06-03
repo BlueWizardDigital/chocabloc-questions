@@ -18,6 +18,13 @@ import type {
   GeometryCircumferenceQuestion,
   GeometryAngleClassifyQuestion,
   GeometryCirclePartsQuestion,
+  GeometryFaceIdentifyQuestion,
+  GeometryIdentifyQuestion,
+  GeometrySymmetryQuestion,
+  GeometryClassifyTriangleQuestion,
+  GeometryVolumeQuestion,
+  GeometrySurfaceAreaQuestion,
+  GeometryCircleConvertQuestion,
   DataGraphQuestion,
   MultiplicationVisualQuestion,
   FractionConceptQuestion,
@@ -379,6 +386,105 @@ function normalizeGeometryCirclePartsRow(r: Record<string, unknown>): GeometryCi
   return {
     ...base, format: 'geometry_circle_parts', imageType: 'circle_parts',
     content: { part }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+  };
+}
+
+function normalizeGeometryFaceIdentifyRow(r: Record<string, unknown>): GeometryFaceIdentifyQuestion {
+  const base = extractBase(r);
+  const c = requireContent(r);
+  const shape = getString(c, 'shape');
+  const face_shape = getString(c, 'face_shape');
+  if (!shape) throw new NormalizeError('geometry_face_identify missing shape', r);
+  if (!face_shape) throw new NormalizeError('geometry_face_identify missing face_shape', r);
+  return {
+    ...base, format: 'geometry_face_identify', imageType: 'shape_3d',
+    content: { shape, face_shape }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+  };
+}
+
+function normalizeGeometryIdentifyRow(r: Record<string, unknown>): GeometryIdentifyQuestion {
+  const base = extractBase(r);
+  const c = requireContent(r);
+  const shape = getString(c, 'shape');
+  if (!shape) throw new NormalizeError('geometry_identify missing shape', r);
+  const imageType = resolveImageType(r, ['shape_2d', 'shape_3d']) as 'shape_2d' | 'shape_3d';
+  return {
+    ...base, format: 'geometry_identify', imageType: imageType ?? 'shape_2d',
+    content: { shape }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+  };
+}
+
+function normalizeGeometrySymmetryRow(r: Record<string, unknown>): GeometrySymmetryQuestion {
+  const base = extractBase(r);
+  const c = requireContent(r);
+  const shape = getString(c, 'shape');
+  if (!shape) throw new NormalizeError('geometry_symmetry missing shape', r);
+  const lines_of_symmetry = getNumber(c, 'lines_of_symmetry') ?? 0;
+  return {
+    ...base, format: 'geometry_symmetry', imageType: 'shape_2d',
+    content: { shape, lines_of_symmetry }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+  };
+}
+
+function normalizeGeometryClassifyTriangleRow(r: Record<string, unknown>): GeometryClassifyTriangleQuestion {
+  const base = extractBase(r);
+  const c = requireContent(r);
+  const operands = getNumberArray(c, 'operands');
+  const classify_by = getString(c, 'classify_by');
+  if (!operands || operands.length < 3) throw new NormalizeError('geometry_classify_triangle missing operands', r);
+  if (!classify_by) throw new NormalizeError('geometry_classify_triangle missing classify_by', r);
+  return {
+    ...base, format: 'geometry_classify_triangle', imageType: 'shape_2d',
+    content: { operands, classify_by }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+  };
+}
+
+function normalizeGeometryVolumeRow(r: Record<string, unknown>): GeometryVolumeQuestion {
+  const base = extractBase(r);
+  const c = requireContent(r);
+  const shape = getString(c, 'shape');
+  const operands = getNumberArray(c, 'operands');
+  if (!shape) throw new NormalizeError('geometry_volume missing shape', r);
+  if (!operands || operands.length === 0) throw new NormalizeError('geometry_volume missing operands', r);
+  const dimensions = getString(c, 'dimensions');
+  const radius = getNumber(c, 'radius');
+  const height = getNumber(c, 'height');
+  return {
+    ...base, format: 'geometry_volume', imageType: 'shape_3d',
+    content: { shape, operands, ...(dimensions ? { dimensions } : {}), ...(radius !== undefined ? { radius } : {}), ...(height !== undefined ? { height } : {}) },
+    answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+  };
+}
+
+function normalizeGeometrySurfaceAreaRow(r: Record<string, unknown>): GeometrySurfaceAreaQuestion {
+  const base = extractBase(r);
+  const c = requireContent(r);
+  const shape = getString(c, 'shape');
+  const operands = getNumberArray(c, 'operands');
+  if (!shape) throw new NormalizeError('geometry_surface_area missing shape', r);
+  if (!operands || operands.length === 0) throw new NormalizeError('geometry_surface_area missing operands', r);
+  const radius = getNumber(c, 'radius');
+  const height = getNumber(c, 'height');
+  const slant = getNumber(c, 'slant');
+  return {
+    ...base, format: 'geometry_surface_area', imageType: 'shape_3d',
+    content: { shape, operands, ...(radius !== undefined ? { radius } : {}), ...(height !== undefined ? { height } : {}), ...(slant !== undefined ? { slant } : {}) },
+    answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+  };
+}
+
+function normalizeGeometryCircleConvertRow(r: Record<string, unknown>): GeometryCircleConvertQuestion {
+  const base = extractBase(r);
+  const c = requireContent(r);
+  const value = getNumber(c, 'value');
+  const given_type = getString(c, 'given_type');
+  const find_type = getString(c, 'find_type');
+  if (value === undefined) throw new NormalizeError('geometry_circle_convert missing value', r);
+  if (!given_type) throw new NormalizeError('geometry_circle_convert missing given_type', r);
+  if (!find_type) throw new NormalizeError('geometry_circle_convert missing find_type', r);
+  return {
+    ...base, format: 'geometry_circle_convert', imageType: 'shape_2d',
+    content: { value, given_type, find_type }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
   };
 }
 
@@ -781,6 +887,13 @@ const FORMAT_NORMALIZERS: Record<string, (r: Record<string, unknown>) => Normali
   geometry_circumference: normalizeGeometryCircumferenceRow,
   geometry_angle_classify: normalizeGeometryAngleClassifyRow,
   geometry_circle_parts: normalizeGeometryCirclePartsRow,
+  geometry_face_identify: normalizeGeometryFaceIdentifyRow,
+  geometry_identify: normalizeGeometryIdentifyRow,
+  geometry_symmetry: normalizeGeometrySymmetryRow,
+  geometry_classify_triangle: normalizeGeometryClassifyTriangleRow,
+  geometry_volume: normalizeGeometryVolumeRow,
+  geometry_surface_area: normalizeGeometrySurfaceAreaRow,
+  geometry_circle_convert: normalizeGeometryCircleConvertRow,
   data_graph: normalizeDataGraphRow,
   multiplication: (r) => {
     const imageType = resolveImageType(r, ['array', 'number_line']);
@@ -816,9 +929,7 @@ const STEM_FORMATS = [
   'statistics_mean', 'statistics_median', 'statistics_mode',
   'skip_count', 'pythagorean_converse',
   'geometry_angle_pairs', 'geometry_classify_quad', 'geometry_formula_identify',
-  'geometry_interior_angles', 'geometry_identify', 'geometry_classify_triangle',
-  'geometry_face_identify', 'geometry_circle_convert', 'geometry_symmetry',
-  'geometry_surface_area', 'geometry_volume',
+  'geometry_interior_angles',
   'money_best_buy', 'money_compare_buys', 'money_compare_savings',
   'money_decimal_calc', 'money_round', 'money_unit_price',
   'money_simple_interest_amount', 'money_simple_interest_final_balance',

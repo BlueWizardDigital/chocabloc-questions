@@ -125,6 +125,85 @@ describe('normalizeQuestion — visual formats', () => {
     }
   });
 
+  it('geometry_face_identify: content has shape + face_shape, imageType preserved', () => {
+    const q = normalizeQuestion(fixtures.geometry_face_identify)!;
+    expect(q.format).toBe('geometry_face_identify');
+    if (q.format === 'geometry_face_identify') {
+      expect(q.content.shape).toBe('cube');
+      expect(q.content.face_shape).toBe('square');
+      expect(q.imageType).toBe('shape_3d');
+    }
+  });
+
+  it('geometry_identify: 2D content has shape, imageType preserved', () => {
+    const q = normalizeQuestion(fixtures.geometry_identify_2d)!;
+    expect(q.format).toBe('geometry_identify');
+    if (q.format === 'geometry_identify') {
+      expect(q.content.shape).toBe('circle');
+      expect(q.imageType).toBe('shape_2d');
+    }
+  });
+
+  it('geometry_identify: 3D content has shape, imageType preserved', () => {
+    const q = normalizeQuestion(fixtures.geometry_identify_3d)!;
+    expect(q.format).toBe('geometry_identify');
+    if (q.format === 'geometry_identify') {
+      expect(q.content.shape).toBe('cube');
+      expect(q.imageType).toBe('shape_3d');
+    }
+  });
+
+  it('geometry_symmetry: content has shape + lines_of_symmetry', () => {
+    const q = normalizeQuestion(fixtures.geometry_symmetry)!;
+    expect(q.format).toBe('geometry_symmetry');
+    if (q.format === 'geometry_symmetry') {
+      expect(q.content.shape).toBe('triangle');
+      expect(q.content.lines_of_symmetry).toBe(3);
+      expect(q.imageType).toBe('shape_2d');
+    }
+  });
+
+  it('geometry_classify_triangle: content has operands + classify_by', () => {
+    const q = normalizeQuestion(fixtures.geometry_classify_triangle)!;
+    expect(q.format).toBe('geometry_classify_triangle');
+    if (q.format === 'geometry_classify_triangle') {
+      expect(q.content.operands).toEqual([3, 4, 5]);
+      expect(q.content.classify_by).toBe('sides');
+      expect(q.imageType).toBe('shape_2d');
+    }
+  });
+
+  it('geometry_volume: content has shape + operands, imageType preserved', () => {
+    const q = normalizeQuestion(fixtures.geometry_volume)!;
+    expect(q.format).toBe('geometry_volume');
+    if (q.format === 'geometry_volume') {
+      expect(q.content.shape).toBe('rectangular prism');
+      expect(q.content.operands).toEqual([11, 18, 14]);
+      expect(q.imageType).toBe('shape_3d');
+    }
+  });
+
+  it('geometry_surface_area: content has shape + operands, imageType preserved', () => {
+    const q = normalizeQuestion(fixtures.geometry_surface_area)!;
+    expect(q.format).toBe('geometry_surface_area');
+    if (q.format === 'geometry_surface_area') {
+      expect(q.content.shape).toBe('rectangular prism');
+      expect(q.content.operands).toEqual([6, 5, 9]);
+      expect(q.imageType).toBe('shape_3d');
+    }
+  });
+
+  it('geometry_circle_convert: content has value + given_type + find_type', () => {
+    const q = normalizeQuestion(fixtures.geometry_circle_convert)!;
+    expect(q.format).toBe('geometry_circle_convert');
+    if (q.format === 'geometry_circle_convert') {
+      expect(q.content.value).toBe(17);
+      expect(q.content.given_type).toBe('radius');
+      expect(q.content.find_type).toBe('diameter');
+      expect(q.imageType).toBe('shape_2d');
+    }
+  });
+
   it('rejects unknown format', () => {
     expect(() =>
       normalizeQuestion({ id: 'x', format: 'nope', content: {}, answer: '1', distractors: [] }),

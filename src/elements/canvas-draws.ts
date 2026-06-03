@@ -882,3 +882,86 @@ export function drawBase10Blocks(
   }
   b10ScaledSet(ctx, blocks, 0, 0, w, h, fills, stroke, highlightPlace);
 }
+
+export function drawLabeled3D(
+  ctx: CanvasRenderingContext2D, w: number, h: number,
+  shapeName: string, operands: number[],
+): void {
+  drawShape3D(ctx, w, h, shapeName);
+  const cx = w / 2, cy = h / 2, s = Math.min(w, h) * 0.3;
+  ctx.fillStyle = '#333';
+  ctx.font = 'bold 11px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const name = shapeName.toLowerCase();
+  if (name === 'cylinder' || name === 'cone') {
+    if (operands[0] !== undefined) ctx.fillText('r=' + operands[0], cx + s * 0.9, cy + s * 0.3);
+    if (operands[1] !== undefined) ctx.fillText('h=' + operands[1], cx - s * 1.0, cy);
+  } else if (name === 'sphere') {
+    if (operands[0] !== undefined) ctx.fillText('r=' + operands[0], cx + s * 0.6, cy - s * 0.2);
+  } else {
+    const labels = ['l', 'w', 'h'];
+    const positions = [
+      { x: cx, y: cy + s * 1.1 },
+      { x: cx + s * 1.2, y: cy + s * 0.4 },
+      { x: cx - s * 1.2, y: cy - s * 0.2 },
+    ];
+    for (let i = 0; i < Math.min(operands.length, 3); i++) {
+      const p = positions[i]!;
+      ctx.fillText(labels[i] + '=' + operands[i], p.x, p.y);
+    }
+  }
+}
+
+export function drawFaceHighlight(
+  ctx: CanvasRenderingContext2D, w: number, h: number,
+  shapeName: string, faceShape: string,
+): void {
+  drawShape3D(ctx, w, h, shapeName);
+  const cx = w / 2, cy = h / 2, s = Math.min(w, h) * 0.3;
+  ctx.fillStyle = 'rgba(255, 152, 0, 0.4)';
+  ctx.strokeStyle = '#e65100';
+  ctx.lineWidth = 2;
+  const iso: IsoFn = (x, y, z) => ({
+    x: cx + (x - z) * 0.866 * s,
+    y: cy - y * s + (x + z) * 0.5 * s,
+  });
+  const name = shapeName.toLowerCase();
+  if (name === 'cube' || name === 'rectangular prism') {
+    const sx = name === 'cube' ? 1 : 1.3;
+    const sy = name === 'cube' ? 1 : 0.7;
+    const sz = name === 'cube' ? 1 : 0.7;
+    const v = [iso(sx, sy, sz), iso(-sx, sy, sz), iso(-sx, sy, -sz), iso(sx, sy, -sz)];
+    ctx.beginPath();
+    ctx.moveTo(v[0]!.x, v[0]!.y);
+    for (let i = 1; i < v.length; i++) ctx.lineTo(v[i]!.x, v[i]!.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = '#333';
+    ctx.font = '11px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('face: ' + faceShape, cx, h - 10);
+  }
+}
+
+export function drawSymmetryLines(
+  ctx: CanvasRenderingContext2D, w: number, h: number,
+  shapeName: string, lineCount: number,
+): void {
+  drawShape2D(ctx, w, h, shapeName);
+  const cx = w / 2, cy = h / 2;
+  const len = Math.min(w, h) * 0.45;
+  ctx.strokeStyle = '#d32f2f';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 4]);
+  for (let i = 0; i < lineCount; i++) {
+    const angle = (Math.PI * i) / lineCount;
+    ctx.beginPath();
+    ctx.moveTo(cx + len * Math.cos(angle), cy + len * Math.sin(angle));
+    ctx.lineTo(cx - len * Math.cos(angle), cy - len * Math.sin(angle));
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+}

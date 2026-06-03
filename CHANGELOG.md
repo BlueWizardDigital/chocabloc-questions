@@ -3,6 +3,28 @@
 All notable changes to chocabloc-questions are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- **7 visual geometry format renderers** in `ChocaCanvasQuestion`:
+  `geometry_face_identify`, `geometry_identify`, `geometry_symmetry`,
+  `geometry_classify_triangle`, `geometry_volume`, `geometry_surface_area`,
+  `geometry_circle_convert`. These formats previously rendered as text-only
+  despite carrying visual data (`image_type`, `shape`). Now render canvas
+  diagrams matching the question's visual intent.
+- `drawLabeled3D` — 3D shapes with dimension labels (for volume/surface area)
+- `drawFaceHighlight` — 3D shape with highlighted face (for face identify)
+- `drawSymmetryLines` — 2D shape with symmetry line overlay
+- 7 new normalizer functions and `FORMAT_NORMALIZERS` entries
+- 7 new TypeScript content + question types exported from `helpers-only`
+
+### Changed
+
+- Removed 7 formats from `STEM_FORMATS` — they now route through dedicated
+  normalizers that preserve `imageType` and structured content instead of
+  stripping them to text-only.
+
 ## [0.4.0-beta.0] — 2026-06-01
 
 Pre-release for chocabloc's Phase F6 stage 5 (server-validated question delivery). The lib now accepts a new "choices-only" wire shape that lets a server emit pre-shuffled choice values WITHOUT shipping the correct `answer` field or per-distractor metadata. Builds on v0.3.0's `validateAnswer` hook — a host MUST wire that hook for choices-only questions, since the built-in client validator can't determine correctness without `answer`.

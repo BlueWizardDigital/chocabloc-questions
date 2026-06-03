@@ -6,6 +6,7 @@ import {
   drawAreaShape, drawCircumference, drawFractionVisual, drawAngle,
   drawCircleParts, drawCompoundShape, drawArray,
   drawAnalogClock, drawCoordinatePlane, drawBase10Blocks,
+  drawLabeled3D, drawFaceHighlight, drawSymmetryLines,
   type Base10Colors,
 } from './canvas-draws';
 import './ChocaChoicePad';
@@ -125,6 +126,13 @@ export class ChocaCanvasQuestion extends HTMLElement {
       else if (q.format === 'pythagorean') text = 'Find the hypotenuse.';
       else if (q.format === 'geometry_angle_classify') text = 'What type of angle is this?';
       else if (q.format === 'geometry_circle_parts') text = 'What part of the circle is highlighted?';
+      else if (q.format === 'geometry_face_identify') text = `What is the shape of each face of a ${q.content.shape}?`;
+      else if (q.format === 'geometry_identify') text = 'What shape is this?';
+      else if (q.format === 'geometry_symmetry') text = `How many lines of symmetry does this shape have?`;
+      else if (q.format === 'geometry_classify_triangle') text = 'Classify this triangle.';
+      else if (q.format === 'geometry_volume') text = 'Find the volume.';
+      else if (q.format === 'geometry_surface_area') text = 'Find the surface area.';
+      else if (q.format === 'geometry_circle_convert') text = `Find the ${q.content.find_type}.`;
       else if (q.format === 'fraction_concept') text = 'What fraction is shaded?';
       else if (q.format === 'time') text = 'What time is shown?';
       else if (q.format === 'coordinate_distance') text = 'What is the distance between the points?';
@@ -182,6 +190,28 @@ export class ChocaCanvasQuestion extends HTMLElement {
         break;
       case 'geometry_circle_parts':
         drawCircleParts(ctx, w, h, q.content.part);
+        break;
+      case 'geometry_face_identify':
+        drawFaceHighlight(ctx, w, h, q.content.shape, q.content.face_shape);
+        break;
+      case 'geometry_identify':
+        if (q.imageType === 'shape_3d') drawShape3D(ctx, w, h, q.content.shape);
+        else drawShape2D(ctx, w, h, q.content.shape);
+        break;
+      case 'geometry_symmetry':
+        drawSymmetryLines(ctx, w, h, q.content.shape, q.content.lines_of_symmetry);
+        break;
+      case 'geometry_classify_triangle':
+        drawShape2D(ctx, w, h, 'triangle');
+        break;
+      case 'geometry_volume':
+        drawLabeled3D(ctx, w, h, q.content.shape, q.content.operands);
+        break;
+      case 'geometry_surface_area':
+        drawLabeled3D(ctx, w, h, q.content.shape, q.content.operands);
+        break;
+      case 'geometry_circle_convert':
+        drawCircumference(ctx, w, h, q.content.given_type === 'radius' ? q.content.value : q.content.value / 2);
         break;
       case 'data_graph':
         if (q.imageType === 'bar_graph') drawBarGraph(ctx, w, h, q.content.data);
