@@ -235,7 +235,7 @@ export class ChocablocQuestion extends HTMLElement {
     }
     if (el) {
       el.style.display = '';
-      if (!el.parentNode) this._panelContainer.appendChild(el);
+      if (el.parentNode !== this._panelContainer) this._panelContainer.appendChild(el);
     }
   }
 
