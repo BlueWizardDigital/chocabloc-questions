@@ -25,6 +25,7 @@ export default defineConfig({
         bridge: resolve(__dirname, 'src/bridge.ts'),
         'elements/coin-pile': resolve(__dirname, 'src/elements/coin-pile.ts'),
         'elements/canvas-question': resolve(__dirname, 'src/elements/canvas-question.ts'),
+        'elements/whiteboard': resolve(__dirname, 'src/elements/whiteboard.ts'),
       },
       formats: ['es', 'cjs'],
       fileName: (format, entryName) =>
