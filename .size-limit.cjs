@@ -18,6 +18,12 @@ module.exports = [
     gzip: true,
   },
   {
+    name: 'whiteboard (standalone tool)',
+    path: 'dist/elements/whiteboard.mjs',
+    limit: '8 KB',
+    gzip: true,
+  },
+  {
     name: 'full (everything)',
     path: 'dist/full.mjs',
     limit: '45 KB',

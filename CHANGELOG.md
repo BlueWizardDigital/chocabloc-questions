@@ -7,6 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `./elements/whiteboard` — public side-effect export that registers the
+  standalone `<choca-whiteboard>` scratchpad element. Additive; no existing
+  export changed.
 - **7 visual geometry format renderers** in `ChocaCanvasQuestion`:
   `geometry_face_identify`, `geometry_identify`, `geometry_symmetry`,
   `geometry_classify_triangle`, `geometry_volume`, `geometry_surface_area`,

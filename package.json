@@ -1,6 +1,6 @@
 {
   "name": "chocabloc-questions",
-  "version": "0.6.0-beta.2",
+  "version": "0.6.0-beta.3",
   "description": "Framework-agnostic question data + renderers for ChocaBLOC iframe games",
   "type": "module",
   "license": "MIT",
@@ -28,6 +28,10 @@
       "types": "./dist/elements/coin-pile.d.ts",
       "import": "./dist/elements/coin-pile.mjs"
     },
+    "./elements/whiteboard": {
+      "types": "./dist/elements/whiteboard.d.ts",
+      "import": "./dist/elements/whiteboard.mjs"
+    },
     "./bridge": {
       "types": "./dist/bridge.d.ts",
       "import": "./dist/bridge.mjs",
@@ -39,6 +43,8 @@
     "./dist/full.cjs",
     "./dist/elements/coin-pile.mjs",
     "./dist/elements/canvas-question.mjs",
+    "./dist/elements/whiteboard.mjs",
+    "./dist/chunks/ChocaWhiteboard.*.mjs",
     "./dist/bridge.mjs",
     "./dist/bridge.cjs"
   ],
