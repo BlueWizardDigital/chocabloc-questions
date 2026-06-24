@@ -22,6 +22,14 @@ import type {
 const INIT_TIMEOUT_MS = 2000;
 const REQUEST_TIMEOUT_MS = 3000;
 const VALIDATE_TIMEOUT_MS = 5000;
+const QUESTIONS_TIMEOUT_MS = 4000;
+
+// Input shapes mirror the host's own validators (GamePageWrapper /
+// useNextGameQuestion). Applied ONLY on the no-host fetch fallback — the
+// postMessage branch sends no gameId, so the host pins it and these never gate it.
+const GAME_ID_RE = /^[a-z0-9][a-z0-9-]{0,49}$/;
+const SKILL_ID_RE = /^[A-Z][A-Z0-9-]{0,99}$/;
+const RECIPE_SLUG_RE = /^[a-z0-9][a-z0-9-]{0,99}$/;
 
 /**
  * Bridge context delivered by the host on boot, or synthesized for standalone.
@@ -46,6 +54,25 @@ export type ReadyCallback = (ctx: BridgeContext) => void;
 export interface RequestNextQuestionOptions {
   skillId?: string;
   recipeSlug?: string;
+  /**
+   * Used ONLY by the no-host fetch fallback (game served same-origin with the
+   * API, no chocabloc host). Ignored when embedded — the host pins the gameId.
+   * Must match /^[a-z0-9][a-z0-9-]{0,49}$/.
+   */
+  gameId?: string;
+}
+
+/**
+ * Bulk question-batch request options. Mirrors GET /api/v1/games/:gameId/questions
+ * query params. Note: bulk uses `recipe` (the adaptive path uses `recipeSlug`),
+ * matching the host's fetchGameQuestions contract.
+ */
+export interface RequestQuestionsOptions {
+  count?: number;
+  recipe?: string;
+  grade?: number | string;
+  /** Used ONLY by the no-host fetch fallback. Ignored when embedded. */
+  gameId?: string;
 }
 
 /**
@@ -190,6 +217,7 @@ export interface Bridge {
   saveNotify(): void;
   exit(): void;
   requestNextQuestion(opts?: RequestNextQuestionOptions): Promise<unknown | null>;
+  requestQuestions(opts?: RequestQuestionsOptions): Promise<unknown[]>;
   validateAnswer(opts: ValidateAnswerOptions): Promise<ValidateAnswerResult>;
   attachValidator(
     el: ChocablocQuestionLike,
@@ -222,6 +250,15 @@ interface PendingValidate {
   timer: ReturnType<typeof setTimeout>;
 }
 const pendingValidates = new Map<string, PendingValidate>();
+
+// In-flight chocabloc:questions:request promises keyed by requestId. The deliver
+// handler resolves with the whole deliver payload; callers extract `.question` /
+// `.questions`. Resolves to null on timeout (never rejects).
+interface PendingQuestions {
+  resolve: (payload: Record<string, unknown> | null) => void;
+  timer: ReturnType<typeof setTimeout>;
+}
+const pendingQuestions = new Map<string, PendingQuestions>();
 
 function deliverReady(payload: BridgeContext): void {
   if (ctx) return;
@@ -296,10 +333,30 @@ window.addEventListener('message', (e: MessageEvent) => {
       handleValidateDeliver(msg.payload);
       return;
     }
+    case 'chocabloc:questions:deliver': {
+      handleQuestionsDeliver(msg.payload);
+      return;
+    }
     default:
       return;
   }
 });
+
+function handleQuestionsDeliver(payload: unknown): void {
+  // Ignore anything we can't tie to a pending request (late / duplicate /
+  // malformed). An error envelope ({ requestId, error }) carries no question(s),
+  // so callers naturally degrade to null / [].
+  if (!payload || typeof payload !== 'object') return;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.requestId !== 'string') return;
+
+  const pending = pendingQuestions.get(p.requestId);
+  if (!pending) return;
+
+  clearTimeout(pending.timer);
+  pendingQuestions.delete(p.requestId);
+  pending.resolve(p);
+}
 
 function handleValidateDeliver(payload: unknown): void {
   // Defensive: ignore any deliver we can't tie to a pending request. Avoids
@@ -486,27 +543,46 @@ function attachValidator(
   };
 }
 
-// Request the next adaptive question from the bank. Server emits the canonical
-// chocabloc question shape (camelCase: skillIds, imageType, questionText, plus
-// answer + distractors[]) directly — same shape the chocabloc-questions lib
-// normalizer accepts as input. So we pass response.question through verbatim.
-// Resolves to the canonical question on success, or null if standalone / fetch
-// failure / timeout / non-2xx. Never throws.
-async function requestNextQuestion(
-  opts: RequestNextQuestionOptions = {}
-): Promise<unknown | null> {
-  if (!ctx || ctx.standalone) return null;
+// Generate a unique request id for postMessage round-trips. Mirrors the
+// validateAnswer requestId scheme: a bare crypto.randomUUID() when available,
+// otherwise a fallback id. The `qr-` (questions) / `vr-` (validate) prefixes
+// only distinguish the two channels' NON-crypto fallback ids.
+function makeRequestId(): string {
+  return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `qr-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
-  const params = new URLSearchParams();
-  if (opts.skillId) params.set('skillId', opts.skillId);
-  if (opts.recipeSlug) params.set('recipeSlug', opts.recipeSlug);
+// Post a questions request to the host and await its chocabloc:questions:deliver.
+// Resolves to the deliver payload, or null on timeout / parent gone. Never rejects.
+function postQuestionsRequest(
+  payload: Record<string, unknown>
+): Promise<Record<string, unknown> | null> {
+  return new Promise((resolve) => {
+    const requestId = makeRequestId();
+    const timer = setTimeout(() => {
+      pendingQuestions.delete(requestId);
+      resolve(null);
+    }, QUESTIONS_TIMEOUT_MS);
+    pendingQuestions.set(requestId, { resolve, timer });
+    try {
+      window.parent.postMessage(
+        { type: 'chocabloc:questions:request', payload: { requestId, ...payload } },
+        parentOrigin || '*'
+      );
+    } catch {
+      clearTimeout(timer);
+      pendingQuestions.delete(requestId);
+      resolve(null);
+    }
+  });
+}
 
-  const qs = params.toString();
-  const url = `/api/v1/games/monkey-money/questions/next${qs ? `?${qs}` : ''}`;
-
+// Same-origin GET with credentials and a hard timeout. Returns the parsed JSON
+// body, or null on non-2xx / network error / abort. Never throws.
+async function fetchJson(url: string): Promise<Record<string, unknown> | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
   try {
     const res = await fetch(url, {
       method: 'GET',
@@ -515,12 +591,84 @@ async function requestNextQuestion(
     });
     clearTimeout(timer);
     if (!res.ok) return null;
-    const body = await res.json();
-    return body?.question ?? null;
+    return (await res.json()) as Record<string, unknown>;
   } catch {
     clearTimeout(timer);
     return null;
   }
+}
+
+// Request the next adaptive question. Embedded (host present): routes through the
+// host's chocabloc:questions:request channel — the host pins the gameId from the
+// iframe's manifest, so any caller-supplied gameId is ignored. No host: falls back
+// to a same-origin relative fetch using a validated caller-supplied gameId.
+// Returns the canonical question verbatim, or null (standalone with no gameId,
+// invalid gameId, timeout, fetch failure, or non-2xx). Never throws.
+// Call after bridge.onReady so `ctx` is populated.
+async function requestNextQuestion(
+  opts: RequestNextQuestionOptions = {}
+): Promise<unknown | null> {
+  // Host present? Gate on ctx (not inIframe): a framed game whose host never
+  // sent chocabloc:init drops to the fetch fallback after INIT_TIMEOUT_MS.
+  if (ctx && !ctx.standalone) {
+    const payload: Record<string, unknown> = { mode: 'adaptive' };
+    if (opts.skillId) payload.skillId = opts.skillId;
+    if (opts.recipeSlug) payload.recipeSlug = opts.recipeSlug;
+    const deliver = await postQuestionsRequest(payload);
+    return deliver?.question ?? null;
+  }
+
+  // No host → same-origin fetch fallback. Requires a valid gameId.
+  if (!opts.gameId || !GAME_ID_RE.test(opts.gameId)) return null;
+  const params = new URLSearchParams();
+  if (opts.skillId) {
+    if (!SKILL_ID_RE.test(opts.skillId)) return null;
+    params.set('skillId', opts.skillId);
+  }
+  if (opts.recipeSlug) {
+    if (!RECIPE_SLUG_RE.test(opts.recipeSlug)) return null;
+    params.set('recipeSlug', opts.recipeSlug);
+  }
+  const qs = params.toString();
+  const url = `/api/v1/games/${encodeURIComponent(opts.gameId)}/questions/next${qs ? `?${qs}` : ''}`;
+  const body = await fetchJson(url);
+  return body?.question ?? null;
+}
+
+// Request a bulk batch of questions (e.g. a full board). Embedded: host channel
+// (bulk = no `mode`), host pins gameId. No host: same-origin relative fetch with
+// a validated caller-supplied gameId. Returns the canonical questions array
+// verbatim, or [] on standalone-without-gameId / invalid gameId / timeout /
+// error reply / fetch failure. Never throws. Call after bridge.onReady.
+async function requestQuestions(
+  opts: RequestQuestionsOptions = {}
+): Promise<unknown[]> {
+  // Host present (ctx-based gate; see requestNextQuestion).
+  if (ctx && !ctx.standalone) {
+    const payload: Record<string, unknown> = {};
+    if (Number.isFinite(opts.count)) payload.count = opts.count;
+    if (opts.recipe) payload.recipe = opts.recipe;
+    if (opts.grade !== undefined && opts.grade !== null) payload.grade = opts.grade;
+    const deliver = await postQuestionsRequest(payload);
+    const questions = deliver?.questions;
+    return Array.isArray(questions) ? questions : [];
+  }
+
+  if (!opts.gameId || !GAME_ID_RE.test(opts.gameId)) return [];
+  const params = new URLSearchParams();
+  if (Number.isFinite(opts.count)) params.set('count', String(opts.count));
+  if (opts.grade !== undefined && opts.grade !== null) {
+    params.set('grade', String(opts.grade));
+  }
+  if (opts.recipe) {
+    if (!RECIPE_SLUG_RE.test(opts.recipe)) return [];
+    params.set('recipe', opts.recipe);
+  }
+  const qs = params.toString();
+  const url = `/api/v1/games/${encodeURIComponent(opts.gameId)}/questions${qs ? `?${qs}` : ''}`;
+  const body = await fetchJson(url);
+  const questions = body?.questions;
+  return Array.isArray(questions) ? questions : [];
 }
 
 export const bridge: Bridge = {
@@ -555,6 +703,9 @@ export const bridge: Bridge = {
   },
   requestNextQuestion(opts?: RequestNextQuestionOptions) {
     return requestNextQuestion(opts);
+  },
+  requestQuestions(opts?: RequestQuestionsOptions) {
+    return requestQuestions(opts);
   },
   validateAnswer(opts: ValidateAnswerOptions) {
     return validateAnswer(opts);
