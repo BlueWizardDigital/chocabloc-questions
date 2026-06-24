@@ -21,12 +21,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `drawSymmetryLines` — 2D shape with symmetry line overlay
 - 7 new normalizer functions and `FORMAT_NORMALIZERS` entries
 - 7 new TypeScript content + question types exported from `helpers-only`
+- `bridge.requestQuestions(opts)` — bulk question batch over the host's
+  `chocabloc:questions:request` channel (host-pinned gameId) with a same-origin
+  relative-fetch fallback for host-less same-origin deployments. Returns the
+  canonical questions array verbatim, or `[]` on any failure (never throws).
+- `RequestQuestionsOptions` type exported from `chocabloc-questions/bridge`
+  (`count` / `recipe` / `grade` / `gameId`). Note bulk uses `recipe` while the
+  adaptive path uses `recipeSlug`, matching the host's `fetchGameQuestions`
+  contract.
+- `gameId` option on `requestNextQuestion` / `requestQuestions` — used **only**
+  by the no-host fetch fallback. When embedded, the host pins the gameId and any
+  caller-supplied `gameId` is ignored.
 
 ### Changed
 
 - Removed 7 formats from `STEM_FORMATS` — they now route through dedicated
   normalizers that preserve `imageType` and structured content instead of
   stripping them to text-only.
+
+### Fixed
+
+- `bridge.requestNextQuestion` hardcoded the `monkey-money` gameId, so every
+  non-money game fetched monkey-money's question bank. It now routes through the
+  host postMessage channel (`chocabloc:questions:request` → `:deliver`, host
+  pins gameId) when embedded, and a same-origin relative fetch
+  (`/api/v1/games/:gameId/questions/next`) when given a `gameId` with no host.
+  Games no longer need to hand-roll a custom question bridge.
 
 ## [0.4.0-beta.0] — 2026-06-01
 
