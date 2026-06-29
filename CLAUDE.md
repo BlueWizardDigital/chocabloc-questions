@@ -54,11 +54,18 @@ The library is intentionally split into two tiers, each with its own entry point
 
   Side-effect imports in `src/full.ts`, `src/elements/coin-pile.ts`, and `src/elements/canvas-question.ts` register elements via `customElements.define`.
 
-Build outputs five bundles: `index`, `helpers-only`, `full`, `elements/coin-pile`, and `elements/canvas-question`. Size budgets in `.size-limit.cjs` (helpers-only 12 KB gz, coin-pile 17 KB gz, canvas-question 20 KB gz, full 45 KB gz).
+Build outputs eight bundles: the rendering tiers (`index`, `helpers-only`, `full`, `elements/coin-pile`, `elements/canvas-question`, `elements/whiteboard`) plus the **host-integration** entry points `bridge` and `host` (see below). Size budgets in `.size-limit.cjs` cover the rendering bundles (helpers-only 12 KB gz, coin-pile 17 KB gz, canvas-question 20 KB gz, full 45 KB gz).
+
+### Host integration (bridge + host kit)
+
+Beyond the two rendering tiers, two entry points connect a game to the ChocaBLOC host:
+
+- **`bridge`** (`chocabloc-questions/bridge`) — the postMessage channel: question acquisition (`requestQuestions` / `requestNextQuestion`), `validateAnswer`, `attempt` / `score` / `saveNotify`, `onReady` / `started`. **Import-safe** — its `window` access is guarded by `typeof window`, so node tests / SSR can import it without crashing (the boot handshake + listener run only in a browser).
+- **`host`** (`chocabloc-questions/host`) — a framework-free convenience kit over the bridge: `hostContext` / `whenHostReady` / `notifyStarted`, fail-safe `reportAttempt` / `reportScore` / `notifySave`, `checkAnswer` (local compare vs F6 server validation), and `requestBankQuestions` / `requestNextBankQuestion` / `loadQuestions` (token-preserving). Games consume this instead of hand-rolling glue per game. `loadQuestions` is the bank → fixture → generate loader (fixture/generate injected per game).
 
 ### Tree-shaking
 
-`package.json` declares `sideEffects` so consumer bundlers can tree-shake pure-logic imports. `helpers-only` and `index` are side-effect-free; `full`, `elements/coin-pile`, and `elements/canvas-question` are listed as side-effectful (they call `customElements.define()`). If a new entry point is added that registers custom elements, it must be added to the `sideEffects` array. Verify with `node tests/tree-shake-test.mjs` — it builds a helpers-only import and asserts no Web Component code leaks.
+`package.json` declares `sideEffects` so consumer bundlers can tree-shake pure-logic imports. `helpers-only` and `index` are side-effect-free; `full`, the `elements/*` bundles, `bridge`, and `host` are listed as side-effectful (`elements/*` call `customElements.define()`; `bridge`/`host` set up the host channel at load). If a new entry point is added that registers custom elements, it must be added to the `sideEffects` array. Verify with `node tests/tree-shake-test.mjs` — it builds a helpers-only import and asserts no Web Component code leaks.
 
 ### Public surface
 
