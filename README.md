@@ -45,11 +45,80 @@ and a themable surface for free.
 
 ## Install
 
-```bash
-npm install chocabloc-questions
+This package is distributed as a **GitHub tarball pinned by tag** — it is *not*
+on the npm registry. Pin an exact tag in `package.json`:
+
+```jsonc
+"chocabloc-questions": "github:BlueWizardDigital/chocabloc-questions#v0.6.0-beta.4"
 ```
 
-(Not yet published. Local dev uses `npm link`. See `CONTRIBUTING.md`.)
+(For local lib development, consumers use `npm link` instead — see
+`CONTRIBUTING.md`.)
+
+Because it's a git dependency, the install/update workflow has sharp edges. The
+rest of this section is the field guide — every gotcha below traces back to
+"tag-pinned git dep, not a registry package."
+
+### Fresh clone / CI
+
+```bash
+npm ci
+```
+
+`npm ci` reads the lockfile's resolved commit — fully deterministic, no gotcha.
+(This is why CI is never at risk from a tag bump: it pins the resolved SHA, not
+the moving tag.)
+
+### Updating to a new tag ⚠️ (the big one)
+
+**Bumping the tag in `package.json` and running `npm install` does _not_ work.**
+npm reuses its cached git resolution and the lockfile silently keeps the old
+commit — and it still prints `added 1 package`, so it looks like it worked.
+
+- **Symptom:** the new API is missing after the bump — e.g.
+  `bridge.requestQuestions` is `undefined`, or TS reports *"Property
+  'requestQuestions' does not exist"*. (This bit us mid-migration: the lockfile's
+  resolved commit stayed on `beta.3` while `package.json` already said `beta.4`.)
+- **Fix — force re-resolution:**
+
+  ```bash
+  npm install "github:BlueWizardDigital/chocabloc-questions#v0.6.0-beta.4" --force
+  ```
+
+  (Or `rm -rf node_modules/chocabloc-questions` first, then `npm install`.) This
+  rewrites the lockfile's resolved commit. **Commit both `package.json` and
+  `package-lock.json`.**
+
+### Verifying an install
+
+- **Don't** use `node -p "require('chocabloc-questions/package.json').version"` —
+  the package's `exports` map blocks the `./package.json` subpath
+  (`ERR_PACKAGE_PATH_NOT_EXPORTED`). Read the file directly:
+
+  ```bash
+  node -e "console.log(JSON.parse(require('fs').readFileSync('node_modules/chocabloc-questions/package.json','utf8')).version)"
+  ```
+
+- Confirm the lockfile resolved the intended commit — compare the remote tag's
+  dereferenced (`^{}`) SHA to the lockfile's `resolved`:
+
+  ```bash
+  git ls-remote --tags https://github.com/BlueWizardDigital/chocabloc-questions.git | grep v0.6.0-beta.4
+  grep -A3 '"node_modules/chocabloc-questions"' package-lock.json   # resolved #<sha> must match
+  ```
+
+- Confirm the API surface you depend on actually shipped in that tag:
+
+  ```bash
+  grep -n "requestQuestions" node_modules/chocabloc-questions/dist/bridge.d.ts
+  ```
+
+### For maintainers (publishing) — precondition
+
+Consumers can only pin a tag that has been **pushed and tagged on the remote** —
+committing on `develop` is not enough, because the github dependency resolves by
+tag, not by branch. **Push + tag first, then bump consumers.** (Skipping this is
+what blocked the `beta.4` migration until the tag existed.)
 
 ## Quick start (React)
 
@@ -121,6 +190,31 @@ https://github.com/jasonbluewizard/Chocabloc/blob/develop/docs/games/IFRAME-GAME
 
 Don't reinvent the bridge or the canonical shape per game. Both live in
 chocabloc's docs; this README is the element + helpers reference only.
+
+### The bridge subpath (`chocabloc-questions/bridge`)
+
+Question acquisition lives in the lib's bridge (v0.6.0-beta.4+), so games don't
+hand-roll a `postMessage` channel. Inside a host it routes through
+`chocabloc:questions:request` — **the host pins the gameId from the iframe's
+manifest, so the game never sends one** (and can't request another game's bank).
+Host-less but same-origin, it falls back to a relative fetch using a
+caller-supplied, validated `gameId`:
+
+- `bridge.requestQuestions({ count })` → `Promise<unknown[]>` — bulk batch (e.g. a
+  board). Returns `[]` on standalone / timeout / error reply / empty; never throws.
+- `bridge.requestNextQuestion({ skillId?, recipeSlug? })` → `Promise<unknown | null>`
+  — adaptive single question. Returns `null` on failure; never throws.
+
+Usually you pass neither `recipe`/`recipeSlug` nor `skillId` — the host resolves
+the game's `default_recipe_slug`. Both methods return canonical questions
+**verbatim**; apply your own `normalizeQuestion`.
+
+**Import-isolation rule.** The bridge touches `window` at module load, which
+crashes node unit tests. Import `chocabloc-questions/bridge` from **one** module
+(e.g. `src/kit/host/bridge.ts`) and have everything else reach it lazily
+(`await import('./bridge')`), so node tests that inject a fake fetcher never load
+it. The game template enforces this with an ESLint `no-restricted-imports`
+override that exempts only that one file.
 
 ## Supported formats
 
