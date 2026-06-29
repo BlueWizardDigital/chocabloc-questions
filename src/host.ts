@@ -12,8 +12,9 @@ import {
   type BridgeContext,
   type AttemptPayload,
   type ScorePayload,
+  type RequestNextQuestionOptions,
 } from './bridge';
-import { normalizeBatch } from './helpers/normalizer';
+import { normalizeBatch, normalizeQuestion } from './helpers/normalizer';
 import type { NormalizedQuestion } from './types';
 
 export type { BridgeContext, AttemptPayload, ScorePayload } from './bridge';
@@ -163,6 +164,19 @@ export async function checkAnswer(
 export async function requestBankQuestions(count: number): Promise<NormalizedQuestion[]> {
   const raw = await bridge.requestQuestions({ count });
   return normalizeBatch(raw);
+}
+
+/**
+ * Fetch the next adaptive question (single) via the bridge and normalize it —
+ * the one-at-a-time counterpart to requestBankQuestions. Pass `skillId` OR
+ * `recipeSlug`; the server picks the next best question. Token-aware. Returns
+ * null on standalone / timeout / error / malformed row (the bridge never throws).
+ */
+export async function requestNextBankQuestion(
+  opts: RequestNextQuestionOptions = {},
+): Promise<NormalizedQuestion | null> {
+  const raw = await bridge.requestNextQuestion(opts);
+  return raw == null ? null : normalizeQuestion(raw);
 }
 
 /** Per-game question sources. All optional; the bank defaults to the bridge. */

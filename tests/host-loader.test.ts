@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { NormalizedQuestion } from '../src/types';
 
 const requestQuestions = vi.fn();
+const requestNextQuestion = vi.fn();
 
 vi.mock('../src/bridge', () => ({
   bridge: {
@@ -17,6 +18,7 @@ vi.mock('../src/bridge', () => ({
     saveNotify: vi.fn(),
     validateAnswer: vi.fn(),
     requestQuestions,
+    requestNextQuestion,
   },
 }));
 
@@ -44,6 +46,30 @@ describe('requestBankQuestions', () => {
     expect(requestQuestions).toHaveBeenCalledWith({ count: 5 });
     expect(qs[0]!.id).toBe('a');
     expect(qs[0]!.answerToken).toBe('tok-a');
+  });
+});
+
+describe('requestNextBankQuestion', () => {
+  it('asks the bridge for one question and normalizes it (token preserved)', async () => {
+    requestNextQuestion.mockResolvedValue({
+      id: 'n1',
+      format: 'multiplication',
+      skillIds: ['M'],
+      questionText: 'q',
+      choices: [{ value: 1 }],
+      answerToken: 'tok-n1',
+    });
+    const { requestNextBankQuestion } = await import('../src/host');
+    const q = await requestNextBankQuestion({ skillId: 'MATH-ADD' });
+    expect(requestNextQuestion).toHaveBeenCalledWith({ skillId: 'MATH-ADD' });
+    expect(q?.id).toBe('n1');
+    expect(q?.answerToken).toBe('tok-n1');
+  });
+
+  it('returns null when the bridge has no question', async () => {
+    requestNextQuestion.mockResolvedValue(null);
+    const { requestNextBankQuestion } = await import('../src/host');
+    expect(await requestNextBankQuestion({ skillId: 'X' })).toBeNull();
   });
 });
 

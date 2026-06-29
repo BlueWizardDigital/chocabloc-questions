@@ -13,8 +13,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `reportAttempt` / `reportScore` / `notifySave` (fail-safe progress reporting —
   telemetry never crashes the game), `checkAnswer` (local compare vs F6 server
   validation; a missing validator or transport failure never counts as correct),
-  and `requestBankQuestions` / `loadQuestions` (bank → fixture → generate, with
-  the fixture/generator injected per game). Lets games consume the host glue as a
+  and `requestBankQuestions` / `requestNextBankQuestion` / `loadQuestions` (bulk
+  + adaptive-single fetch, plus a bank → fixture → generate loader with the
+  fixture/generator injected per game). Lets games consume the host glue as a
   versioned dependency instead of copying it per-game. Import-safe without a
   `window`.
 - `./elements/whiteboard` — public side-effect export that registers the
