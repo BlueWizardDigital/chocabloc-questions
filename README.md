@@ -209,12 +209,45 @@ Usually you pass neither `recipe`/`recipeSlug` nor `skillId` — the host resolv
 the game's `default_recipe_slug`. Both methods return canonical questions
 **verbatim**; apply your own `normalizeQuestion`.
 
-**Import-isolation rule.** The bridge touches `window` at module load, which
-crashes node unit tests. Import `chocabloc-questions/bridge` from **one** module
-(e.g. `src/kit/host/bridge.ts`) and have everything else reach it lazily
-(`await import('./bridge')`), so node tests that inject a fake fetcher never load
-it. The game template enforces this with an ESLint `no-restricted-imports`
-override that exempts only that one file.
+**Import safety (v0.6.0-beta.5+).** The bridge is safe to `import` without a
+`window`: its message listener and boot handshake run only in a browser (guarded
+by `typeof window`), so node tests, SSR, and the `/host` kit can import it without
+crashing. Before beta.5 it touched `window` at load — consumers imported it from a
+single module and reached it lazily (`await import('./bridge')`); that's no longer
+required, though injecting a fake fetcher in tests is still the tidiest way to
+avoid real network calls. (The game template still routes bridge use through one
+module via an ESLint `no-restricted-imports` fence — now a convention, not a
+crash guard.)
+
+### The host kit (`chocabloc-questions/host`)
+
+A framework-free convenience layer over the bridge — the glue most iframe games
+need, so they don't re-implement it per game. Import-safe (it wraps the
+import-safe bridge):
+
+- **Boot / context** — `hostContext()`, `whenHostReady(timeoutMs?)`,
+  `notifyStarted()`. `whenHostReady` resolves once the host replies, or falls back
+  to a synthesized standalone context after the timeout (and stays resolved, so
+  repeat calls don't re-wait).
+- **Progress (fail-safe)** — `reportAttempt(payload)`, `reportScore(payload)`,
+  `notifySave()`. Each swallows transport errors — telemetry never crashes the
+  game. Forward the question's `answerToken` on attempts so the host grades
+  server-side.
+- **Answer check** — `checkAnswer(q, studentAnswer, validator?)`: local compare
+  when the question carries `answer`; server validation via the bridge when it
+  carries `answerToken`. A missing validator or a transport failure returns
+  `false` — never counts as correct.
+- **Question loading** — `requestBankQuestions(count)` (bulk) and
+  `requestNextBankQuestion({ skillId? | recipeSlug? })` (adaptive single) return
+  normalized, `answerToken`-preserving questions. `loadQuestions(count, opts, deps)`
+  is the bank → fixture → generate loader: the bank defaults to the bridge, while a
+  game injects its own fixture/generator, and any tier without a dep (or that
+  errors) is skipped — so a round never comes up empty while a later tier can fill
+  it.
+
+A game whose questions use the lib's own formats can consume `loadQuestions`
+directly; a game with its own question shape can use the boot / reporting /
+checkAnswer helpers and keep its own loader.
 
 ## Supported formats
 
