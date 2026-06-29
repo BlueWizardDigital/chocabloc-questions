@@ -36,6 +36,11 @@
       "types": "./dist/bridge.d.ts",
       "import": "./dist/bridge.mjs",
       "require": "./dist/bridge.cjs"
+    },
+    "./host": {
+      "types": "./dist/host.d.ts",
+      "import": "./dist/host.mjs",
+      "require": "./dist/host.cjs"
     }
   },
   "sideEffects": [
@@ -46,7 +51,9 @@
     "./dist/elements/whiteboard.mjs",
     "./dist/chunks/ChocaWhiteboard.*.mjs",
     "./dist/bridge.mjs",
-    "./dist/bridge.cjs"
+    "./dist/bridge.cjs",
+    "./dist/host.mjs",
+    "./dist/host.cjs"
   ],
   "files": [
     "dist",

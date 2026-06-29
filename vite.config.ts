@@ -23,6 +23,7 @@ export default defineConfig({
         'helpers-only': resolve(__dirname, 'src/helpers-only.ts'),
         full: resolve(__dirname, 'src/full.ts'),
         bridge: resolve(__dirname, 'src/bridge.ts'),
+        host: resolve(__dirname, 'src/host.ts'),
         'elements/coin-pile': resolve(__dirname, 'src/elements/coin-pile.ts'),
         'elements/canvas-question': resolve(__dirname, 'src/elements/canvas-question.ts'),
         'elements/whiteboard': resolve(__dirname, 'src/elements/whiteboard.ts'),
