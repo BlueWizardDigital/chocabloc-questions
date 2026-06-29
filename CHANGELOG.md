@@ -7,6 +7,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `chocabloc-questions/host` — new framework-free **host-kit** entrypoint that
+  wraps the bridge with the glue every game needs: `hostContext` /
+  `whenHostReady` / `notifyStarted` (safe boot, standalone-synthesized),
+  `reportAttempt` / `reportScore` / `notifySave` (fail-safe progress reporting —
+  telemetry never crashes the game), `checkAnswer` (local compare vs F6 server
+  validation; a missing validator or transport failure never counts as correct),
+  and `requestBankQuestions` / `loadQuestions` (bank → fixture → generate, with
+  the fixture/generator injected per game). Lets games consume the host glue as a
+  versioned dependency instead of copying it per-game. Import-safe without a
+  `window`.
 - `./elements/whiteboard` — public side-effect export that registers the
   standalone `<choca-whiteboard>` scratchpad element. Additive; no existing
   export changed.
@@ -35,12 +45,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `normalizeQuestion` now preserves the F6 `answerToken` on the normalized
+  question (added optional `answerToken?: string` to `BaseQuestion`; reads the
+  `answerToken` / `answer_token` wire keys). The lib still does **not** consume
+  it (its built-in validator returns `correct:false` — a host validator is
+  required); preserving it lets consumers (e.g. `chocabloc-questions/host`)
+  forward graded attempts instead of silently dropping the token. Absent/empty →
+  omitted; never affects row validity. Additive optional field.
 - Removed 7 formats from `STEM_FORMATS` — they now route through dedicated
   normalizers that preserve `imageType` and structured content instead of
   stripping them to text-only.
 
 ### Fixed
 
+- `chocabloc-questions/bridge` is now safe to `import` without a `window` (node
+  tests, SSR, and the new `./host` entrypoint). Its message-listener
+  registration and boot handshake are deferred behind a `typeof window` guard;
+  the in-handler security gates (`e.source === window.parent`, origin check) are
+  unchanged — only listener registration is now conditional.
 - `bridge.requestNextQuestion` hardcoded the `monkey-money` gameId, so every
   non-money game fetched monkey-money's question bank. It now routes through the
   host postMessage channel (`chocabloc:questions:request` → `:deliver`, host
