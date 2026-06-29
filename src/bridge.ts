@@ -286,7 +286,10 @@ function enterStandalone(): void {
   });
 }
 
-window.addEventListener('message', (e: MessageEvent) => {
+// Host → game message handler. Registered only in a browser (see the boot
+// block at the end of this module) so importing this file is safe where there
+// is no window (node tests / SSR / the host-kit entrypoint).
+function handleHostMessage(e: MessageEvent): void {
   // Correction F1: only trust messages from our actual parent. The host
   // already enforces the symmetric check (e.source === iframeWin) in
   // GamePageWrapper.tsx; this closes the asymmetric gap on the game side.
@@ -340,7 +343,7 @@ window.addEventListener('message', (e: MessageEvent) => {
     default:
       return;
   }
-});
+}
 
 function handleQuestionsDeliver(payload: unknown): void {
   // Ignore anything we can't tie to a pending request (late / duplicate /
@@ -715,13 +718,20 @@ export const bridge: Bridge = {
   },
 };
 
-if (inIframe) {
-  try {
-    window.parent.postMessage({ type: 'chocabloc:ready' }, '*');
-  } catch {
+// All window-touching boot work is deferred behind this guard so the module is
+// import-safe under node (no window): browsers run it exactly as before, node
+// treats it as a no-op. The in-handler security gates are unchanged — only the
+// registration of the listener is now conditional.
+if (typeof window !== 'undefined') {
+  window.addEventListener('message', handleHostMessage);
+  if (inIframe) {
+    try {
+      window.parent.postMessage({ type: 'chocabloc:ready' }, '*');
+    } catch {
+      enterStandalone();
+    }
+    initTimer = setTimeout(enterStandalone, INIT_TIMEOUT_MS);
+  } else {
     enterStandalone();
   }
-  initTimer = setTimeout(enterStandalone, INIT_TIMEOUT_MS);
-} else {
-  enterStandalone();
 }
