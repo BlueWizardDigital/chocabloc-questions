@@ -13,8 +13,11 @@ import {
   type AttemptPayload,
   type ScorePayload,
 } from './bridge';
+import { normalizeBatch } from './helpers/normalizer';
+import type { NormalizedQuestion } from './types';
 
 export type { BridgeContext, AttemptPayload, ScorePayload } from './bridge';
+export type { NormalizedQuestion } from './types';
 
 // ── Host context ────────────────────────────────────────────────────────────
 
@@ -147,4 +150,74 @@ export async function checkAnswer(
     }
   }
   return q.answer != null && studentAnswer === q.answer;
+}
+
+// ── Question loading (bank → fixture → generate) ────────────────────────────
+
+/**
+ * Fetch a batch of bank questions via the bridge and normalize them. Token-aware:
+ * graded questions keep their `answerToken`. Returns [] on standalone / timeout /
+ * error / empty (the bridge never throws here). This is the bulk path; adaptive
+ * one-at-a-time games can wrap `bridge.requestNextQuestion` similarly.
+ */
+export async function requestBankQuestions(count: number): Promise<NormalizedQuestion[]> {
+  const raw = await bridge.requestQuestions({ count });
+  return normalizeBatch(raw);
+}
+
+/** Per-game question sources. All optional; the bank defaults to the bridge. */
+export interface LoadQuestionsDeps {
+  fetchBank?: (count: number) => Promise<NormalizedQuestion[]>;
+  loadFixture?: () => Promise<NormalizedQuestion[]>;
+  generate?: (count: number) => NormalizedQuestion[];
+}
+
+export interface LoadQuestionsOptions {
+  /** Skip the bank tier (no host / offline). */
+  standalone?: boolean;
+}
+
+/**
+ * Fill a round: try bank → fixture → generate in order, topping up (never
+ * discarding) until `count` is met, deduped by id. The bank defaults to the
+ * bridge; a game injects its own fixture/generate. Any tier without a dep — or
+ * one that errors — is skipped, so the screen never comes up empty while a later
+ * tier can still fill it.
+ */
+export async function loadQuestions(
+  count: number,
+  opts: LoadQuestionsOptions = {},
+  deps: LoadQuestionsDeps = {},
+): Promise<NormalizedQuestion[]> {
+  const fetchBank = deps.fetchBank ?? requestBankQuestions;
+  const out: NormalizedQuestion[] = [];
+  const seen = new Set<string>();
+  const topUp = (add: NormalizedQuestion[]): void => {
+    for (const q of add) {
+      if (out.length >= count) break;
+      if (!seen.has(q.id)) {
+        seen.add(q.id);
+        out.push(q);
+      }
+    }
+  };
+
+  if (!opts.standalone) {
+    try {
+      topUp(await fetchBank(count));
+    } catch {
+      /* fall through to the next tier */
+    }
+  }
+  if (out.length < count && deps.loadFixture) {
+    try {
+      topUp(await deps.loadFixture());
+    } catch {
+      /* fall through to the next tier */
+    }
+  }
+  if (out.length < count && deps.generate) {
+    topUp(deps.generate(count));
+  }
+  return out.slice(0, count);
 }
