@@ -55,6 +55,14 @@ export type BaseQuestion = {
    * legacy `answer + distractors` path.
    */
   choices?: { value: AnswerValue }[];
+  /**
+   * F6 graded-question handle. Opaque server-issued token the consumer forwards
+   * to the host's validate / attempt channel so the server can re-derive
+   * correctness. The lib never consumes it (its built-in validator still returns
+   * correct:false); it is preserved here so downstream game code can report
+   * graded attempts. Absent on ungraded / offline questions.
+   */
+  answerToken?: string;
 };
 
 // USD / CAD content variants discriminated on currency

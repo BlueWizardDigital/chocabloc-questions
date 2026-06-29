@@ -62,16 +62,15 @@ describe('normalizeQuestion — choices-only (v0.4.0)', () => {
     expect(q!.choices).toHaveLength(4);
   });
 
-  it('preserves answerToken passthrough on the wire (not consumed by normalize)', () => {
-    // Wire shape carries answerToken; lib doesn't read it, but it must
-    // pass through so the React consumer can forward it to the validate
-    // endpoint. We only assert the lib doesn't strip it from the input
-    // object — it's not part of the typed NormalizedQuestion shape.
+  it('preserves answerToken on the normalized question (forwarded to validate)', () => {
+    // The lib doesn't *consume* answerToken (its built-in validator still
+    // returns correct:false — a host validator is required), but it must keep
+    // it on the normalized object so the consumer can forward it to the host's
+    // validate / attempt channel. As of the F6 question-model update it is a
+    // typed BaseQuestion field, not just an untyped passthrough.
     const q = normalizeQuestion(choicesRow);
-    // answerToken isn't part of NormalizedQuestion type, but the original
-    // payload is intact for the consumer to read at the call site (the
-    // React caller threads it through createServerValidator).
     expect(q).not.toBeNull();
+    expect(q!.answerToken).toBe('IGNORED-BY-LIB');
   });
 });
 

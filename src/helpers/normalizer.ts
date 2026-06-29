@@ -148,6 +148,7 @@ function extractBase(r: Record<string, unknown>): {
   questionText: string;
   answerMode?: 'choice' | 'input';
   answerDisplay?: string;
+  answerToken?: string;
 } {
   const id = getString(r, 'id', 'question_id');
   if (!id) throw new NormalizeError('Question missing id', r);
@@ -165,10 +166,13 @@ function extractBase(r: Record<string, unknown>): {
     : rawType && INPUT_ANSWER_TYPES.has(rawType) ? 'input'
     : undefined;
   const answerDisplay = getString(r, 'answer_display', 'answerDisplay');
+  // F6 graded handle — opaque passthrough (camel + snake wire keys). Empty/absent → omitted.
+  const answerToken = getString(r, 'answerToken', 'answer_token');
   return {
     id, skillIds, questionText,
     ...(answerMode ? { answerMode } : {}),
     ...(answerDisplay ? { answerDisplay } : {}),
+    ...(answerToken ? { answerToken } : {}),
   };
 }
 
