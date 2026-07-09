@@ -7,6 +7,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Concept channel (grade-tiered, open-ended game content).** A concept is NOT
+  a question — it carries game-loop *rules* (`archetype` + `params` + `validity`
+  + `seeds`) the game consumes to generate and client-side-validate its own
+  rounds. New bridge + host-kit surface:
+  - `bridge.requestConcept(opts?)` — resolve the grade-appropriate concept for
+    this game over the host's `chocabloc:concept:request` / `:deliver` channel
+    (host-pinned gameId; the endpoint takes NO client grade — the server resolves
+    it from the session). Same-origin relative-fetch fallback for host-less
+    deployments. Returns `ResolvedConcept | null` (null on standalone / timeout /
+    `NO_CONCEPT`; never throws).
+  - `bridge.reportConceptSession(payload)` — report a play-session over the
+    `chocabloc:concept-session:report` / `:deliver` channel and get back the
+    rolled-up `progress` block. Host pins the conceptId + gameId (an iframe can't
+    report against another game's concept). NO fetch fallback — the write needs
+    the host's CSRF/session. Returns `ConceptProgress | null`.
+  - Host-kit: `requestGameConcept()` + fail-safe `reportConceptSession()`.
+  - Types exported from `chocabloc-questions/bridge` + `/host`:
+    `RequestConceptOptions`, `ResolvedConcept`, `ConceptResolvedMeta`,
+    `ConceptSessionPayload`, `ConceptProgress`.
 - `chocabloc-questions/host` — new framework-free **host-kit** entrypoint that
   wraps the bridge with the glue every game needs: `hostContext` /
   `whenHostReady` / `notifyStarted` (safe boot, standalone-synthesized),

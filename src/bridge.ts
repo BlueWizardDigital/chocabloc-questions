@@ -23,6 +23,10 @@ const INIT_TIMEOUT_MS = 2000;
 const REQUEST_TIMEOUT_MS = 3000;
 const VALIDATE_TIMEOUT_MS = 5000;
 const QUESTIONS_TIMEOUT_MS = 4000;
+const CONCEPT_TIMEOUT_MS = 4000;
+// Session report is a write (POST /concepts/:id/sessions). Give it the same
+// slack as validate rather than the read-path questions timeout.
+const CONCEPT_SESSION_TIMEOUT_MS = 5000;
 
 // Input shapes mirror the host's own validators (GamePageWrapper /
 // useNextGameQuestion). Applied ONLY on the no-host fetch fallback — the
@@ -73,6 +77,80 @@ export interface RequestQuestionsOptions {
   grade?: number | string;
   /** Used ONLY by the no-host fetch fallback. Ignored when embedded. */
   gameId?: string;
+}
+
+/**
+ * Concept-resolution request options. Mirrors GET /api/v1/games/:gameId/concept.
+ * The endpoint takes NO client-supplied grade — the server resolves the
+ * grade-appropriate concept from the session (`req.user.gradeLevel`). The
+ * `?grade=` query param is admin/teacher preview only and is ignored for
+ * children, so it is deliberately not exposed here.
+ */
+export interface RequestConceptOptions {
+  /**
+   * Used ONLY by the no-host fetch fallback (game served same-origin with the
+   * API, no chocabloc host). Ignored when embedded — the host pins the gameId.
+   * Must match /^[a-z0-9][a-z0-9-]{0,49}$/.
+   */
+  gameId?: string;
+}
+
+/**
+ * `resolved` meta returned alongside a concept — how the server picked it.
+ * `grade` is the player's effective grade (string, session-derived);
+ * `matchedGrade` is the concept's own `grade_suggestion` (integer).
+ */
+export interface ConceptResolvedMeta {
+  via: 'pinned' | 'category';
+  grade: string | null;
+  matchedGrade: number | null;
+}
+
+/**
+ * A resolved concept. NOTE the deliberate mixed casing — the top-level fields
+ * are snake_case because the server emits them verbatim (matching the `skills`
+ * / mathSkills shape), while the `resolved` sub-object is camelCase. This is
+ * the raw wire shape; do NOT add a camelCase transform (adapters are forbidden).
+ * `params` + `validity` (+ optional `seeds`) are the game-loop rules the game
+ * consumes to generate and client-side-validate its own rounds.
+ */
+export interface ResolvedConcept {
+  concept_id: string;
+  category_id: string | null;
+  common: Record<string, unknown>;
+  archetype: string;
+  params: Record<string, unknown>;
+  validity: Record<string, unknown>;
+  seeds: unknown[];
+  resolved: ConceptResolvedMeta;
+}
+
+/**
+ * Concept play-session report. Mirrors POST /api/v1/concepts/:conceptId/sessions
+ * body. All fields optional; the server clamps every value (timePlayedMs 0..24h,
+ * levelsCompleted 0..10000, xpEarned 0..1M, correctCombos 0..100000). The host
+ * pins the conceptId (from the concept it resolved) and the gameId — an iframe
+ * cannot report against another game's concept.
+ */
+export interface ConceptSessionPayload {
+  timePlayedMs?: number;
+  levelsCompleted?: number;
+  xpEarned?: number;
+  correctCombos?: number;
+  clientSessionId?: string;
+  gameId?: string;
+}
+
+/**
+ * Rolled-up per-player concept progress returned by a successful session report
+ * (the `progress` block of the 201 response). BIGINT totals arrive as JS numbers.
+ */
+export interface ConceptProgress {
+  totalTimePlayedMs: number;
+  totalLevelsCompleted: number;
+  totalXp: number;
+  sessionsCount: number;
+  lastPlayedAt: string | null;
 }
 
 /**
@@ -218,6 +296,10 @@ export interface Bridge {
   exit(): void;
   requestNextQuestion(opts?: RequestNextQuestionOptions): Promise<unknown | null>;
   requestQuestions(opts?: RequestQuestionsOptions): Promise<unknown[]>;
+  requestConcept(opts?: RequestConceptOptions): Promise<ResolvedConcept | null>;
+  reportConceptSession(
+    payload: ConceptSessionPayload
+  ): Promise<ConceptProgress | null>;
   validateAnswer(opts: ValidateAnswerOptions): Promise<ValidateAnswerResult>;
   attachValidator(
     el: ChocablocQuestionLike,
@@ -259,6 +341,24 @@ interface PendingQuestions {
   timer: ReturnType<typeof setTimeout>;
 }
 const pendingQuestions = new Map<string, PendingQuestions>();
+
+// In-flight chocabloc:concept:request promises keyed by requestId. The deliver
+// handler resolves with the whole deliver payload (the concept fields spread at
+// top level, mirroring the questions channel). Resolves null on timeout.
+interface PendingConcepts {
+  resolve: (payload: Record<string, unknown> | null) => void;
+  timer: ReturnType<typeof setTimeout>;
+}
+const pendingConcepts = new Map<string, PendingConcepts>();
+
+// In-flight chocabloc:concept-session:report promises keyed by requestId. The
+// deliver handler resolves with the whole payload; the caller extracts
+// `.progress`. Resolves null on timeout.
+interface PendingConceptSessions {
+  resolve: (payload: Record<string, unknown> | null) => void;
+  timer: ReturnType<typeof setTimeout>;
+}
+const pendingConceptSessions = new Map<string, PendingConceptSessions>();
 
 function deliverReady(payload: BridgeContext): void {
   if (ctx) return;
@@ -340,6 +440,14 @@ function handleHostMessage(e: MessageEvent): void {
       handleQuestionsDeliver(msg.payload);
       return;
     }
+    case 'chocabloc:concept:deliver': {
+      handleConceptDeliver(msg.payload);
+      return;
+    }
+    case 'chocabloc:concept-session:deliver': {
+      handleConceptSessionDeliver(msg.payload);
+      return;
+    }
     default:
       return;
   }
@@ -358,6 +466,38 @@ function handleQuestionsDeliver(payload: unknown): void {
 
   clearTimeout(pending.timer);
   pendingQuestions.delete(p.requestId);
+  pending.resolve(p);
+}
+
+function handleConceptDeliver(payload: unknown): void {
+  // Mirror handleQuestionsDeliver: ignore anything we can't tie to a pending
+  // request. An error envelope ({ requestId, error }) carries no concept, so
+  // requestConcept degrades to null.
+  if (!payload || typeof payload !== 'object') return;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.requestId !== 'string') return;
+
+  const pending = pendingConcepts.get(p.requestId);
+  if (!pending) return;
+
+  clearTimeout(pending.timer);
+  pendingConcepts.delete(p.requestId);
+  pending.resolve(p);
+}
+
+function handleConceptSessionDeliver(payload: unknown): void {
+  // Mirror handleQuestionsDeliver: ignore late / duplicate / malformed replies.
+  // An error envelope ({ requestId, error }) has no `progress`, so
+  // reportConceptSession degrades to null.
+  if (!payload || typeof payload !== 'object') return;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.requestId !== 'string') return;
+
+  const pending = pendingConceptSessions.get(p.requestId);
+  if (!pending) return;
+
+  clearTimeout(pending.timer);
+  pendingConceptSessions.delete(p.requestId);
   pending.resolve(p);
 }
 
@@ -674,6 +814,100 @@ async function requestQuestions(
   return Array.isArray(questions) ? questions : [];
 }
 
+// Post a concept-resolution request to the host and await its
+// chocabloc:concept:deliver. Resolves to the deliver payload, or null on
+// timeout / parent gone. Never rejects. Mirrors postQuestionsRequest.
+function postConceptRequest(
+  payload: Record<string, unknown>
+): Promise<Record<string, unknown> | null> {
+  return new Promise((resolve) => {
+    const requestId = makeRequestId();
+    const timer = setTimeout(() => {
+      pendingConcepts.delete(requestId);
+      resolve(null);
+    }, CONCEPT_TIMEOUT_MS);
+    pendingConcepts.set(requestId, { resolve, timer });
+    try {
+      window.parent.postMessage(
+        { type: 'chocabloc:concept:request', payload: { requestId, ...payload } },
+        parentOrigin || '*'
+      );
+    } catch {
+      clearTimeout(timer);
+      pendingConcepts.delete(requestId);
+      resolve(null);
+    }
+  });
+}
+
+// Post a concept play-session report to the host and await its
+// chocabloc:concept-session:deliver. Resolves to the deliver payload, or null
+// on timeout / parent gone. Never rejects. Mirrors postQuestionsRequest.
+function postConceptSessionReport(
+  payload: Record<string, unknown>
+): Promise<Record<string, unknown> | null> {
+  return new Promise((resolve) => {
+    const requestId = makeRequestId();
+    const timer = setTimeout(() => {
+      pendingConceptSessions.delete(requestId);
+      resolve(null);
+    }, CONCEPT_SESSION_TIMEOUT_MS);
+    pendingConceptSessions.set(requestId, { resolve, timer });
+    try {
+      window.parent.postMessage(
+        {
+          type: 'chocabloc:concept-session:report',
+          payload: { requestId, ...payload },
+        },
+        parentOrigin || '*'
+      );
+    } catch {
+      clearTimeout(timer);
+      pendingConceptSessions.delete(requestId);
+      resolve(null);
+    }
+  });
+}
+
+// Resolve the grade-appropriate concept for this game. Embedded (host present):
+// routes through the host's chocabloc:concept:request channel — the host pins
+// the gameId from the iframe's manifest, so any caller-supplied gameId is
+// ignored. No host: falls back to a same-origin relative fetch using a
+// validated caller-supplied gameId. Returns the resolved concept verbatim, or
+// null (standalone with no/invalid gameId, timeout, error reply, non-2xx incl.
+// 404 NO_CONCEPT / GAME_NOT_FOUND). Never throws. Call after bridge.onReady.
+async function requestConcept(
+  opts: RequestConceptOptions = {}
+): Promise<ResolvedConcept | null> {
+  if (ctx && !ctx.standalone) {
+    const deliver = await postConceptRequest({});
+    if (!deliver || deliver.error) return null;
+    return deliver as unknown as ResolvedConcept;
+  }
+
+  if (!opts.gameId || !GAME_ID_RE.test(opts.gameId)) return null;
+  const url = `/api/v1/games/${encodeURIComponent(opts.gameId)}/concept`;
+  const body = await fetchJson(url);
+  return body ? (body as unknown as ResolvedConcept) : null;
+}
+
+// Report a concept play-session and return the rolled-up progress block, or
+// null on timeout / error / no host. NO standalone fetch fallback: the POST is
+// CSRF-protected (only the host holds the token) and the conceptId is
+// host-resolved, so a report is only meaningful embedded. Never throws. The
+// host pins the conceptId + gameId; the payload here carries only the bounded
+// counters. Call after bridge.onReady, and after at least one requestConcept
+// (the host needs a resolved conceptId to attribute the session).
+async function reportConceptSession(
+  payload: ConceptSessionPayload
+): Promise<ConceptProgress | null> {
+  if (!ctx || ctx.standalone) return null;
+  const deliver = await postConceptSessionReport({ ...payload });
+  if (!deliver || deliver.error) return null;
+  const progress = deliver.progress;
+  return progress ? (progress as unknown as ConceptProgress) : null;
+}
+
 export const bridge: Bridge = {
   get ctx() {
     return ctx;
@@ -709,6 +943,12 @@ export const bridge: Bridge = {
   },
   requestQuestions(opts?: RequestQuestionsOptions) {
     return requestQuestions(opts);
+  },
+  requestConcept(opts?: RequestConceptOptions) {
+    return requestConcept(opts);
+  },
+  reportConceptSession(payload: ConceptSessionPayload) {
+    return reportConceptSession(payload);
   },
   validateAnswer(opts: ValidateAnswerOptions) {
     return validateAnswer(opts);

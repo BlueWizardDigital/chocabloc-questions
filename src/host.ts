@@ -13,11 +13,21 @@ import {
   type AttemptPayload,
   type ScorePayload,
   type RequestNextQuestionOptions,
+  type RequestConceptOptions,
+  type ResolvedConcept,
+  type ConceptSessionPayload,
+  type ConceptProgress,
 } from './bridge';
 import { normalizeBatch, normalizeQuestion } from './helpers/normalizer';
 import type { NormalizedQuestion } from './types';
 
 export type { BridgeContext, AttemptPayload, ScorePayload } from './bridge';
+export type {
+  RequestConceptOptions,
+  ResolvedConcept,
+  ConceptSessionPayload,
+  ConceptProgress,
+} from './bridge';
 export type { NormalizedQuestion } from './types';
 
 // ── Host context ────────────────────────────────────────────────────────────
@@ -116,6 +126,41 @@ export function notifySave(): void {
     bridge.saveNotify();
   } catch {
     /* never let telemetry crash the game */
+  }
+}
+
+// ── Concepts (open-ended, grade-tiered game content) ────────────────────────
+// A concept is NOT a question — it's a set of game-loop rules (archetype +
+// params + validity) the game consumes to generate and client-side-validate its
+// own rounds. `requestGameConcept` resolves the grade-appropriate concept for
+// this game (grade comes from the session server-side — the game passes none);
+// `reportConceptSession` rolls up a play session into the platform.
+
+/**
+ * Resolve the grade-appropriate concept for this game. Returns null on
+ * standalone / timeout / no concept configured (the bridge never throws).
+ * Thin pass-through over `bridge.requestConcept` for host-kit symmetry.
+ */
+export async function requestGameConcept(
+  opts: RequestConceptOptions = {},
+): Promise<ResolvedConcept | null> {
+  return bridge.requestConcept(opts);
+}
+
+/**
+ * Report a concept play-session and return the rolled-up progress block, or
+ * null (standalone / timeout / server error). Fail-safe: telemetry must never
+ * crash the game, so a transport error resolves null rather than throwing.
+ * Requires at least one prior `requestGameConcept` so the host has a resolved
+ * conceptId to attribute the session to.
+ */
+export async function reportConceptSession(
+  payload: ConceptSessionPayload,
+): Promise<ConceptProgress | null> {
+  try {
+    return await bridge.reportConceptSession(payload);
+  } catch {
+    return null; // never let telemetry crash the game
   }
 }
 
