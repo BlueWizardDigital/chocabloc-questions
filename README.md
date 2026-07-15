@@ -249,6 +249,28 @@ A game whose questions use the lib's own formats can consume `loadQuestions`
 directly; a game with its own question shape can use the boot / reporting /
 checkAnswer helpers and keep its own loader.
 
+## Word problems (optional)
+
+`chocabloc-questions/word-problems` turns a bare math question into a themed word
+problem, deterministically, **without changing the math**. It ships no data — inject
+your own templates + context (or import the bundled sample set).
+
+```ts
+import { createWordProblemEngine, loadWordProblemData } from 'chocabloc-questions/word-problems';
+
+const data = await loadWordProblemData(); // or { templatesUrl, contextUrl }
+const engine = createWordProblemEngine(data);
+
+const worded = engine.applyWordProblem(rawRow, { difficulty: 'intermediate' });
+// worded.questionText is a word problem; answer/content/distractors/skill_ids unchanged.
+// A template that would drop an operand or expose the answer is rejected.
+// No usable template → rawRow returned unchanged (or pass { strict: true } to throw).
+```
+
+Recommended data paths: `/word-problems/word_templates.json` and `/word-problems/context.json`
+(override per project). Statically check any dataset with `analyzeDataset(data)` or
+`npm run wp:validate`.
+
 ## Supported formats
 
 20-member discriminated union on `format`:

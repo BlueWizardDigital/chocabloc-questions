@@ -63,6 +63,17 @@ Beyond the two rendering tiers, two entry points connect a game to the ChocaBLOC
 - **`bridge`** (`chocabloc-questions/bridge`) — the postMessage channel: question acquisition (`requestQuestions` / `requestNextQuestion`), `validateAnswer`, `attempt` / `score` / `saveNotify`, `onReady` / `started`. **Import-safe** — its `window` access is guarded by `typeof window`, so node tests / SSR can import it without crashing (the boot handshake + listener run only in a browser).
 - **`host`** (`chocabloc-questions/host`) — a framework-free convenience kit over the bridge: `hostContext` / `whenHostReady` / `notifyStarted`, fail-safe `reportAttempt` / `reportScore` / `notifySave`, `checkAnswer` (local compare vs F6 server validation), and `requestBankQuestions` / `requestNextBankQuestion` / `loadQuestions` (token-preserving). Games consume this instead of hand-rolling glue per game. `loadQuestions` is the bank → fixture → generate loader (fixture/generate injected per game).
 
+### Word problems (`src/word-problems/`)
+
+Optional, data-agnostic, seeded word-problem renderer on the `word-problems` subpath.
+`createWordProblemEngine(data).applyWordProblem(rawRow)` rewrites **only** `questionText`
+(on success it always (re)writes that field, even if the row expressed its stem elsewhere);
+it runs on the **raw row** (before `normalizeWithStem` drops `operands`). A `templateCompatibility`
+gate rejects templates that drop an operand, omit a fraction, or expose `{result}`. Numeric
+scalars only in v1; operation falls back to `row.format`. Placeholders are lowercase-only.
+Determinism holds for the same input **and** the same dataset. Ships no data; `sample-data`
+is a separate entry. Pure/tree-shakeable — do NOT add it to `sideEffects`.
+
 ### Tree-shaking
 
 `package.json` declares `sideEffects` so consumer bundlers can tree-shake pure-logic imports. `helpers-only` and `index` are side-effect-free; `full`, the `elements/*` bundles, `bridge`, and `host` are listed as side-effectful (`elements/*` call `customElements.define()`; `bridge`/`host` set up the host channel at load). If a new entry point is added that registers custom elements, it must be added to the `sideEffects` array. Verify with `node tests/tree-shake-test.mjs` — it builds a helpers-only import and asserts no Web Component code leaks.

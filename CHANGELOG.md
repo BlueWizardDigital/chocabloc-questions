@@ -5,7 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-_No unreleased changes._
+### Added
+- **Word-problem support (optional, tree-shakeable).** New `chocabloc-questions/word-problems`
+  subpath: `createWordProblemEngine(data).applyWordProblem(rawRow)` rewrites a raw question's
+  `questionText` into a themed, seeded word problem without changing the math. A compatibility
+  gate rejects any template that would drop an operand or reveal the answer, so numbers, answer,
+  distractors, skill, and format always pass through untouched. Data is injected and agnostic —
+  bring your own templates + context, or import `chocabloc-questions/word-problems/sample-data`.
+  `loadWordProblemData()` fetches per-project data by URL. No compatible template → the original
+  question is returned unchanged (or `strict: true` throws `WordProblemError`). `analyzeDataset()`
+  and `npm run wp:validate` statically check a dataset.
 
 ## [0.6.0-beta.6] — 2026-07-09
 
