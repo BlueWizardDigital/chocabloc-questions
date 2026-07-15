@@ -12,12 +12,16 @@
 
 ## Design decisions locked from review
 
-- **Compatibility ≠ resolvability.** A template is only usable if it represents ALL of the question's math: every operand placeholder present; fractions via `{fraction}` or both `{fraction_a}`+`{fraction_b}`; scalars required only when no operands/fraction define the math; `{result}` forbidden unless `opts.allowResult`. This is the core correctness gate.
-- **Themes are tried, not gambled.** When no theme is requested, deterministically shuffle all themes and try until one renders. Fall back only after exhausting compatible templates × themes.
+- **Compatibility ≠ resolvability.** A template is only usable if it represents ALL of the question's math: every operand placeholder present; fractions via `{fraction}` or both `{fraction_a}`+`{fraction_b}`; scalars required only when no operands/fraction define the math; `{result}` forbidden unless `opts.allowResult`. It also **rejects inputs with no identifiable math** and **more than six operands** (a..f) rather than dropping them silently. This is the core correctness gate.
+- **Numeric scalars only (v1).** The row adapter treats numeric primitive content fields as scalar math; string fields (units, labels) are left out to avoid over-restriction. A per-consumer adapter can widen this later.
+- **Operation resolves from `content.operation`, else `row.format`** — so verb pools resolve even when operation lives in the format field.
+- **Placeholders are lowercase-only.** Uppercase / malformed brace tokens are flagged by `analyzeDataset` and never partially resolved.
+- **Themes are tried, not gambled, theme-first.** When no theme is requested, deterministically shuffle all themes; for each theme, `selectForTheme` applies theme-specific-over-universal preference, then render. An explicit unknown theme fails precisely (`unknown theme "..."`) in strict mode.
 - **Difficulty degrades by nearest bucket:** `beginner→intermediate→advanced`, `intermediate→beginner→advanced`, `advanced→intermediate→beginner`. First non-empty bucket wins.
 - **Skill selection scans all IDs**, choosing the first in `supportedSkills`.
-- **`analyzeDataset` is static only** (structural errors + placeholder audit). It does not claim runtime renderability. Runtime renderability is proven by rendering representative rows in tests.
-- **Determinism** comes from a `stableSeed` over all normalized math fields (scalars sorted), or the row `id`.
+- **On success, `applyWordProblem` always (re)writes `questionText`** and returns a shallow clone; it never mutates the input. No usable template → the original row (or throw in strict mode).
+- **`analyzeDataset(unknown)` is static only** — top-level structural guards + malformed-brace + template-theme-existence checks (hard errors) plus a placeholder audit (`unrecognizedPlaceholders`, `exposesResult`). It does not claim runtime renderability; that is proven by rendering representative rows in tests.
+- **Determinism** comes from a `stableSeed` over all normalized math fields (scalars sorted), or the row `id`, and holds for the **same input and same dataset** (adding templates can change seeded selection).
 
 ## File structure
 
@@ -129,6 +133,15 @@ describe('templateCompatibility', () => {
     expect(templateCompatibility('{percent}% of {whole}', { skillId: 'X', scalars: { percent: 25, whole: 80 } }).ok).toBe(true);
     expect(templateCompatibility('{percent}% only', { skillId: 'X', scalars: { percent: 25, whole: 80 } }).ok).toBe(false);
     expect(templateCompatibility('{a} and {b}', { skillId: 'X', operands: [1, 2], scalars: { extra: 9 } }).ok).toBe(true);
+  });
+  it('rejects more than six operands rather than dropping them', () => {
+    const r = templateCompatibility('{a}{b}{c}{d}{e}{f}{g}', { skillId: 'X', operands: [1, 2, 3, 4, 5, 6, 7] });
+    expect(r.ok).toBe(false);
+    expect(r.missing).toContain('operand_7');
+  });
+  it('rejects an input with no identifiable math', () => {
+    expect(templateCompatibility('{name} found some {item}.', { skillId: 'X', scalars: {} }).ok).toBe(false);
+    expect(templateCompatibility('{name} found some {item}.', { skillId: 'X' }).ok).toBe(false);
   });
 });
 ```
@@ -311,7 +324,7 @@ export function extractMath(input: MathInput): Record<string, string> {
 import { LETTERS } from './extract';
 import type { MathInput } from './types';
 
-const PLACEHOLDER = /\{([a-z_0-9]+)\}/gi;
+const PLACEHOLDER = /\{([a-z_0-9]+)\}/g; // lowercase-only by contract
 
 export interface Compatibility {
   ok: boolean;
@@ -327,7 +340,8 @@ function placeholderSet(text: string): Set<string> {
 
 /**
  * Does this template represent ALL of the question's math? Run BEFORE rendering.
- * Prevents silently dropping an operand or revealing the answer.
+ * Rejects a template that would drop an operand, omit a fraction, reveal the
+ * answer, or represent an input the extractor could not identify as math.
  */
 export function templateCompatibility(
   text: string,
@@ -335,9 +349,24 @@ export function templateCompatibility(
   opts: { allowResult?: boolean } = {},
 ): Compatibility {
   const ph = placeholderSet(text);
-  const missing: string[] = [];
+  const exposesResult = ph.has('result') && !opts.allowResult;
 
   const ops = input.operands ?? [];
+  const scalarKeys = Object.keys(input.scalars ?? {});
+  // No identifiable math at all -> never generate a story from nothing.
+  if (ops.length === 0 && !input.fraction && scalarKeys.length === 0) {
+    return { ok: false, missing: ['math-input'], exposesResult };
+  }
+  // More operands than we can name uniquely (a..f) -> refuse, don't drop silently.
+  if (ops.length > LETTERS.length) {
+    return {
+      ok: false,
+      missing: ops.slice(LETTERS.length).map((_, i) => `operand_${LETTERS.length + i + 1}`),
+      exposesResult,
+    };
+  }
+
+  const missing: string[] = [];
   ops.forEach((_, i) => {
     const k = LETTERS[i];
     if (k && !ph.has(k)) missing.push(k);
@@ -350,10 +379,9 @@ export function templateCompatibility(
 
   // Scalars carry the math only when there are no operands/fraction to define it.
   if (ops.length === 0 && !input.fraction) {
-    for (const k of Object.keys(input.scalars ?? {})) if (!ph.has(k)) missing.push(k);
+    for (const k of scalarKeys) if (!ph.has(k)) missing.push(k);
   }
 
-  const exposesResult = ph.has('result') && !opts.allowResult;
   return { ok: missing.length === 0 && !exposesResult, missing, exposesResult };
 }
 ```
@@ -442,15 +470,15 @@ describe('renderTemplate', () => {
   it('returns null when the theme lacks the needed vocab', () => {
     expect(renderTemplate('{item}', {}, ctx, 'nonexistent', 'addition', makeRng('s'))).toBeNull();
   });
-  it('draws distinct values for repeated keys and supports exact character keys', () => {
+  it('prefers distinct values for repeated keys when the pool allows, and supports exact character keys', () => {
     const ctx2: ContextData = {
-      themes: { cave: { item: ['gem/gems', 'ruby/rubies'] } },
+      themes: { cave: { item: ['gem/gems', 'ruby/rubies'] } }, // two options -> can differ
       characters: { hero: ['Zed'] }, // exact key, no trailing 's'
     };
     const out = renderTemplate('{hero}: {item} and {item2}', {}, ctx2, 'cave', undefined, makeRng('s'));
     expect(out).toMatch(/^Zed: /);
     const [i1, i2] = (out as string).split(': ')[1]!.split(' and ');
-    expect(i1).not.toBe(i2); // {item} and {item2} resolve to different pool entries
+    expect(i1).not.toBe(i2); // distinct because the pool has >= 2 values (contract: prefer-distinct)
   });
 });
 ```
@@ -491,8 +519,23 @@ describe('analyzeDataset', () => {
     expect(r.errors.join(' ')).toContain('ADD');
   });
   it('reports a structural error when a difficulty is not an array', () => {
-    const data = { templates: { ADD: { beginner: 'oops' } }, context } as unknown as WordProblemData;
-    expect(analyzeDataset(data).ok).toBe(false);
+    expect(analyzeDataset({ templates: { ADD: { beginner: 'oops' } }, context }).ok).toBe(false);
+  });
+  it('reports malformed brace syntax and uppercase placeholders', () => {
+    expect(analyzeDataset({ templates: { A: { beginner: ['{a'] } }, context }).ok).toBe(false);
+    expect(analyzeDataset({ templates: { A: { beginner: ['{}'] } }, context }).ok).toBe(false);
+    expect(analyzeDataset({ templates: { A: { beginner: ['{~item}'] } }, context }).ok).toBe(false);
+    expect(analyzeDataset({ templates: { A: { beginner: ['{A}'] } }, context }).ok).toBe(false);
+  });
+  it('reports a template theme that does not exist in context', () => {
+    const r = analyzeDataset({ templates: { A: { beginner: [{ template: '{a} {item}', themes: ['cvae'] }] } }, context });
+    expect(r.ok).toBe(false);
+    expect(r.errors.join(' ')).toContain('cvae');
+  });
+  it('rejects non-object data / templates / context', () => {
+    expect(analyzeDataset(null).ok).toBe(false);
+    expect(analyzeDataset({ templates: [], context }).ok).toBe(false);
+    expect(analyzeDataset({ templates: { A: {} }, context: 'oops' }).ok).toBe(false);
   });
 });
 ```
@@ -509,7 +552,7 @@ Expected: FAIL — modules not found.
 import type { ContextData, Template } from './types';
 import { pick, type Rng } from './rng';
 
-const PLACEHOLDER = /\{([a-z_0-9]+)\}/gi;
+const PLACEHOLDER = /\{([a-z_0-9]+)\}/g; // lowercase-only by contract
 const MARKER = /\{~([^/}]+)\/([^}]+)\}/g;
 const SINGULAR_WORDS = new Set(['a', 'an', 'each', 'every', 'the', 'one', '1']);
 
@@ -616,19 +659,21 @@ export function renderTemplate(
 
 ```ts
 // src/word-problems/validate.ts
-import type {
-  ContextData,
-  DatasetAnalysis,
-  Difficulty,
-  SkillAnalysis,
-  Template,
-  WordProblemData,
-} from './types';
-import { templateText } from './parser';
+import type { ContextData, DatasetAnalysis, Difficulty, SkillAnalysis } from './types';
 
 const DIFFICULTIES: Difficulty[] = ['beginner', 'intermediate', 'advanced'];
-const PLACEHOLDER = /\{([a-z_0-9]+)\}/gi;
+const PLACEHOLDER = /\{([a-z_0-9]+)\}/g; // lowercase-only by contract
 const MATH = new Set(['a', 'b', 'c', 'd', 'e', 'f', 'result', 'fraction', 'fraction_a', 'fraction_b']);
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+function templateTextOf(t: unknown): string | null {
+  if (typeof t === 'string') return t;
+  if (isPlainObject(t) && typeof t.template === 'string') return t.template;
+  return null;
+}
 
 function contextHasPool(base: string, ctx: ContextData): boolean {
   if (ctx.characters && (Array.isArray(ctx.characters[base]) || Array.isArray(ctx.characters[base + 's']))) return true;
@@ -643,17 +688,49 @@ function contextHasPool(base: string, ctx: ContextData): boolean {
   return false;
 }
 
+/** Malformed brace syntax the placeholder/marker patterns don't cover. */
+function braceErrors(text: string): string[] {
+  const errs: string[] = [];
+  const opens = (text.match(/\{/g) ?? []).length;
+  const closes = (text.match(/\}/g) ?? []).length;
+  if (opens !== closes) errs.push('unbalanced braces');
+  if (text.includes('{{') || text.includes('}}')) errs.push('double braces');
+  if (/\{\s*\}/.test(text)) errs.push('empty placeholder');
+  if (/\{[A-Z]/.test(text)) errs.push('uppercase placeholder (lowercase-only)');
+  for (const seg of text.match(/\{[^{}]*\}/g) ?? []) {
+    const isPlaceholder = /^\{[a-z_0-9]+\}$/.test(seg);
+    const isMarker = /^\{~[^/{}]+\/[^{}]+\}$/.test(seg);
+    if (!isPlaceholder && !isMarker) errs.push(`malformed token "${seg}"`);
+  }
+  return errs;
+}
+
 /**
- * STATIC analysis only: structural errors (hard) + a placeholder audit. It does
- * NOT prove runtime renderability — a key that is neither math nor a context
- * pool is treated as a possible scalar and merely listed for review.
+ * STATIC analysis of a dataset (accepts unknown so the CLI can pass raw JSON).
+ * Hard `errors` cover structural problems (bad shapes, malformed braces, unknown
+ * template themes). `skills[]` reports each skill's `exposesResult` and the
+ * placeholders that are neither math nor a context pool (possible scalars/typos).
+ * It does NOT prove runtime renderability.
  */
-export function analyzeDataset(data: WordProblemData): DatasetAnalysis {
+export function analyzeDataset(data: unknown): DatasetAnalysis {
   const errors: string[] = [];
   const skills: SkillAnalysis[] = [];
-  const ctx = data.context ?? {};
 
-  for (const [skillId, byDifficulty] of Object.entries(data.templates ?? {})) {
+  if (!isPlainObject(data)) return { ok: false, total: 0, errors: ['data must be an object'], skills };
+  if (!isPlainObject(data.context)) errors.push('context must be an object');
+  const ctx = (isPlainObject(data.context) ? data.context : {}) as ContextData;
+  const themeNames = new Set(Object.keys(ctx.themes ?? {}));
+
+  if (!isPlainObject(data.templates)) {
+    errors.push('templates must be an object');
+    return { ok: false, total: 0, errors, skills };
+  }
+
+  for (const [skillId, byDifficulty] of Object.entries(data.templates)) {
+    if (!isPlainObject(byDifficulty)) {
+      errors.push(`${skillId}: must be an object of difficulty -> templates`);
+      continue;
+    }
     const unrecognized = new Set<string>();
     let exposesResult = false;
 
@@ -665,14 +742,23 @@ export function analyzeDataset(data: WordProblemData): DatasetAnalysis {
         continue;
       }
       for (const tpl of list) {
-        if (typeof tpl !== 'string' && (typeof tpl !== 'object' || tpl === null || typeof (tpl as Template & object).template !== 'string')) {
+        const text = templateTextOf(tpl);
+        if (text === null) {
           errors.push(`${skillId}.${diff}: template must be a string or { template }`);
           continue;
         }
-        const text = templateText(tpl);
-        if (text.includes('{{') || text.includes('}}')) {
-          errors.push(`${skillId}.${diff}: double braces in "${text.slice(0, 40)}"`);
+        if (text.trim() === '') errors.push(`${skillId}.${diff}: empty template text`);
+        for (const e of braceErrors(text)) errors.push(`${skillId}.${diff}: ${e}`);
+
+        if (isPlainObject(tpl) && 'themes' in tpl) {
+          const themes = tpl.themes;
+          if (!Array.isArray(themes) || !themes.every((t) => typeof t === 'string')) {
+            errors.push(`${skillId}.${diff}: template themes must be a string array`);
+          } else if (themeNames.size) {
+            for (const t of themes) if (!themeNames.has(t as string)) errors.push(`${skillId}.${diff}: unknown theme "${t}"`);
+          }
         }
+
         for (const match of text.matchAll(PLACEHOLDER)) {
           const key = match[1] as string;
           const base = key.replace(/\d+$/, '');
@@ -727,6 +813,15 @@ const data: WordProblemData = {
     },
     'FRAC-X': { intermediate: ['{name} used {fraction} of the {item}. {question_total}'] },
     'DROP-B': { intermediate: ['{name} has {a} {item}. {question_total}'] }, // omits {b} -> incompatible
+    'PCT-X': { intermediate: ['{name} needs {percent}% of the {item}. {question_total}'] }, // scalar-only
+    'THEME-PREF': {
+      intermediate: [
+        'UNIVERSAL {a} plus {b}. {question_total}',
+        { template: 'CAVE {a} plus {b}. {question_total}', themes: ['cave'] },
+      ],
+    },
+    'VERB-X': { intermediate: ['{name} {verb_gain} {a} and {b}. {question_total}'] },
+    'RES-X': { intermediate: ['{a} plus {b} equals {result}. Right?'] },
   },
   context: {
     themes: { cave: { item: ['gem/gems'] } },
@@ -765,9 +860,8 @@ describe('createWordProblemEngine', () => {
     expect(() => engine().applyWordProblem(row, { strict: true })).toThrow(WordProblemError);
   });
 
-  it('renders fraction questions (covers fraction + scalar extraction)', () => {
-    // `note` is an incidental scalar: extracted, but not required because a fraction defines the math.
-    const row = { id: 'f1', skill_ids: ['FRAC-X'], content: { fraction: [3, 4], note: 'x' } };
+  it('renders fraction questions (covers fraction extraction)', () => {
+    const row = { id: 'f1', skill_ids: ['FRAC-X'], content: { fraction: [3, 4] } };
     const out = engine().applyWordProblem(row, { difficulty: 'intermediate', theme: 'cave' });
     expect(out.questionText).toContain('3/4');
   });
@@ -794,6 +888,39 @@ describe('createWordProblemEngine', () => {
     // FRAC-X only has intermediate; a beginner request still renders.
     const row = { id: 'f2', skill_ids: ['FRAC-X'], content: { fraction: [1, 2] } };
     expect(engine().applyWordProblem(row, { difficulty: 'beginner', theme: 'cave' }).questionText).toContain('1/2');
+  });
+
+  it('renders a scalar-only question through the engine', () => {
+    const row = { id: 'p1', skill_ids: ['PCT-X'], content: { percent: 25 } };
+    expect(engine().applyWordProblem(row, { difficulty: 'intermediate', theme: 'cave' }).questionText).toContain('25');
+  });
+
+  it('prefers a theme-specific template over a universal one', () => {
+    const row = { id: 't1', skill_ids: ['THEME-PREF'], content: { operands: [1, 2] } };
+    expect(engine().applyWordProblem(row, { theme: 'cave' }).questionText.startsWith('CAVE')).toBe(true);
+  });
+
+  it('falls back to row.format when content has no operation (verb pools)', () => {
+    const row = { id: 'v1', format: 'addition', skill_ids: ['VERB-X'], content: { operands: [1, 2] } };
+    expect(engine().applyWordProblem(row, { theme: 'cave' }).questionText).toContain('found');
+  });
+
+  it('renders a {result} template only when allowResult is set', () => {
+    const row = { id: 'r1', skill_ids: ['RES-X'], content: { operands: [1, 2] }, answer: 3 };
+    expect(engine().applyWordProblem(row, { theme: 'cave' })).toBe(row); // rejected by default
+    expect(engine().applyWordProblem(row, { theme: 'cave', allowResult: true }).questionText).toContain('3');
+  });
+
+  it('rejects an explicit unknown theme in strict mode', () => {
+    const row = { id: 'u1', skill_ids: ['ADD-X'], content: { operands: [1, 2] } };
+    expect(() => engine().applyWordProblem(row, { strict: true, theme: 'nope' })).toThrow(/unknown theme/);
+  });
+
+  it('reads camelCase skillIds and question_id, and names a skill in strict errors', () => {
+    const row = { question_id: 'c1', skillIds: ['ADD-X'], content: { operands: [1, 2] } };
+    expect(engine().applyWordProblem(row, { theme: 'cave' }).questionText).toContain('1');
+    const bad = { id: 'b', skill_ids: ['UNSUP1', 'UNSUP2'], content: { operands: [1, 2] } };
+    expect(() => engine().applyWordProblem(bad, { strict: true })).toThrow(/UNSUP1/);
   });
 
   it('returns non-object inputs unchanged and exposes supportedSkills', () => {
@@ -894,11 +1021,19 @@ function rowToMathInput(row: Record<string, unknown>, skillId: string): MathInpu
   const fraction = Array.isArray(frRaw) && frRaw.length === 2 && frRaw.every((n) => typeof n === 'number')
     ? ([frRaw[0], frRaw[1]] as [number, number]) : undefined;
 
-  const scalars: Record<string, number | string> = {};
+  // v1: numeric primitives only. String content fields are too often incidental
+  // (units, labels) to treat as required math; add a per-consumer adapter later.
+  const scalars: Record<string, number> = {};
   for (const [k, v] of Object.entries(content)) {
-    if (k === 'operands' || k === 'fraction' || k === 'operation') continue;
-    if (typeof v === 'number' || typeof v === 'string') scalars[k] = v;
+    if (k === 'operands' || k === 'fraction') continue;
+    if (typeof v === 'number') scalars[k] = v;
   }
+
+  // Operation drives verb pools. Prefer content.operation; fall back to row.format.
+  const operation =
+    typeof content.operation === 'string' ? content.operation
+    : typeof row.format === 'string' ? row.format
+    : undefined;
 
   const grade = row.gradeLevel ?? row.grade;
   return {
@@ -906,7 +1041,7 @@ function rowToMathInput(row: Record<string, unknown>, skillId: string): MathInpu
     ...(operands ? { operands } : {}),
     ...(fraction ? { fraction } : {}),
     answer: row.answer,
-    ...(typeof content.operation === 'string' ? { operation: content.operation } : {}),
+    ...(operation ? { operation } : {}),
     scalars,
     ...(typeof row.gradeBand === 'string' ? { gradeBand: row.gradeBand } : {}),
     ...(typeof grade === 'number' ? { gradeLevel: grade } : {}),
@@ -948,21 +1083,23 @@ export function createWordProblemEngine(data: WordProblemData): WordProblemEngin
     const list = templatesFor(input.skillId, pref);
     if (!list.length) return fail(opts, `no templates in any difficulty for ${input.skillId}`);
 
+    if (opts.theme && themeKeys.length && !themeKeys.includes(opts.theme)) {
+      return fail(opts, `unknown theme "${opts.theme}"`);
+    }
+
     const rng = makeRng(opts.seed ?? stableSeed(input));
     const math = extractMath(input);
 
-    const compatible = shuffle(rng, list).filter(
+    const compatible = list.filter(
       (t) => templateCompatibility(templateText(t), input, { allowResult: opts.allowResult }).ok,
     );
     if (!compatible.length) return fail(opts, `no math-compatible template for ${input.skillId}`);
 
+    // Theme-first so theme-specific templates take precedence over universal ones.
     const themesToTry = opts.theme ? [opts.theme] : themeKeys.length ? shuffle(rng, themeKeys) : [''];
-    for (const tpl of compatible) {
-      const forTheme = (theme: string): Template[] => selectForTheme([tpl], theme);
-      for (const theme of themesToTry) {
-        const chosen = forTheme(theme)[0];
-        if (!chosen) continue;
-        const out = renderTemplate(chosen, math, context, theme, input.operation, rng);
+    for (const theme of themesToTry) {
+      for (const tpl of shuffle(rng, selectForTheme(compatible, theme))) {
+        const out = renderTemplate(tpl, math, context, theme, input.operation, rng);
         if (out) return out;
       }
     }
@@ -1053,6 +1190,14 @@ cp /Users/davidbrabbins/Documents/Bluewizard/Education/mathSkills/data/templates
 cp /Users/davidbrabbins/Documents/Bluewizard/Education/mathSkills/data/templates/context.json src/word-problems/data/context.json
 ```
 
+Correct one upstream defect in the vendored copy (the validator flags it as an
+unbalanced brace; the source has a stray `}ingredient}` that should be `{ingredient}`
+in `SUB-4DIGIT-NO-REGROUP`). This fails loudly if the upstream text ever changes:
+
+```bash
+node -e "const f='src/word-problems/data/word_templates.json';const fs=require('fs');const s=fs.readFileSync(f,'utf8');const fixed=s.replaceAll('{b} }ingredient}','{b} {ingredient}');if(fixed===s){console.error('expected malformed template not found — re-check upstream before proceeding');process.exit(1)}fs.writeFileSync(f,fixed);console.log('fixed stray brace in SUB-4DIGIT-NO-REGROUP');"
+```
+
 In `tsconfig.json`, add inside `compilerOptions` (after `"esModuleInterop": true,`):
 
 ```json
@@ -1086,7 +1231,8 @@ describe('bundled sample data', () => {
     const engine = createWordProblemEngine({ templates: sampleTemplates, context: sampleContext });
     for (const row of REPRESENTATIVE) {
       const out = engine.applyWordProblem(row, { difficulty: 'intermediate' });
-      expect(out.questionText, `${row.skill_ids[0]} should render`).toBeDefined();
+      expect(out, `${row.skill_ids[0]} should be transformed, not fall back`).not.toBe(row);
+      expect(typeof out.questionText).toBe('string');
       expect(out.questionText).not.toMatch(/[{}]/);
       expect(out.questionText).toContain(String(row.content.operands[0]));
       expect(out.questionText).toContain(String(row.content.operands[1]));
@@ -1151,7 +1297,7 @@ const rawTemplates = JSON.parse(readFileSync(templatesPath, 'utf8')) as Record<s
 delete rawTemplates._meta;
 const context = JSON.parse(readFileSync(contextPath, 'utf8'));
 
-const report = analyzeDataset({ templates: rawTemplates as never, context });
+const report = analyzeDataset({ templates: rawTemplates, context }); // analyzeDataset accepts unknown
 const withResult = report.skills.filter((s) => s.exposesResult);
 const withUnknown = report.skills.filter((s) => s.unrecognizedPlaceholders.length);
 
@@ -1176,10 +1322,9 @@ Expected: PASS.
 
 - [ ] **Step 6: Wire the build**
 
-In `vite.config.ts`, inside `build.lib.entry`, after the `'elements/whiteboard'` line, add:
+In `vite.config.ts`, inside `build.lib.entry`, add ONLY these two new lines immediately after the existing `'elements/whiteboard': ...` entry (do not re-add the whiteboard line):
 
 ```ts
-        'elements/whiteboard': resolve(__dirname, 'src/elements/whiteboard.ts'),
         'word-problems/index': resolve(__dirname, 'src/word-problems/index.ts'),
         'word-problems/sample-data': resolve(__dirname, 'src/word-problems/sample-data.ts'),
 ```
@@ -1321,7 +1466,11 @@ const wpResult = await build({
   },
 });
 
-const wpCode = (wpResult.output || wpResult[0]?.output || []).map(o => o.code || '').join('\n');
+const wpOutputs = Array.isArray(wpResult) ? wpResult : [wpResult];
+const wpCode = wpOutputs
+  .flatMap((r) => r.output)
+  .map((o) => (o.type === 'chunk' ? o.code : ''))
+  .join('\n');
 const dataSentinels = ['catacomb', 'docks', 'mountain', 'ADD-2DIGIT-1DIGIT-NO-REGROUP'];
 const leaked = dataSentinels.filter(s => wpCode.includes(s));
 if (leaked.length) {
@@ -1386,9 +1535,12 @@ Add to `CLAUDE.md` under the host-integration / architecture area:
 ### Word problems (`src/word-problems/`)
 
 Optional, data-agnostic, seeded word-problem renderer on the `word-problems` subpath.
-`createWordProblemEngine(data).applyWordProblem(rawRow)` rewrites **only** `questionText`;
+`createWordProblemEngine(data).applyWordProblem(rawRow)` rewrites **only** `questionText`
+(on success it always (re)writes that field, even if the row expressed its stem elsewhere);
 it runs on the **raw row** (before `normalizeWithStem` drops `operands`). A `templateCompatibility`
-gate rejects templates that drop an operand or expose `{result}`. Ships no data; `sample-data`
+gate rejects templates that drop an operand, omit a fraction, or expose `{result}`. Numeric
+scalars only in v1; operation falls back to `row.format`. Placeholders are lowercase-only.
+Determinism holds for the same input **and** the same dataset. Ships no data; `sample-data`
 is a separate entry. Pure/tree-shakeable — do NOT add it to `sideEffects`.
 ```
 
@@ -1408,7 +1560,8 @@ git commit -m "test+docs(word-problems): tree-shake proof, unchanged normalizati
 
 ## Self-review notes
 
-- **Review fixes:** compat gate (Task 1 `compat.ts` + Task 3 wiring), fixed parser test with single-name fixtures (Task 2), `vite-node` CLI (Task 4), `analyzeDataset` static rename + scalar-tolerant audit (Task 2), theme iteration (Task 3 `generateStem`), multi skill-id (Task 3 `applyWordProblem`), `complexity` removed from `Template` (Task 1), nearest-difficulty fallback (Task 3 `NEAREST`/`templatesFor`), stronger sample-data gate (Task 4), `pick` throws on empty (Task 1), `stableSeed` over all fields (Task 3), multi-sentinel + size-limit primary (Task 5), `Promise.all` loader (Task 3), generic `applyWordProblem<T>` (Task 1). Scope cut to 5 tasks.
+- **Review-1 fixes:** compat gate (Task 1 `compat.ts` + Task 3 wiring), fixed parser test with single-name fixtures (Task 2), `vite-node` CLI (Task 4), `analyzeDataset` static rename + scalar-tolerant audit (Task 2), theme iteration (Task 3 `generateStem`), multi skill-id (Task 3 `applyWordProblem`), `complexity` removed from `Template` (Task 1), nearest-difficulty fallback (Task 3 `NEAREST`/`templatesFor`), stronger sample-data gate (Task 4), `pick` throws on empty (Task 1), `stableSeed` over all fields (Task 3), multi-sentinel + size-limit primary (Task 5), `Promise.all` loader (Task 3), generic `applyWordProblem<T>` (Task 1). Scope cut to 5 tasks.
+- **Review-2 fixes:** reject >6 operands + no-math inputs (Task 1 `compat.ts` + tests); theme-first loop honoring theme-specific preference (Task 3 `generateStem` + test); `row.format` operation fallback (Task 3 `rowToMathInput` + test); numeric-only scalar extraction (Task 3); precise unknown-theme strict error (Task 3 + test); `analyzeDataset(unknown)` with top-level guards, malformed-brace + template-theme validation, lowercase-only placeholders (Task 2 + tests) — verified the vendored data passes all hard checks; sample-data test asserts `not.toBe(row)` + `typeof === 'string'` (Task 4); honest CLI cast (Task 4); robust Vite output extraction + de-duplicated entry snippet (Tasks 4–5); "always writes `questionText`" + determinism-scope documented (Task 5). Separate RNG streams intentionally deferred (documented determinism scope instead).
 - **Spec coverage:** raw-row transform, generic extractor, renderer + guard, seeded determinism, validation, fallback + strict, three layers, tree-shaking, unchanged behavior, docs — all mapped.
 - **Type consistency:** `MathInput`, `WordProblemOptions` (with `allowResult`), `WordProblemData`, `DatasetAnalysis`/`SkillAnalysis`, `Template` (no `complexity`), `WordProblemEngine` (generic `applyWordProblem`, no `coverage`) defined once in Task 1; `templateCompatibility`, `templateText`, `selectForTheme`, `renderTemplate`, `analyzeDataset`, `extractMath`, `makeRng`/`pick`/`shuffle` signatures match across tasks.
 - **No placeholders:** every code step has full code; every command lists expected output.
@@ -1416,4 +1569,6 @@ git commit -m "test+docs(word-problems): tree-shake proof, unchanged normalizati
 ## Open risk to watch during execution
 
 Some vendored templates reference placeholders the extractor can't satisfy for a given skill (or only one operand). Those candidates are rejected by the compatibility gate and the skill falls back — expected and safe. Run `npm run wp:validate` to see `{result}` exposure and unrecognized-placeholder counts; a large fallback count is informational, not a failure, unless `analyzeDataset(...).ok` is false.
+
+The vendored snapshot was verified clean against every hard structural check **except** one stray-brace template in `SUB-4DIGIT-NO-REGROUP`, corrected in Task 4 Step 1. If a future re-vendor from upstream introduces new structural defects, `analyzeDataset(sample).ok` will go false and the Task 4 sample-data test will fail loudly — fix or correct the offending templates in the vendored copy before shipping.
 ```
