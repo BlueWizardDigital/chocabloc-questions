@@ -11,9 +11,16 @@ const dataDir = resolve(here, '../../src/word-problems/data');
 const templatesPath = process.argv[2] ?? resolve(dataDir, 'word_templates.json');
 const contextPath = process.argv[3] ?? resolve(dataDir, 'context.json');
 
-const rawTemplates = JSON.parse(readFileSync(templatesPath, 'utf8')) as Record<string, unknown>;
-delete rawTemplates._meta;
-const context = JSON.parse(readFileSync(contextPath, 'utf8'));
+let rawTemplates: Record<string, unknown>;
+let context: unknown;
+try {
+  rawTemplates = JSON.parse(readFileSync(templatesPath, 'utf8')) as Record<string, unknown>;
+  delete rawTemplates._meta;
+  context = JSON.parse(readFileSync(contextPath, 'utf8'));
+} catch (e) {
+  console.error(`word-problems: could not read/parse data (${e instanceof Error ? e.message : String(e)})`);
+  process.exit(1);
+}
 
 const report = analyzeDataset({ templates: rawTemplates, context }); // analyzeDataset accepts unknown
 const withResult = report.skills.filter((s) => s.exposesResult);
