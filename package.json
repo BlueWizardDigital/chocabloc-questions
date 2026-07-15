@@ -1,6 +1,6 @@
 {
   "name": "chocabloc-questions",
-  "version": "0.6.0-beta.6",
+  "version": "0.6.0-beta.7",
   "description": "Framework-agnostic question data + renderers for ChocaBLOC iframe games",
   "type": "module",
   "license": "MIT",

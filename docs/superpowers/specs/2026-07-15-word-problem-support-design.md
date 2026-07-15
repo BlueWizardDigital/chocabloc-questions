@@ -222,3 +222,13 @@ The CLI exits non-zero on structural errors so a project can gate its own data i
 - Server-side or build-time pre-filling of stems.
 - Changing how questions are generated or normalized.
 ```
+
+## Implementation deviations (recorded post-build)
+
+The shipped implementation refined a few names/shapes from this spec; the code, README, CLAUDE.md, and CHANGELOG are all consistent with the shipped names:
+
+- **`validateWordProblemData` → `analyzeDataset(data: unknown)`.** Renamed and its return type `CoverageReport → DatasetAnalysis`. The honest framing is "static structural analysis, NOT a runtime renderability claim," so `coverage` over-promised.
+- **`engine.coverage()` dropped.** The engine surface is `applyWordProblem` / `generateStem` / `supportedSkills`; dataset checking lives in the standalone `analyzeDataset` (used by the CLI too).
+- **Added:** `WordProblemOptions.allowResult`; a dedicated `compat.ts` (`templateCompatibility`) split out of the engine; extra type exports (`Template`, `DifficultyTemplates`, `Difficulty`, `SkillAnalysis`).
+- **CLI is `scripts/word-problems/validate.ts` (run via `vite-node`)**, not `.mjs`; there is no standalone `determinism.test.ts` (determinism is covered inline in the `engine`/`rng`/`sample-data` tests).
+- **Version:** shipped as `0.6.0-beta.7` (minor-surface bump for the two new subpaths).

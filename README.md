@@ -255,17 +255,37 @@ checkAnswer helpers and keep its own loader.
 problem, deterministically, **without changing the math**. It ships no data — inject
 your own templates + context (or import the bundled sample set).
 
+Build the engine once, then word each **raw** bank row **before** normalizing it —
+`applyWordProblem` rewrites only the row's `questionText`; the rest of your pipeline
+is unchanged:
+
 ```ts
+import { bridge } from 'chocabloc-questions/bridge';
+import { normalizeBatch } from 'chocabloc-questions';
 import { createWordProblemEngine, loadWordProblemData } from 'chocabloc-questions/word-problems';
 
-const data = await loadWordProblemData(); // or { templatesUrl, contextUrl }
-const engine = createWordProblemEngine(data);
+// once, at startup — from your own data…
+const engine = createWordProblemEngine(await loadWordProblemData()); // or { templatesUrl, contextUrl }
+// …or from the bundled sample set:
+//   import { sampleTemplates, sampleContext } from 'chocabloc-questions/word-problems/sample-data';
+//   const engine = createWordProblemEngine({ templates: sampleTemplates, context: sampleContext });
 
-const worded = engine.applyWordProblem(rawRow, { difficulty: 'intermediate' });
-// worded.questionText is a word problem; answer/content/distractors/skill_ids unchanged.
-// A template that would drop an operand or expose the answer is rejected.
-// No usable template → rawRow returned unchanged (or pass { strict: true } to throw).
+// per round — raw rows → word → normalize
+const rawRows   = await bridge.requestQuestions({ count: 10 }); // raw rows (numbers intact)
+const worded    = rawRows.map((r) => engine.applyWordProblem(r, { difficulty: 'intermediate' }));
+const questions = normalizeBatch(worded);                       // render as usual
 ```
+
+`worded.questionText` is a word problem; `answer` / `content` / `distractors` / `skill_ids`
+are unchanged. A template that would drop an operand or expose the answer is rejected.
+No usable template → the row is returned **unchanged** (or pass `{ strict: true }` to throw).
+
+**Order matters:** word the raw row *before* `normalizeQuestion` / `normalizeBatch`, because
+normalizing an arithmetic question keeps only the finished stem and drops the operands the
+word problem needs. Your renderer reads the row's `questionText`, so the reworded text flows
+through automatically. (If you currently use the host kit's `requestBankQuestions()`, which
+fetches **and** normalizes in one call, switch to `bridge.requestQuestions()` + word +
+`normalizeBatch()`.)
 
 Recommended data paths: `/word-problems/word_templates.json` and `/word-problems/context.json`
 (override per project). Statically check any dataset with `analyzeDataset(data)` or

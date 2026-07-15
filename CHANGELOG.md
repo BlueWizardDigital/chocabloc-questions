@@ -5,6 +5,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+_No unreleased changes._
+
+## [0.6.0-beta.7] — 2026-07-15
+
 ### Added
 - **Word-problem support (optional, tree-shakeable).** New `chocabloc-questions/word-problems`
   subpath: `createWordProblemEngine(data).applyWordProblem(rawRow)` rewrites a raw question's
