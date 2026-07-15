@@ -101,6 +101,6 @@ export function renderTemplate(
 
   text = text.replace(/\s+/g, ' ').trim();
 
-  if (/\{[^}]*\}/.test(text)) return null; // guard: leftover placeholder -> reject
+  if (/[{}]/.test(text)) return null; // guard: any residual brace -> reject
   return text;
 }

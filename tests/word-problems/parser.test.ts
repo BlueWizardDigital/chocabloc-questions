@@ -58,6 +58,9 @@ describe('renderTemplate', () => {
   it('returns null when the theme lacks the needed vocab', () => {
     expect(renderTemplate('{item}', {}, ctx, 'nonexistent', 'addition', makeRng('s'))).toBeNull();
   });
+  it('rejects output containing any residual brace, even a lone one', () => {
+    expect(renderTemplate('{a} things', { a: 'wei{rd' }, ctx, 'cave', 'addition', makeRng('s'))).toBeNull();
+  });
   it('prefers distinct values for repeated keys when the pool allows, and supports exact character keys', () => {
     const ctx2: ContextData = {
       themes: { cave: { item: ['gem/gems', 'ruby/rubies'] } }, // two options -> can differ
