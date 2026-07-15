@@ -291,6 +291,10 @@ Recommended data paths: `/word-problems/word_templates.json` and `/word-problems
 (override per project). Statically check any dataset with `analyzeDataset(data)` or
 `npm run wp:validate`.
 
+Not every skill gets a word problem — arithmetic/fraction/numeric-scalar skills do; money,
+geometry, time, patterns, and base-10 fall back to their normal stem by design. See
+[`docs/word-problems-coverage.md`](docs/word-problems-coverage.md) for the full breakdown and why.
+
 ## Supported formats
 
 20-member discriminated union on `format`:
