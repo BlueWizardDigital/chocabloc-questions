@@ -20,6 +20,7 @@ const data: WordProblemData = {
     },
     'VERB-X': { intermediate: ['{name} {verb_gain} {a} and {b}. {question_total}'] },
     'RES-X': { intermediate: ['{a} plus {b} equals {result}. Right?'] },
+    'UNRENDER': { intermediate: ['{a} {b} {nopool}'] },
   },
   context: {
     themes: { cave: { item: ['gem/gems'] } },
@@ -119,6 +120,17 @@ describe('createWordProblemEngine', () => {
     expect(engine().applyWordProblem(row, { theme: 'cave' }).questionText).toContain('1');
     const bad = { id: 'b', skill_ids: ['UNSUP1', 'UNSUP2'], content: { operands: [1, 2] } };
     expect(() => engine().applyWordProblem(bad, { strict: true })).toThrow(/UNSUP1/);
+  });
+
+  it('returns the original row when skill_ids is empty (non-strict)', () => {
+    const row = { id: 'e', skill_ids: [], content: { operands: [1, 2] } };
+    expect(engine().applyWordProblem(row)).toBe(row);
+  });
+
+  it('falls back when a compatible template cannot render (unresolvable placeholder)', () => {
+    const row = { id: 'nr', skill_ids: ['UNRENDER'], content: { operands: [1, 2] } };
+    expect(engine().applyWordProblem(row, { theme: 'cave' })).toBe(row);
+    expect(() => engine().applyWordProblem(row, { strict: true, theme: 'cave' })).toThrow(/no renderable template/);
   });
 
   it('returns non-object inputs unchanged and exposes supportedSkills', () => {

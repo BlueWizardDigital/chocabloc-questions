@@ -39,10 +39,10 @@ function rowToMathInput(row: Record<string, unknown>, skillId: string): MathInpu
   const content = (typeof row.content === 'object' && row.content !== null ? row.content : {}) as Record<string, unknown>;
 
   const opsRaw = content.operands;
-  const operands = Array.isArray(opsRaw) && opsRaw.every((n) => typeof n === 'number') ? (opsRaw as number[]) : undefined;
+  const operands = Array.isArray(opsRaw) && opsRaw.every((n) => Number.isFinite(n)) ? (opsRaw as number[]) : undefined;
 
   const frRaw = content.fraction;
-  const fraction = Array.isArray(frRaw) && frRaw.length === 2 && frRaw.every((n) => typeof n === 'number')
+  const fraction = Array.isArray(frRaw) && frRaw.length === 2 && frRaw.every((n) => Number.isFinite(n))
     ? ([frRaw[0], frRaw[1]] as [number, number]) : undefined;
 
   // v1: numeric primitives only. String content fields are too often incidental
@@ -50,7 +50,7 @@ function rowToMathInput(row: Record<string, unknown>, skillId: string): MathInpu
   const scalars: Record<string, number> = {};
   for (const [k, v] of Object.entries(content)) {
     if (k === 'operands' || k === 'fraction') continue;
-    if (typeof v === 'number') scalars[k] = v;
+    if (typeof v === 'number' && Number.isFinite(v)) scalars[k] = v;
   }
 
   // Operation drives verb pools. Prefer content.operation; fall back to row.format.
@@ -142,6 +142,7 @@ export function createWordProblemEngine(data: WordProblemData): WordProblemEngin
       return rawRow;
     }
     const input = rowToMathInput(row, skillId);
+    // id-seeded so a given question always rewords identically; assumes row ids are unique
     const seed = opts.seed ?? rowId(row) ?? stableSeed(input);
     const stem = generateStem(input, { ...opts, seed });
     if (stem == null) return rawRow; // strict already threw inside generateStem
