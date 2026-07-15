@@ -5,6 +5,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+_No unreleased changes._
+
+## [0.6.0-beta.6] — 2026-07-09
+
 ### Added
 
 - **Concept channel (grade-tiered, open-ended game content).** A concept is NOT
@@ -26,6 +30,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Types exported from `chocabloc-questions/bridge` + `/host`:
     `RequestConceptOptions`, `ResolvedConcept`, `ConceptResolvedMeta`,
     `ConceptSessionPayload`, `ConceptProgress`.
+
+## [0.6.0-beta.5] — 2026-06-29
+
+### Added
+
 - `chocabloc-questions/host` — new framework-free **host-kit** entrypoint that
   wraps the bridge with the glue every game needs: `hostContext` /
   `whenHostReady` / `notifyStarted` (safe boot, standalone-synthesized),
@@ -37,20 +46,29 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   fixture/generator injected per game). Lets games consume the host glue as a
   versioned dependency instead of copying it per-game. Import-safe without a
   `window`.
-- `./elements/whiteboard` — public side-effect export that registers the
-  standalone `<choca-whiteboard>` scratchpad element. Additive; no existing
-  export changed.
-- **7 visual geometry format renderers** in `ChocaCanvasQuestion`:
-  `geometry_face_identify`, `geometry_identify`, `geometry_symmetry`,
-  `geometry_classify_triangle`, `geometry_volume`, `geometry_surface_area`,
-  `geometry_circle_convert`. These formats previously rendered as text-only
-  despite carrying visual data (`image_type`, `shape`). Now render canvas
-  diagrams matching the question's visual intent.
-- `drawLabeled3D` — 3D shapes with dimension labels (for volume/surface area)
-- `drawFaceHighlight` — 3D shape with highlighted face (for face identify)
-- `drawSymmetryLines` — 2D shape with symmetry line overlay
-- 7 new normalizer functions and `FORMAT_NORMALIZERS` entries
-- 7 new TypeScript content + question types exported from `helpers-only`
+
+### Changed
+
+- `normalizeQuestion` now preserves the F6 `answerToken` on the normalized
+  question (added optional `answerToken?: string` to `BaseQuestion`; reads the
+  `answerToken` / `answer_token` wire keys). The lib still does **not** consume
+  it (its built-in validator returns `correct:false` — a host validator is
+  required); preserving it lets consumers (e.g. `chocabloc-questions/host`)
+  forward graded attempts instead of silently dropping the token. Absent/empty →
+  omitted; never affects row validity. Additive optional field.
+
+### Fixed
+
+- `chocabloc-questions/bridge` is now safe to `import` without a `window` (node
+  tests, SSR, and the new `./host` entrypoint). Its message-listener
+  registration and boot handshake are deferred behind a `typeof window` guard;
+  the in-handler security gates (`e.source === window.parent`, origin check) are
+  unchanged — only listener registration is now conditional.
+
+## [0.6.0-beta.4] — 2026-06-24
+
+### Added
+
 - `bridge.requestQuestions(opts)` — bulk question batch over the host's
   `chocabloc:questions:request` channel (host-pinned gameId) with a same-origin
   relative-fetch fallback for host-less same-origin deployments. Returns the
@@ -63,32 +81,100 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   by the no-host fetch fallback. When embedded, the host pins the gameId and any
   caller-supplied `gameId` is ignored.
 
-### Changed
-
-- `normalizeQuestion` now preserves the F6 `answerToken` on the normalized
-  question (added optional `answerToken?: string` to `BaseQuestion`; reads the
-  `answerToken` / `answer_token` wire keys). The lib still does **not** consume
-  it (its built-in validator returns `correct:false` — a host validator is
-  required); preserving it lets consumers (e.g. `chocabloc-questions/host`)
-  forward graded attempts instead of silently dropping the token. Absent/empty →
-  omitted; never affects row validity. Additive optional field.
-- Removed 7 formats from `STEM_FORMATS` — they now route through dedicated
-  normalizers that preserve `imageType` and structured content instead of
-  stripping them to text-only.
-
 ### Fixed
 
-- `chocabloc-questions/bridge` is now safe to `import` without a `window` (node
-  tests, SSR, and the new `./host` entrypoint). Its message-listener
-  registration and boot handshake are deferred behind a `typeof window` guard;
-  the in-handler security gates (`e.source === window.parent`, origin check) are
-  unchanged — only listener registration is now conditional.
 - `bridge.requestNextQuestion` hardcoded the `monkey-money` gameId, so every
   non-money game fetched monkey-money's question bank. It now routes through the
   host postMessage channel (`chocabloc:questions:request` → `:deliver`, host
   pins gameId) when embedded, and a same-origin relative fetch
   (`/api/v1/games/:gameId/questions/next`) when given a `gameId` with no host.
   Games no longer need to hand-roll a custom question bridge.
+
+## [0.6.0-beta.3] — 2026-06-11
+
+### Added
+
+- `./elements/whiteboard` — public side-effect export that registers the
+  standalone `<choca-whiteboard>` scratchpad element. Additive; no existing
+  export changed.
+
+## [0.6.0-beta.2] — 2026-06-03
+
+### Added
+
+- **7 visual geometry format renderers** in `ChocaCanvasQuestion`:
+  `geometry_face_identify`, `geometry_identify`, `geometry_symmetry`,
+  `geometry_classify_triangle`, `geometry_volume`, `geometry_surface_area`,
+  `geometry_circle_convert`. These formats previously rendered as text-only
+  despite carrying visual data (`image_type`, `shape`). Now render canvas
+  diagrams matching the question's visual intent.
+- `drawLabeled3D` — 3D shapes with dimension labels (for volume/surface area)
+- `drawFaceHighlight` — 3D shape with highlighted face (for face identify)
+- `drawSymmetryLines` — 2D shape with symmetry line overlay
+- 7 new normalizer functions and `FORMAT_NORMALIZERS` entries
+- 7 new TypeScript content + question types exported from `helpers-only`
+
+### Changed
+
+- Removed 7 formats from `STEM_FORMATS` — they now route through dedicated
+  normalizers that preserve `imageType` and structured content instead of
+  stripping them to text-only.
+
+## [0.6.0-beta.1] — 2026-06-03
+
+### Added
+
+- **Stacked math template overlay** in `<choca-whiteboard>` — column-aligned
+  scratchpad layout for addition and subtraction.
+
+### Fixed
+
+- `<choca-whiteboard>` now re-attaches its cached tool panel after a shadow-DOM
+  rebuild in `_render()` (the cached panel had kept a stale `parentNode`).
+
+## [0.5.0] — 2026-06-02
+
+Graduates the `chocabloc-questions/bridge` line to a stable release. No code
+changes since `0.5.0-beta.2`.
+
+## [0.5.0-beta.2] — 2026-06-02
+
+### Security
+
+- **P0 — parent-side origin check.** The bridge now rejects any message whose
+  `e.origin` doesn't match `window.location.origin`, closing a defense-in-depth
+  gap if the iframe sandbox is ever tightened to a null origin.
+- **P0 — choices-only "fail-not-wrong".** When a canonical question has no
+  `answer` field and the host validator rejects / is unavailable, the pad no
+  longer falls through to the built-in helper (which marks every pick wrong
+  because `answer` is undefined). It dispatches `chocabloc-validation-unavailable`
+  and leaves the pad enabled so the host can render a retry UX — preventing silent
+  mass-wrong-marking during a `/answer/validate` outage. Applied in both the
+  choice-pad (`shared-pad.ts`) and input-mode (`ChocablocQuestion.ts`) paths.
+- **P1 — attempt-token forwarding.** `AttemptPayload` gains an optional
+  `answerToken` that `bridge.attempt()` forwards so the host can re-derive
+  `is_correct` server-side, closing the `chocabloc:attempt` cheat channel.
+
+## [0.5.0-beta.1] — 2026-06-02
+
+### Fixed
+
+- Normalizer coerces a numeric-string money `answer` (e.g. `"5"`) to a number so
+  money-format validation compares correctly.
+
+## [0.5.0-beta.0] — 2026-06-02
+
+### Added
+
+- **`chocabloc-questions/bridge` subpath** — the postMessage host channel, a 1:1
+  TypeScript port of Monkey Money's `chocablocBridge.js` into `src/bridge.ts`.
+  Phase 1.5 security invariants preserved verbatim (source check, parent-origin
+  capture-after-gate, explicit switch allow-list, 2s standalone timeout). Adds
+  the `./bridge` subpath export.
+- `bridge.validateAnswer()` — F6 host-validation proxy.
+- `bridge.attachValidator()` — convenience sugar for wiring the element's
+  `validateAnswer` hook.
+- Bridge test suite (Phase 2).
 
 ## [0.4.0-beta.0] — 2026-06-01
 
@@ -204,6 +290,27 @@ This release graduates the lib from alpha. Input contract conforms to the canoni
 - **Review-mode forwarding** through dispatcher (`ChocablocQuestion._passAttrs`) → visual wrappers → `<choca-choice-pad>` via `shared-pad.syncChoicePad`. All 5 visual wrappers observe `student-answer`.
 - **New parts:** `choice-correct`, `choice-wrong`, `choice-other`.
 - **New theming vars:** `--cq-choice-correct-border` (default `#10b981`), `--cq-choice-wrong-border` (default `#ef4444`), `--cq-choice-disabled-opacity` (default `0.5`).
+- **`sideEffects` field** in `package.json` — enables consumer bundlers to
+  tree-shake unused exports from `helpers-only` and `index` entry points.
+  Side-effectful entries (`full`, `coin-pile`, `canvas-question`) are listed
+  explicitly so `customElements.define()` calls are preserved.
+- **Tree-shake verification script** at `tests/tree-shake-test.mjs` — builds
+  a helpers-only import via Vite and asserts no Web Component code leaks into
+  the output.
+- **`base10_blocks` format** — full pipeline: types, normalizer, canvas renderer,
+  CSS custom properties. Handles 4 DB operations (`base10_count`, `base10_block_count`,
+  `base10_regroup`, `base10_compare`) under single normalized `format: 'base10_blocks'`.
+  Thousands cubes render with 3D faces; place highlighting (pink stroke) for
+  `base10_block_count`; side-by-side comparison layout for `base10_compare`;
+  auto-scaling to fit canvas.
+- **CSS vars for base10 block colors**: `--cq-b10-ones`, `--cq-b10-tens`,
+  `--cq-b10-hundreds`, `--cq-b10-thousands`, `--cq-b10-stroke`.
+- `base10_blocks` added to DB snapshot script and vanilla HTML example.
+
+### Changed
+
+- `NormalizedQuestion` union expanded to 20 formats.
+- Coin-pile size budget bumped 16 → 17 KB (shared normalizer growth via dispatcher).
 
 ### Removed
 
@@ -220,33 +327,6 @@ This release graduates the lib from alpha. Input contract conforms to the canoni
 - 204 unit specs passing (Vitest), including 2 new `correctIndex` rejection specs.
 - 111 browser specs passing (web-test-runner + Playwright Chromium), including 10 new `review-mode` specs covering correct/wrong marking, PC-3 string-vs-number coercion, PC-3 object-shape choice handling, full aria-disabled coverage, student-answer absent fallback, and per-wrapper forwarding.
 - Smoke test: **21,415/21,415 real mathSkills bank questions normalize, 0 malformed.**
-
-## [Unreleased]
-
-### Added
-
-- **`sideEffects` field** in `package.json` — enables consumer bundlers to
-  tree-shake unused exports from `helpers-only` and `index` entry points.
-  Side-effectful entries (`full`, `coin-pile`, `canvas-question`) are listed
-  explicitly so `customElements.define()` calls are preserved.
-- **Tree-shake verification script** at `tests/tree-shake-test.mjs` — builds
-  a helpers-only import via Vite and asserts no Web Component code leaks into
-  the output.
-
-- **`base10_blocks` format** — full pipeline: types, normalizer, canvas renderer,
-  CSS custom properties. Handles 4 DB operations (`base10_count`, `base10_block_count`,
-  `base10_regroup`, `base10_compare`) under single normalized `format: 'base10_blocks'`.
-  Thousands cubes render with 3D faces; place highlighting (pink stroke) for
-  `base10_block_count`; side-by-side comparison layout for `base10_compare`;
-  auto-scaling to fit canvas.
-- **CSS vars for base10 block colors**: `--cq-b10-ones`, `--cq-b10-tens`,
-  `--cq-b10-hundreds`, `--cq-b10-thousands`, `--cq-b10-stroke`.
-- `base10_blocks` added to DB snapshot script and vanilla HTML example.
-
-### Changed
-
-- `NormalizedQuestion` union expanded to 20 formats.
-- Coin-pile size budget bumped 16 → 17 KB (shared normalizer growth via dispatcher).
 
 ## [0.1.0-alpha.6] — 2026-05-27
 
