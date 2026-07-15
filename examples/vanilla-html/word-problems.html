@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>chocabloc-questions — Word Problems</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui; padding: 32px; max-width: 1200px; margin: 0 auto; }
+    h1 { margin-bottom: 8px; }
+    .intro { color: #555; margin-bottom: 20px; max-width: 760px; }
+    .intro code { background: #f0f0f0; padding: 1px 5px; border-radius: 4px; }
+
+    .controls {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 16px;
+      padding: 14px 16px; margin-bottom: 28px;
+      background: #f5f7fa; border: 1px solid #e0e4ea; border-radius: 12px;
+    }
+    .controls label { font-size: 0.85rem; color: #333; display: flex; align-items: center; gap: 6px; }
+    .controls select { padding: 4px 8px; border-radius: 6px; border: 1px solid #ccc; font: inherit; }
+    .switch {
+      padding: 6px 14px; border-radius: 8px; border: 1px solid #1565c0;
+      background: #1565c0; color: #fff; cursor: pointer; font: inherit; font-weight: 600;
+    }
+    .switch.off { background: #fff; color: #1565c0; }
+    .reroll {
+      padding: 6px 12px; border-radius: 8px; border: 1px solid #ccc;
+      background: #fff; cursor: pointer; font: inherit; color: #555;
+    }
+    .reroll:hover { background: #e3f2fd; border-color: #90caf9; }
+    .spacer { flex: 1; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 24px; }
+    .card { border: 1px solid #ddd; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+    .card-header {
+      padding: 8px 14px; background: #f5f5f5; font-size: 0.8rem; font-weight: 600; color: #333;
+      border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 8px;
+    }
+    .card-header .spacer { flex: 1; }
+    .badge { font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.03em; }
+    .badge.worded { background: #e8f5e9; color: #2e7d32; }
+    .badge.original { background: #eceff1; color: #607d8b; }
+
+    chocabloc-question {
+      --cq-font: system-ui, sans-serif;
+      --cq-text: #1C2B45;
+      --cq-choice-bg: #D4881F;
+      --cq-choice-text: #FFF;
+      --cq-choice-radius: 10px;
+      --cq-focus-ring: #1C2B45;
+    }
+    chocabloc-question::part(container) {
+      background: linear-gradient(180deg, #FFF8E5, #FEEFC9);
+      padding: 20px; min-height: 120px;
+    }
+
+    .card-footer {
+      padding: 8px 14px; font-size: 0.75rem; background: #fafafa; border-top: 1px solid #eee;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .footer-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 22px; }
+    .result { color: #666; font-family: monospace; }
+    .qid { color: #aaa; font-size: 0.65rem; }
+    .toggle-btn {
+      padding: 2px 8px; border-radius: 4px; border: 1px solid #ccc;
+      background: #fff; cursor: pointer; font-size: 0.7rem; color: #555; font-family: system-ui;
+    }
+    .toggle-btn:hover { background: #e3f2fd; border-color: #90caf9; }
+    .toggle-btn.active { background: #1565c0; color: #fff; border-color: #1565c0; }
+  </style>
+</head>
+<body>
+  <h1>chocabloc-questions — word problems</h1>
+  <p class="intro">
+    The <b>same</b> <code>&lt;chocabloc-question&gt;</code> component, fed a question that was
+    reworded upstream: <code>engine.applyWordProblem(rawRow)</code> → <code>normalizeQuestion()</code> →
+    <code>el.question = …</code>. Toggle <b>Word problem</b> on/off to see the stem change while the
+    multiple-choice pad, <b>Input</b> mode, and <b>Whiteboard</b> keep working. The math, answer, and
+    choices never change — only the wording.
+  </p>
+
+  <div class="controls">
+    <button class="switch" id="wpSwitch">Word problem: ON</button>
+    <label>Difficulty
+      <select id="difficulty">
+        <option value="beginner">beginner</option>
+        <option value="intermediate" selected>intermediate</option>
+        <option value="advanced">advanced</option>
+      </select>
+    </label>
+    <label>Theme <select id="theme"></select></label>
+    <button class="reroll" id="reroll">↻ Re-roll wording</button>
+    <span class="spacer"></span>
+    <span class="qid" id="hint">seeded &amp; deterministic — re-roll to vary</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <script type="module">
+    import '../../dist/full.mjs';
+    import { normalizeQuestion } from '../../dist/helpers-only.mjs';
+    import { createWordProblemEngine } from '../../dist/word-problems/index.mjs';
+    import { sampleTemplates, sampleContext } from '../../dist/word-problems/sample-data.mjs';
+
+    const engine = createWordProblemEngine({ templates: sampleTemplates, context: sampleContext });
+
+    // A few raw bank-shape rows (operands intact — that's what the word-problem engine needs).
+    const d = (value, error_type) => ({ value, error_type });
+    const ROWS = [
+      { question_id: 'ADD-WITHIN-10-demo', skill_ids: ['ADD-WITHIN-10'], format: 'addition',
+        content: { operands: [6, 3], operation: 'addition' }, answer: 9, questionText: '6 + 3 = ?',
+        distractors: [d(8, 'off-by-1'), d(10, 'off-by-1'), d(18, 'multiplied')] },
+      { question_id: 'ADD-2D1D-demo', skill_ids: ['ADD-2DIGIT-1DIGIT-NO-REGROUP'], format: 'addition',
+        content: { operands: [23, 5], operation: 'addition' }, answer: 28, questionText: '23 + 5 = ?',
+        distractors: [d(27, 'off-by-1'), d(29, 'off-by-1'), d(18, 'subtracted')] },
+      { question_id: 'SUB-2D1D-demo', skill_ids: ['SUB-2DIGIT-1DIGIT-NO-REGROUP'], format: 'subtraction',
+        content: { operands: [27, 4], operation: 'subtraction' }, answer: 23, questionText: '27 − 4 = ?',
+        distractors: [d(22, 'off-by-1'), d(24, 'off-by-1'), d(31, 'added')] },
+      { question_id: 'MULT-2D1D-demo', skill_ids: ['MULT-2DIGIT-BY-1DIGIT'], format: 'multiplication',
+        content: { operands: [12, 4], operation: 'multiplication' }, answer: 48, questionText: '12 × 4 = ?',
+        distractors: [d(44, 'off-by-one-group'), d(16, 'added'), d(3, 'divided')] },
+      { question_id: 'DIV-2D1D-demo', skill_ids: ['DIV-2DIGIT-BY-1DIGIT-NO-REMAINDER'], format: 'division',
+        content: { operands: [24, 3], operation: 'division' }, answer: 8, questionText: '24 ÷ 3 = ?',
+        distractors: [d(6, 'wrong-divisor'), d(9, 'off-by-1'), d(72, 'multiplied')] },
+      // Intentional fallback: no template for this skill id → returned unchanged even when toggled on.
+      { question_id: 'NO-TEMPLATE-demo', skill_ids: ['ADDITION-UNTEMPLATED'], format: 'addition',
+        content: { operands: [7, 2], operation: 'addition' }, answer: 9, questionText: '7 + 2 = ?',
+        distractors: [d(8, 'off-by-1'), d(5, 'subtracted'), d(14, 'multiplied')] },
+    ];
+
+    // --- shared UI state ---
+    let wordOn = true;
+    let difficulty = 'intermediate';
+    let theme = '';      // '' = auto (deterministic pick)
+    let seedBump = 0;    // re-roll counter
+
+    // theme dropdown from the injected context (agnostic — whatever themes the data has)
+    const themeSel = document.getElementById('theme');
+    themeSel.append(new Option('(auto)', ''));
+    for (const t of Object.keys(sampleContext.themes || {})) themeSel.append(new Option(t, t));
+
+    const grid = document.getElementById('grid');
+    const cards = ROWS.map(mountCard);
+    renderAll();
+
+    function wordedRow(raw) {
+      const opts = { difficulty };
+      if (theme) opts.theme = theme;
+      if (seedBump) opts.seed = `${raw.question_id}:${seedBump}`;
+      const out = engine.applyWordProblem(raw, opts);
+      return { row: out, fellBack: out === raw }; // engine returns the SAME object on fallback
+    }
+
+    function mountCard(raw) {
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const header = document.createElement('div');
+      header.className = 'card-header';
+      const title = document.createElement('span');
+      title.textContent = raw.skill_ids[0];
+      const spacer = document.createElement('span');
+      spacer.className = 'spacer';
+      const badge = document.createElement('span');
+      badge.className = 'badge';
+      header.append(title, spacer, badge);
+
+      const el = document.createElement('chocabloc-question');
+      el.setAttribute('answer-mode', 'mc');
+      el.setAttribute('whiteboard', '');
+
+      const footer = document.createElement('div');
+      footer.className = 'card-footer';
+      const resultRow = document.createElement('div');
+      resultRow.className = 'footer-row';
+      const status = document.createElement('span');
+      status.className = 'result';
+      const qid = document.createElement('span');
+      qid.className = 'qid';
+      qid.textContent = raw.question_id;
+      resultRow.append(status, qid);
+      const controlsRow = document.createElement('div');
+      controlsRow.className = 'footer-row';
+      const inputToggle = document.createElement('button');
+      inputToggle.className = 'toggle-btn';
+      inputToggle.textContent = 'Input mode';
+      controlsRow.append(inputToggle);
+      footer.append(resultRow, controlsRow);
+
+      card.append(header, el, footer);
+      grid.appendChild(card);
+
+      let inputMode = false;
+      inputToggle.addEventListener('click', () => {
+        inputMode = !inputMode;
+        el.setAttribute('answer-mode', inputMode ? 'input' : 'mc');
+        inputToggle.classList.toggle('active', inputMode);
+        update();
+      });
+
+      el.addEventListener('answered', (e) => {
+        const dt = e.detail;
+        status.textContent = dt.correct
+          ? `✓ correct (${dt.studentAnswer})`
+          : `✗ ${dt.studentAnswer} — expected ${dt.expected}` +
+            (dt.distractorMatched ? ` [${dt.distractorMatched.errorType}]` : '');
+        status.style.color = dt.correct ? '#2e7d32' : '#c62828';
+      });
+
+      // Pre-fill the whiteboard with the underlying math when opened.
+      el.addEventListener('tool-used', (e) => {
+        const dt = e.detail;
+        if (dt.tool !== 'whiteboard' || dt.action !== 'opened') return;
+        const sym = { addition: '+', subtraction: '-', multiplication: '×', division: '÷' }[raw.content.operation];
+        if (!sym) return;
+        const set = () => {
+          const wb = el.shadowRoot && el.shadowRoot.querySelector('choca-whiteboard');
+          if (wb) wb.setMathExpression(raw.content.operands.join(` ${sym} `));
+          else setTimeout(set, 50);
+        };
+        set();
+      });
+
+      function update() {
+        status.textContent = 'awaiting answer…';
+        status.style.color = '#666';
+        const use = wordOn ? wordedRow(raw) : { row: raw, fellBack: false };
+        try {
+          el.question = normalizeQuestion(use.row);
+        } catch (err) {
+          status.textContent = 'normalize error: ' + err.message;
+          status.style.color = '#c62828';
+          return;
+        }
+        if (!wordOn) { badge.className = 'badge original'; badge.textContent = 'symbolic'; }
+        else if (use.fellBack) { badge.className = 'badge original'; badge.textContent = 'no template → original'; }
+        else { badge.className = 'badge worded'; badge.textContent = 'word problem'; }
+      }
+
+      return { update };
+    }
+
+    function renderAll() { for (const c of cards) c.update(); }
+
+    // --- wire the global controls ---
+    const wpSwitch = document.getElementById('wpSwitch');
+    wpSwitch.addEventListener('click', () => {
+      wordOn = !wordOn;
+      wpSwitch.textContent = `Word problem: ${wordOn ? 'ON' : 'OFF'}`;
+      wpSwitch.classList.toggle('off', !wordOn);
+      renderAll();
+    });
+    document.getElementById('difficulty').addEventListener('change', (e) => { difficulty = e.target.value; renderAll(); });
+    themeSel.addEventListener('change', (e) => { theme = e.target.value; renderAll(); });
+    document.getElementById('reroll').addEventListener('click', () => { seedBump++; renderAll(); });
+  </script>
+</body>
+</html>
