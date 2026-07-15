@@ -17,6 +17,8 @@ export default defineConfig({
         'src/index.ts',                     // re-export only
         'src/elements/coin-pile.ts',        // re-export only
         'src/helpers-only.ts',              // re-export only
+        'src/word-problems/index.ts',       // re-export only
+        'src/word-problems/sample-data.ts', // re-export of vendored JSON
       ],
       thresholds: {
         lines: 90,

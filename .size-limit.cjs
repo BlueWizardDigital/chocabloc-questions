@@ -29,4 +29,10 @@ module.exports = [
     limit: '45 KB',
     gzip: true,
   },
+  {
+    name: 'word-problems engine (no data)',
+    path: 'dist/word-problems/index.mjs',
+    limit: '8 KB',
+    gzip: true,
+  },
 ];

@@ -1,0 +1,1458 @@
+{
+  "themes": {
+    "cave": {
+      "item": [
+        "gem/gems",
+        "crystal/crystals",
+        "torch/torches",
+        "coin/coins",
+        "rock/rocks",
+        "fossil/fossils",
+        "mushroom/mushrooms",
+        "mineral/minerals"
+      ],
+      "location": [
+        "cavern/caverns",
+        "tunnel/tunnels",
+        "chamber/chambers",
+        "mine/mines",
+        "grotto/grottos",
+        "underground lake/underground lakes",
+        "crystal cave/crystal caves",
+        "passage/passages",
+        "alcove/alcoves",
+        "underground river/underground rivers"
+      ],
+      "container": [
+        "chest/chests",
+        "pile/piles",
+        "cart/carts",
+        "sack/sacks",
+        "crate/crates",
+        "minecart/minecarts",
+        "pouch/pouches"
+      ],
+      "specialty": [],
+      "large_item": [
+        "stalactite/stalactites",
+        "boulder/boulders",
+        "stalagmite/stalagmites"
+      ],
+      "animal": [
+        "spider/spiders",
+        "glowworm/glowworms",
+        "bat/bats"
+      ],
+      "ingredient": [
+        "mushroom/mushrooms",
+        "mineral/minerals"
+      ],
+      "monster": [
+        "golem/golems",
+        "slime/slimes",
+        "slug/slugs"
+      ]
+    },
+    "forest": {
+      "item": [
+        "acorn/acorns",
+        "mushroom/mushrooms",
+        "berry/berries",
+        "leaf/leaves",
+        "pinecone/pinecones",
+        "flower/flowers",
+        "feather/feathers",
+        "fern/ferns",
+        "stick/sticks",
+        "pebble/pebbles",
+        "chestnut/chestnuts"
+      ],
+      "location": [
+        "clearing/clearings",
+        "hollow/hollows",
+        "log/logs",
+        "stream/streams",
+        "meadow/meadows",
+        "thicket/thickets",
+        "grove/groves",
+        "pond/ponds",
+        "bramble/brambles",
+        "canopy/canopies"
+      ],
+      "container": [
+        "basket/baskets",
+        "burrow/burrows",
+        "nest/nests",
+        "tree stump/tree stumps",
+        "hollow log/hollow logs",
+        "pouch/pouches",
+        "knapsack/knapsacks",
+        "den/dens"
+      ],
+      "specialty": [
+        "potion/potions"
+      ],
+      "ingredient": [
+        "mushroom/mushrooms",
+        "berry/berries",
+        "leaf/leaves",
+        "herb/herbs"
+      ],
+      "animal": [
+        "firefly/fireflies",
+        "ladybug/ladybugs",
+        "butterfly/butterflies",
+        "squirrel/squirrels",
+        "deer"
+      ],
+      "large_item": [
+        "tree/trees",
+        "boulder/boulders"
+      ],
+      "monster": [
+        "goblin/goblins",
+        "living mushroom/living mushrooms",
+        "logling/loglings",
+        "spider/spiders"
+      ]
+    },
+    "catacomb": {
+      "item": [
+        "skull/skulls",
+        "bone/bones",
+        "candle/candles",
+        "scroll/scrolls",
+        "cobweb/cobwebs",
+        "key/keys",
+        "relic/relics",
+        "urn/urns",
+        "artifact/artifacts",
+        "torch/torches",
+        "amulet/amulets",
+        "ancient coin/ancient coins",
+        "tablet/tablets",
+        "jewel/jewels"
+      ],
+      "location": [
+        "tomb/tombs",
+        "crypt/crypts",
+        "burial chamber/burial chambers",
+        "passageway/passageways",
+        "vault/vaults",
+        "alcove/alcoves",
+        "corridor/corridors",
+        "antechamber/antechambers",
+        "ossuary/ossuaries",
+        "tunnel/tunnels",
+        "hall/halls",
+        "shrine/shrines"
+      ],
+      "container": [
+        "sarcophagus/sarcophagi",
+        "urn/urns",
+        "chest/chests",
+        "niche/niches",
+        "casket/caskets",
+        "coffer/coffers",
+        "crate/crates",
+        "shelf/shelves"
+      ],
+      "specialty": [
+        "potion/potions"
+      ],
+      "ingredient": [
+        "bone/bones",
+        "cobweb/cobwebs"
+      ],
+      "animal": [
+        "spider/spiders",
+        "beetle/beetles",
+        "bat/bats"
+      ],
+      "large_item": [
+        "skeleton/skeletons"
+      ],
+      "monster": [
+        "skeleton/skeletons",
+        "skeleton warrior/skeleton warriors"
+      ]
+    },
+    "mountain": {
+      "item": [
+        "rock/rocks",
+        "crystal/crystals",
+        "snowflake/snowflakes",
+        "pinecone/pinecones",
+        "feather/feathers",
+        "wildflower/wildflowers",
+        "stone/stones",
+        "icicle/icicles",
+        "alpine flower/alpine flowers",
+        "pebble/pebbles",
+        "fossil/fossils"
+      ],
+      "location": [
+        "peak/peaks",
+        "cliff/cliffs",
+        "cave/caves",
+        "ledge/ledges",
+        "valley/valleys",
+        "summit/summits",
+        "trail/trails",
+        "ridge/ridges",
+        "slope/slopes",
+        "glacier/glaciers",
+        "ravine/ravines",
+        "overlook/overlooks",
+        "meadow/meadows",
+        "pass/passes"
+      ],
+      "container": [
+        "bag/bags",
+        "pack/packs",
+        "basket/baskets",
+        "pouch/pouches",
+        "satchel/satchels",
+        "rucksack/rucksacks",
+        "cache/caches",
+        "pile/piles"
+      ],
+      "specialty": [],
+      "animal": [
+        "eagle/eagles",
+        "goat/goats",
+        "hawk/hawks"
+      ],
+      "ingredient": [
+        "alpine flower/alpine flowers",
+        "wildflower/wildflowers",
+        "feather/feathers",
+        "pinecone/pinecones"
+      ],
+      "large_item": [
+        "tree/trees",
+        "boulder/boulders"
+      ],
+      "monster": [
+        "bigfoot",
+        "troll/trolls",
+        "spider/spiders"
+      ]
+    },
+    "potion": {
+      "item": [],
+      "location": [
+        "wizard's laboratory/wizard's laboratories",
+        "apothecary shop/apothecary shops",
+        "witch's cottage/witch's cottages",
+        "enchanted greenhouse/enchanted greenhouses",
+        "potion cellar/potion cellars",
+        "bubbling workshop/bubbling workshops",
+        "magic tower/magic towers",
+        "alchemy station/alchemy stations",
+        "ingredient pantry/ingredient pantries",
+        "spell chamber/spell chambers",
+        "mystic garden/mystic gardens",
+        "brewing room/brewing rooms"
+      ],
+      "container": [
+        "cauldron/cauldrons",
+        "glass vial/glass vials",
+        "crystal flask/crystal flasks",
+        "potion bottle/potion bottles",
+        "ingredient jar/ingredient jars",
+        "beaker/beakers",
+        "brewing pot/brewing pots"
+      ],
+      "specialty": [
+        "healing potion/healing potions",
+        "invisibility elixir/invisibility elixirs",
+        "strength brew/strength brews",
+        "flying potion/flying potions",
+        "shrinking serum/shrinking serums",
+        "growing tonic/growing tonics",
+        "sleep draught/sleep draughts",
+        "luck potion/luck potions",
+        "speed elixir/speed elixirs",
+        "glow potion/glow potions",
+        "bubble brew/bubble brews",
+        "color-changing concoction/color-changing concoctions",
+        "sparkle solution/sparkle solutions",
+        "giggle juice/giggle juices",
+        "courage cordial/courage cordials",
+        "memory mixture/memory mixtures"
+      ],
+      "ingredient": [
+        "moonpetal/moonpetals",
+        "glowshroom/glowshrooms",
+        "fairy wing/fairy wings",
+        "dragon scale/dragon scales",
+        "phoenix feather/phoenix feathers",
+        "stardust speck/stardust specks",
+        "crystal shard/crystal shards",
+        "enchanted berry/enchanted berries",
+        "unicorn hair/unicorn hairs",
+        "sunflower seed/sunflower seeds",
+        "frog eye/frog eyes",
+        "spider silk strand/spider silk strands",
+        "rainbow droplet/rainbow droplets",
+        "mermaid tear/mermaid tears",
+        "thunderclap pebble/thunderclap pebbles",
+        "dewdrop/dewdrops",
+        "shimmer leaf/shimmer leaves",
+        "goblin tooth/goblin teeth",
+        "pixie dust pinch/pixie dust pinches"
+      ]
+    },
+    "docks": {
+      "item": [
+        "fish/fish",
+        "rope/ropes",
+        "net/nets",
+        "shell/shells",
+        "pearl/pearls",
+        "coin/coins",
+        "lantern/lanterns",
+        "compass/compasses",
+        "map/maps",
+        "bottle/bottles",
+        "sail/sails"
+      ],
+      "location": [
+        "pier/piers",
+        "warehouse/warehouses",
+        "ship/ships",
+        "lighthouse/lighthouses",
+        "market/markets",
+        "tavern/taverns",
+        "harbor/harbors",
+        "deck/decks",
+        "cabin/cabins",
+        "dock/docks",
+        "wharf/wharves",
+        "cargo hold/cargo holds",
+        "crow's nest/crow's nests",
+        "gangway/gangways"
+      ],
+      "container": [
+        "crate/crates",
+        "barrel/barrels",
+        "chest/chests",
+        "net/nets",
+        "cargo hold/cargo holds",
+        "sack/sacks",
+        "lockbox/lockboxes",
+        "trunk/trunks",
+        "basket/baskets"
+      ],
+      "large_item": [
+        "crate/crates",
+        "plank/planks",
+        "anchor/anchors",
+        "barrel/barrels"
+      ],
+      "animal": [
+        "seagull/seagulls",
+        "rat/rats",
+        "fish"
+      ],
+      "ingredient": [
+        "spice/spices",
+        "pinch of salt/pinches of salt"
+      ],
+      "monster": [
+        "rat/rats",
+        "large rat/large rats",
+        "goblin/goblins"
+      ]
+    }
+  },
+  "units": {
+    "length": {
+      "metric": [
+        "millimeter/millimeters/mm",
+        "centimeter/centimeters/cm",
+        "meter/meters/m",
+        "kilometer/kilometers/km"
+      ],
+      "imperial": [
+        "inch/inches/in",
+        "foot/feet/ft",
+        "yard/yards/yd",
+        "mile/miles/mi"
+      ]
+    },
+    "volume": {
+      "metric": [
+        "milliliter/milliliters/mL",
+        "liter/liters/L"
+      ],
+      "imperial": [
+        "teaspoon/teaspoons/tsp",
+        "tablespoon/tablespoons/tbsp",
+        "fluid ounce/fluid ounces/fl oz",
+        "cup/cups/c",
+        "pint/pints/pt",
+        "quart/quarts/qt",
+        "gallon/gallons/gal"
+      ]
+    },
+    "weight": {
+      "metric": [
+        "gram/grams/g",
+        "kilogram/kilograms/kg"
+      ],
+      "imperial": [
+        "ounce/ounces/oz",
+        "pound/pounds/lb",
+        "ton/tons/t"
+      ]
+    },
+    "area": {
+      "metric": [
+        "square centimeter/square centimeters/cm²",
+        "square meter/square meters/m²",
+        "square kilometer/square kilometers/km²"
+      ],
+      "imperial": [
+        "square inch/square inches/in²",
+        "square foot/square feet/ft²",
+        "square yard/square yards/yd²",
+        "acre/acres/ac",
+        "square mile/square miles/mi²"
+      ]
+    },
+    "volume_cubic": {
+      "metric": [
+        "cubic centimeter/cubic centimeters/cm³",
+        "cubic meter/cubic meters/m³"
+      ],
+      "imperial": [
+        "cubic inch/cubic inches/in³",
+        "cubic foot/cubic feet/ft³",
+        "cubic yard/cubic yards/yd³"
+      ]
+    },
+    "time": [
+      "second/seconds/sec",
+      "minute/minutes/min",
+      "hour/hours/hr",
+      "day/days",
+      "week/weeks/wk",
+      "month/months/mo",
+      "year/years/yr"
+    ],
+    "temperature": {
+      "metric": [
+        "degree Celsius/degrees Celsius/°C"
+      ],
+      "imperial": [
+        "degree Fahrenheit/degrees Fahrenheit/°F"
+      ]
+    }
+  },
+  "money": {
+    "USD": {
+      "symbol": "$",
+      "decimal": ".",
+      "name": "dollar/dollars",
+      "subunit": "cent/cents",
+      "denominations": [
+        {
+          "name": "hundred dollar bill/hundred dollar bills",
+          "value": 10000,
+          "type": "bill"
+        },
+        {
+          "name": "fifty dollar bill/fifty dollar bills",
+          "value": 5000,
+          "type": "bill"
+        },
+        {
+          "name": "twenty dollar bill/twenty dollar bills",
+          "value": 2000,
+          "type": "bill"
+        },
+        {
+          "name": "ten dollar bill/ten dollar bills",
+          "value": 1000,
+          "type": "bill"
+        },
+        {
+          "name": "five dollar bill/five dollar bills",
+          "value": 500,
+          "type": "bill"
+        },
+        {
+          "name": "one dollar bill/one dollar bills",
+          "value": 100,
+          "type": "bill"
+        },
+        {
+          "name": "half dollar/half dollars",
+          "value": 50,
+          "type": "coin"
+        },
+        {
+          "name": "quarter/quarters",
+          "value": 25,
+          "type": "coin"
+        },
+        {
+          "name": "dime/dimes",
+          "value": 10,
+          "type": "coin"
+        },
+        {
+          "name": "nickel/nickels",
+          "value": 5,
+          "type": "coin"
+        },
+        {
+          "name": "penny/pennies",
+          "value": 1,
+          "type": "coin"
+        }
+      ]
+    },
+    "CAD": {
+      "symbol": "$",
+      "decimal": ".",
+      "name": "dollar/dollars",
+      "subunit": "cent/cents",
+      "denominations": [
+        {
+          "name": "hundred dollar bill/hundred dollar bills",
+          "value": 10000,
+          "type": "bill"
+        },
+        {
+          "name": "fifty dollar bill/fifty dollar bills",
+          "value": 5000,
+          "type": "bill"
+        },
+        {
+          "name": "twenty dollar bill/twenty dollar bills",
+          "value": 2000,
+          "type": "bill"
+        },
+        {
+          "name": "ten dollar bill/ten dollar bills",
+          "value": 1000,
+          "type": "bill"
+        },
+        {
+          "name": "five dollar bill/five dollar bills",
+          "value": 500,
+          "type": "bill"
+        },
+        {
+          "name": "toonie/toonies",
+          "value": 200,
+          "type": "coin"
+        },
+        {
+          "name": "loonie/loonies",
+          "value": 100,
+          "type": "coin"
+        },
+        {
+          "name": "quarter/quarters",
+          "value": 25,
+          "type": "coin"
+        },
+        {
+          "name": "dime/dimes",
+          "value": 10,
+          "type": "coin"
+        },
+        {
+          "name": "nickel/nickels",
+          "value": 5,
+          "type": "coin"
+        }
+      ]
+    }
+  },
+  "time": {
+    "clock_faces": [
+      "analog",
+      "digital"
+    ],
+    "periods": [
+      "AM",
+      "PM"
+    ],
+    "time_of_day": [
+      "morning",
+      "afternoon",
+      "evening",
+      "night",
+      "noon",
+      "midnight"
+    ],
+    "schedule_points": [
+      "the expedition started",
+      "the expedition ended",
+      "the rest break began",
+      "the rest break ended",
+      "camp was set up",
+      "the climb began",
+      "the descent started",
+      "the exploration began",
+      "the group gathered",
+      "the torches were lit"
+    ],
+    "duration_verbs": [
+      "lasted",
+      "took",
+      "went on for",
+      "continued for",
+      "spent"
+    ],
+    "relative_words": [
+      "before",
+      "after",
+      "ago",
+      "later",
+      "earlier",
+      "from now"
+    ]
+  },
+  "fractions": {
+    "shareable": [
+      "treasure/treasures",
+      "supply cache/supply caches",
+      "ration/rations",
+      "provision/provisions",
+      "map/maps",
+      "gold bar/gold bars",
+      "crystal cluster/crystal clusters",
+      "bundle of torches/bundles of torches",
+      "pile of gems/piles of gems",
+      "sack of coins/sacks of coins"
+    ],
+    "divisible_sets": [
+      "bag of gems/bags of gems",
+      "pouch of coins/pouches of coins",
+      "crate of supplies/crates of supplies",
+      "chest of artifacts/chests of artifacts",
+      "bundle of scrolls/bundles of scrolls",
+      "pack of torches/packs of torches",
+      "collection of crystals/collections of crystals",
+      "set of tools/sets of tools"
+    ],
+    "recipients": [
+      "explorer/explorers",
+      "adventurer/adventurers",
+      "companion/companions",
+      "teammate/teammates",
+      "guide/guides",
+      "traveler/travelers",
+      "scout/scouts",
+      "climber/climbers"
+    ],
+    "fraction_verbs": [
+      "shared equally among",
+      "divided among",
+      "split between",
+      "distributed to",
+      "separated into",
+      "gave equal parts to"
+    ]
+  },
+  "shapes": {
+    "2d": [
+      {
+        "name": "triangle/triangles",
+        "sides": 3,
+        "angles": 3
+      },
+      {
+        "name": "square/squares",
+        "sides": 4,
+        "angles": 4
+      },
+      {
+        "name": "rectangle/rectangles",
+        "sides": 4,
+        "angles": 4
+      },
+      {
+        "name": "pentagon/pentagons",
+        "sides": 5,
+        "angles": 5
+      },
+      {
+        "name": "hexagon/hexagons",
+        "sides": 6,
+        "angles": 6
+      },
+      {
+        "name": "heptagon/heptagons",
+        "sides": 7,
+        "angles": 7
+      },
+      {
+        "name": "octagon/octagons",
+        "sides": 8,
+        "angles": 8
+      },
+      {
+        "name": "circle/circles",
+        "sides": 0,
+        "angles": 0
+      },
+      {
+        "name": "parallelogram/parallelograms",
+        "sides": 4,
+        "angles": 4
+      },
+      {
+        "name": "rhombus/rhombuses",
+        "sides": 4,
+        "angles": 4
+      },
+      {
+        "name": "trapezoid/trapezoids",
+        "sides": 4,
+        "angles": 4
+      }
+    ],
+    "3d": [
+      {
+        "name": "cube/cubes",
+        "faces": 6,
+        "edges": 12,
+        "vertices": 8
+      },
+      {
+        "name": "sphere/spheres",
+        "faces": 1,
+        "edges": 0,
+        "vertices": 0
+      },
+      {
+        "name": "cylinder/cylinders",
+        "faces": 3,
+        "edges": 2,
+        "vertices": 0
+      },
+      {
+        "name": "cone/cones",
+        "faces": 2,
+        "edges": 1,
+        "vertices": 1
+      },
+      {
+        "name": "rectangular prism/rectangular prisms",
+        "faces": 6,
+        "edges": 12,
+        "vertices": 8
+      },
+      {
+        "name": "triangular prism/triangular prisms",
+        "faces": 5,
+        "edges": 9,
+        "vertices": 6
+      },
+      {
+        "name": "pyramid/pyramids",
+        "faces": 5,
+        "edges": 8,
+        "vertices": 5
+      },
+      {
+        "name": "triangular pyramid/triangular pyramids",
+        "faces": 4,
+        "edges": 6,
+        "vertices": 4
+      }
+    ],
+    "triangle_types": [
+      "equilateral triangle/equilateral triangles",
+      "isosceles triangle/isosceles triangles",
+      "scalene triangle/scalene triangles",
+      "right triangle/right triangles",
+      "acute triangle/acute triangles",
+      "obtuse triangle/obtuse triangles"
+    ],
+    "angle_types": [
+      {
+        "name": "acute angle/acute angles",
+        "range": "less than 90°"
+      },
+      {
+        "name": "right angle/right angles",
+        "range": "exactly 90°"
+      },
+      {
+        "name": "obtuse angle/obtuse angles",
+        "range": "between 90° and 180°"
+      },
+      {
+        "name": "straight angle/straight angles",
+        "range": "exactly 180°"
+      },
+      {
+        "name": "reflex angle/reflex angles",
+        "range": "between 180° and 360°"
+      }
+    ]
+  },
+  "surfaces": {
+    "item": [
+      "cave floor/cave floors",
+      "chamber wall/chamber walls",
+      "tunnel entrance/tunnel entrances",
+      "ledge/ledges",
+      "platform/platforms",
+      "clearing/clearings",
+      "campsite/campsites",
+      "tomb floor/tomb floors",
+      "stone slab/stone slabs",
+      "cavern ceiling/cavern ceilings",
+      "cliff face/cliff faces",
+      "mountain trail/mountain trails",
+      "base camp/base camps"
+    ],
+    "perimeter_actions": [
+      "rope off",
+      "mark the boundary of",
+      "outline",
+      "surround with torches",
+      "fence",
+      "border"
+    ],
+    "area_actions": [
+      "clear",
+      "map",
+      "excavate",
+      "cover",
+      "explore",
+      "survey",
+      "measure"
+    ]
+  },
+  "volume_containers": {
+    "item": [
+      "treasure chest/treasure chests",
+      "storage crate/storage crates",
+      "supply box/supply boxes",
+      "water barrel/water barrels",
+      "specimen container/specimen containers",
+      "artifact case/artifact cases",
+      "equipment locker/equipment lockers",
+      "provisions box/provisions boxes",
+      "crystal container/crystal containers",
+      "excavation bin/excavation bins"
+    ],
+    "actions": [
+      "fill",
+      "empty",
+      "pack",
+      "store in",
+      "fit inside",
+      "hold"
+    ]
+  },
+  "data": {
+    "scenarios": [
+      "expedition log/expedition logs",
+      "survey/surveys",
+      "exploration report/exploration reports",
+      "specimen count/specimen counts",
+      "mapping project/mapping projects",
+      "excavation record/excavation records"
+    ],
+    "measurables": [
+      "gem count/gem counts",
+      "tunnel depth/tunnel depths",
+      "temperature/temperatures",
+      "distance traveled/distances traveled",
+      "elevation/elevations",
+      "artifact count/artifact counts",
+      "specimen/specimens",
+      "measurement/measurements"
+    ],
+    "groups": [
+      "expedition team/expedition teams",
+      "exploration party/exploration parties",
+      "group/groups",
+      "crew/crews",
+      "team/teams"
+    ],
+    "graph_types": [
+      "bar graph/bar graphs",
+      "line graph/line graphs",
+      "pie chart/pie charts",
+      "pictograph/pictographs",
+      "histogram/histograms",
+      "scatter plot/scatter plots"
+    ]
+  },
+  "ratios": {
+    "recipes": {
+      "ingredients": [
+        "cup/cups of water",
+        "torch/torches",
+        "rope/ropes",
+        "ration pack/ration packs",
+        "supply bundle/supply bundles",
+        "fuel canister/fuel canisters",
+        "bandage/bandages",
+        "flare/flares"
+      ],
+      "outputs": [
+        "supply kit/supply kits",
+        "expedition pack/expedition packs",
+        "survival bundle/survival bundles",
+        "day ration/day rations",
+        "provision set/provision sets"
+      ]
+    },
+    "mixing": [
+      "part/parts powder",
+      "part/parts water",
+      "scoop/scoops of mineral",
+      "drop/drops of solution",
+      "measure/measures of compound",
+      "portion/portions of mixture"
+    ],
+    "rates": {
+      "speed": [
+        "meter/meters per minute",
+        "kilometer/kilometers per hour",
+        "foot/feet per minute",
+        "mile/miles per hour"
+      ],
+      "cost": [
+        "coin/coins per item",
+        "gold piece/gold pieces each",
+        "silver/silvers per supply"
+      ],
+      "work": [
+        "meter/meters per hour",
+        "tunnel section/tunnel sections per day",
+        "artifact/artifacts per expedition",
+        "specimen/specimens per hour"
+      ]
+    },
+    "maps": {
+      "scale_phrases": [
+        "1 inch represents",
+        "1 centimeter represents",
+        "every inch equals",
+        "each centimeter equals"
+      ]
+    }
+  },
+  "percent": {
+    "discounts": {
+      "contexts": [
+        "expedition sale",
+        "supply discount",
+        "explorer deal",
+        "clearance",
+        "special offer"
+      ],
+      "items": [
+        "torch/torches",
+        "rope/ropes",
+        "lantern/lanterns",
+        "pickaxe/pickaxes",
+        "compass/compasses",
+        "map/maps",
+        "climbing gear/climbing gear",
+        "backpack/backpacks"
+      ]
+    },
+    "tips_tax": {
+      "scenarios": [
+        "guide fee",
+        "expedition cost",
+        "supply purchase",
+        "equipment rental"
+      ],
+      "types": [
+        "tip",
+        "tax",
+        "fee",
+        "bonus"
+      ]
+    },
+    "scores": {
+      "contexts": [
+        "expedition quiz",
+        "safety test",
+        "navigation exam",
+        "training assessment",
+        "skill check"
+      ],
+      "metrics": [
+        "correct",
+        "points earned",
+        "accuracy",
+        "score"
+      ]
+    },
+    "change": {
+      "increase": [
+        "increased by",
+        "grew by",
+        "went up by",
+        "rose by",
+        "gained"
+      ],
+      "decrease": [
+        "decreased by",
+        "dropped by",
+        "went down by",
+        "fell by",
+        "lost"
+      ],
+      "subjects": [
+        "supply count/supply counts",
+        "expedition size/expedition sizes",
+        "discovery rate/discovery rates",
+        "exploration progress/exploration progress"
+      ]
+    }
+  },
+  "coordinates": {
+    "grid_contexts": [
+      "cave map/cave maps",
+      "expedition grid/expedition grids",
+      "tunnel map/tunnel maps",
+      "exploration chart/exploration charts",
+      "treasure map/treasure maps",
+      "catacomb layout/catacomb layouts",
+      "mountain trail map/mountain trail maps"
+    ],
+    "landmarks": [
+      "treasure/treasures",
+      "base camp/base camps",
+      "crystal deposit/crystal deposits",
+      "water source/water sources",
+      "artifact site/artifact sites",
+      "rest point/rest points",
+      "supply cache/supply caches",
+      "entrance/entrances",
+      "exit/exits"
+    ],
+    "directions": {
+      "cardinal": [
+        "north",
+        "south",
+        "east",
+        "west"
+      ],
+      "relative": [
+        "up",
+        "down",
+        "left",
+        "right"
+      ],
+      "movement": [
+        "move",
+        "go",
+        "travel",
+        "head",
+        "proceed"
+      ]
+    },
+    "quadrants": [
+      "Quadrant I",
+      "Quadrant II",
+      "Quadrant III",
+      "Quadrant IV"
+    ]
+  },
+  "patterns": {
+    "sequence_items": [
+      "gem/gems",
+      "torch/torches",
+      "marker/markers",
+      "symbol/symbols",
+      "number/numbers",
+      "crystal/crystals",
+      "stone/stones",
+      "tile/tiles"
+    ],
+    "arrangements": [
+      "trail marker/trail markers",
+      "cave marking/cave markings",
+      "sequence/sequences",
+      "pattern/patterns",
+      "path/paths",
+      "line/lines"
+    ],
+    "pattern_verbs": [
+      "continues",
+      "repeats",
+      "follows the rule",
+      "comes next",
+      "extends"
+    ],
+    "rules": [
+      "add",
+      "subtract",
+      "multiply by",
+      "divide by",
+      "double",
+      "halve"
+    ]
+  },
+  "algebra": {
+    "unknown_contexts": [
+      "mystery number",
+      "secret number",
+      "missing value",
+      "unknown amount",
+      "hidden number",
+      "number"
+    ],
+    "variable_names": [
+      "x",
+      "y",
+      "n",
+      "?",
+      "□",
+      "___"
+    ],
+    "age_problems": {
+      "relationships": [
+        "older than",
+        "younger than",
+        "twice as old as",
+        "half as old as",
+        "years older than",
+        "years younger than"
+      ],
+      "people": [
+        "explorer/explorers",
+        "guide/guides",
+        "companion/companions",
+        "teammate/teammates",
+        "leader/leaders"
+      ]
+    },
+    "equation_phrases": [
+      "is equal to",
+      "equals",
+      "is the same as",
+      "gives",
+      "results in"
+    ]
+  },
+  "angles": {
+    "real_world": [
+      "cave passage/cave passages",
+      "tunnel turn/tunnel turns",
+      "cliff face/cliff faces",
+      "mountain slope/mountain slopes",
+      "ladder/ladders",
+      "rope bridge/rope bridges",
+      "trail switchback/trail switchbacks",
+      "rock formation/rock formations"
+    ],
+    "turns": {
+      "fractions": [
+        "quarter turn",
+        "half turn",
+        "three-quarter turn",
+        "full turn"
+      ],
+      "degrees": [
+        "90 degree turn",
+        "180 degree turn",
+        "270 degree turn",
+        "360 degree turn"
+      ]
+    },
+    "instruments": [
+      "protractor/protractors",
+      "angle ruler/angle rulers",
+      "clinometer/clinometers"
+    ]
+  },
+  "verbs": {
+    "addition": {
+      "gain": [
+        "found",
+        "discovered",
+        "collected",
+        "gathered",
+        "uncovered",
+        "retrieved",
+        "obtained",
+        "picked up",
+        "spotted",
+        "acquired"
+      ],
+      "combine": [
+        "joined",
+        "added",
+        "combined",
+        "merged",
+        "put together"
+      ],
+      "increase": [
+        "grew by",
+        "increased by",
+        "gained",
+        "added"
+      ]
+    },
+    "subtraction": {
+      "loss": [
+        "lost",
+        "gave away",
+        "used",
+        "dropped",
+        "shared",
+        "donated",
+        "misplaced"
+      ],
+      "remove": [
+        "took away",
+        "removed",
+        "subtracted",
+        "extracted"
+      ],
+      "decrease": [
+        "decreased by",
+        "went down by",
+        "reduced by"
+      ],
+      "consume": [
+        "used up",
+        "spent",
+        "consumed",
+        "exhausted"
+      ]
+    },
+    "multiplication": {
+      "groups": [
+        "groups of",
+        "sets of",
+        "piles of",
+        "stacks of",
+        "bundles of",
+        "pouches of",
+        "crates of",
+        "rows of"
+      ],
+      "scaling": [
+        "times as many",
+        "times as much",
+        "multiplied by",
+        "times more"
+      ],
+      "repeated": [
+        "each expedition for",
+        "every day for",
+        "each time"
+      ]
+    },
+    "division": {
+      "sharing": [
+        "shared equally among",
+        "split between",
+        "divided among",
+        "distributed to",
+        "gave equal parts to",
+        "passed out evenly to"
+      ],
+      "grouping": [
+        "put into groups of",
+        "sorted into piles of",
+        "arranged in sets of",
+        "packed into crates of",
+        "organized into bundles of"
+      ],
+      "rate": [
+        "per",
+        "for each",
+        "every"
+      ]
+    }
+  },
+  "question_phrases": {
+    "total": [
+      "How many in all?",
+      "How many altogether?",
+      "What is the total?",
+      "How many does {name} have now?",
+      "How many are there now?",
+      "What is the sum?"
+    ],
+    "remaining": [
+      "How many are left?",
+      "How many remain?",
+      "How many does {name} have now?",
+      "How many are still there?",
+      "What is left over?"
+    ],
+    "difference": [
+      "How many more?",
+      "How many fewer?",
+      "What is the difference?",
+      "How many more does {name} need?",
+      "How many less?"
+    ],
+    "each": [
+      "How many does each get?",
+      "How many in each group?",
+      "How many per {container}?",
+      "How much for each explorer?",
+      "What does each one receive?"
+    ],
+    "groups": [
+      "How many groups?",
+      "How many equal groups?",
+      "How many {container}?",
+      "How many groups can be made?",
+      "How many sets?"
+    ],
+    "product": [
+      "How many in all?",
+      "What is the total?",
+      "How many altogether?",
+      "What is the product?"
+    ],
+    "measurement": [
+      "What is the length?",
+      "What is the width?",
+      "What is the area?",
+      "What is the perimeter?",
+      "What is the volume?",
+      "How long is it?",
+      "How much does it hold?"
+    ],
+    "time": [
+      "What time is it?",
+      "What time did {name} finish?",
+      "How long did it take?",
+      "How much time passed?",
+      "What time will it be?"
+    ],
+    "money": [
+      "How much money in all?",
+      "What is the total cost?",
+      "How much change?",
+      "How much does {name} have?",
+      "What is the price?"
+    ]
+  },
+  "characters": {
+    "names": [
+      "Emma",
+      "Liam",
+      "Olivia",
+      "Noah",
+      "Ava",
+      "James",
+      "Sophia",
+      "Lucas",
+      "Mia",
+      "Mason",
+      "Lily",
+      "Ethan",
+      "Isabella",
+      "Aiden",
+      "Charlotte",
+      "Elijah",
+      "Amelia",
+      "Oliver",
+      "Harper",
+      "Benjamin",
+      "Evelyn",
+      "Henry",
+      "Luna",
+      "Sebastian",
+      "Aria",
+      "Jack",
+      "Chloe",
+      "Owen",
+      "Zoey",
+      "Leo"
+    ],
+    "roles": [
+      "explorer/explorers",
+      "guide/guides",
+      "archaeologist/archaeologists",
+      "geologist/geologists",
+      "cartographer/cartographers",
+      "expedition leader/expedition leaders",
+      "scout/scouts",
+      "researcher/researchers",
+      "historian/historians",
+      "naturalist/naturalists",
+      "mountaineer/mountaineers",
+      "spelunker/spelunkers"
+    ],
+    "relationships": [
+      "companion/companions",
+      "teammate/teammates",
+      "partner/partners",
+      "fellow explorer/fellow explorers",
+      "expedition member/expedition members"
+    ]
+  },
+  "comparisons": {
+    "more_less": [
+      "more than",
+      "less than",
+      "fewer than",
+      "greater than",
+      "not as many as"
+    ],
+    "scaling": [
+      "twice as many",
+      "half as many",
+      "three times as many",
+      "four times as many",
+      "twice as much",
+      "half as much"
+    ],
+    "equality": [
+      "the same as",
+      "equal to",
+      "as many as",
+      "as much as",
+      "equivalent to"
+    ],
+    "ordering": [
+      "more",
+      "most",
+      "fewer",
+      "fewest",
+      "least",
+      "greatest"
+    ]
+  },
+  "time_events": {
+    "activities": [
+      "expedition/expeditions",
+      "exploration/explorations",
+      "rest break/rest breaks",
+      "climb/climbs",
+      "descent/descents",
+      "mapping session/mapping sessions",
+      "excavation/excavations",
+      "survey/surveys"
+    ],
+    "actions": [
+      "exploring",
+      "climbing",
+      "mapping",
+      "resting",
+      "excavating",
+      "surveying",
+      "descending",
+      "ascending",
+      "navigating"
+    ]
+  }
+}

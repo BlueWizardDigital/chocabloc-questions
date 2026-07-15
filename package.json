@@ -41,6 +41,14 @@
       "types": "./dist/host.d.ts",
       "import": "./dist/host.mjs",
       "require": "./dist/host.cjs"
+    },
+    "./word-problems": {
+      "types": "./dist/word-problems/index.d.ts",
+      "import": "./dist/word-problems/index.mjs"
+    },
+    "./word-problems/sample-data": {
+      "types": "./dist/word-problems/sample-data.d.ts",
+      "import": "./dist/word-problems/sample-data.mjs"
     }
   },
   "sideEffects": [
@@ -74,6 +82,7 @@
     "format": "prettier --write src tests",
     "size": "size-limit",
     "typecheck": "tsc --noEmit",
+    "wp:validate": "vite-node scripts/word-problems/validate.ts",
     "ci": "npm run typecheck && npm run lint && npm run test && npm run build && npm run size"
   },
   "devDependencies": {
