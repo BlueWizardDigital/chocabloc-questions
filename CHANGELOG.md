@@ -7,6 +7,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 _No unreleased changes._
 
+## [0.6.0-beta.8] — 2026-07-17
+
+### Fixed
+
+- **Text-format (choices-only) stem was invisible inside a light-colored host
+  container.** `ChocablocQuestion`'s `text`-format fallback render path never
+  pinned a text `color`, so the stem inherited the surrounding cascade — e.g. a
+  host "Try Again" modal that set a near-white content color made the stem
+  disappear, while the choice pad (its own shadow root already pins `--cq-text`)
+  stayed readable. The fallback `:host` now sets `color: var(--cq-text, #222)`,
+  matching every other format element. Hosts can still override via `--cq-text`.
+
 ## [0.6.0-beta.7] — 2026-07-15
 
 ### Added

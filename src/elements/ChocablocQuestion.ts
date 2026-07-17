@@ -26,7 +26,7 @@ function buildFallback(): { fragment: DocumentFragment; promptEl: HTMLElement } 
   const fragment = document.createDocumentFragment();
   const style = document.createElement('style');
   style.textContent = `
-    :host { display: block; font-family: var(--cq-font, system-ui); }
+    :host { display: block; font-family: var(--cq-font, system-ui); color: var(--cq-text, #222); }
     [part="container"] { padding: var(--cq-container-padding, 16px); }
     [part="prompt"] { font-size: var(--cq-prompt-size, 1rem); }
   `;

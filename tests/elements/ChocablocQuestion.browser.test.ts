@@ -183,3 +183,47 @@ describe('<chocabloc-question> dispatcher routing', () => {
     expect(inner).to.not.be.null;
   });
 });
+
+describe('<chocabloc-question> text-format stem contrast', () => {
+  // Regression: a text-format (choices-only, no visual) stem rendered via
+  // buildFallback did not pin a text color, so inside a host "Try Again" modal
+  // that set a light `color` on its content the stem inherited it and became
+  // invisible — while the choice pad (its own shadow root pins --cq-text) stayed
+  // readable. Every sibling format element pins `color: var(--cq-text, #222)`;
+  // the text path must too.
+  it('pins prompt color so it does not inherit a light ancestor color', async () => {
+    const wrapper = document.createElement('div');
+    // Simulate a modal whose content color is near-white.
+    wrapper.style.color = 'rgb(255, 255, 255)';
+    const el = document.createElement('chocabloc-question') as HTMLElement & { question: unknown };
+    wrapper.appendChild(el);
+    document.body.appendChild(wrapper);
+    el.question = {
+      id: 'CMP-1',
+      skillIds: ['COMPARE-NUMBERS-WITHIN-1000'],
+      format: 'text',
+      content: { stem: 'Compare: 108 □ 105 (use <, >, or =)' },
+      answer: '>',
+      distractors: [{ value: '<', errorType: 'reversed' }],
+    };
+    await new Promise((r) => requestAnimationFrame(r));
+    const prompt = el.shadowRoot!.querySelector('[part="prompt"]') as HTMLElement;
+    expect(prompt).to.not.be.null;
+    expect(getComputedStyle(prompt).color).to.equal('rgb(34, 34, 34)');
+  });
+
+  it('lets a host override the pinned color via --cq-text', async () => {
+    const el = mount(`<chocabloc-question style="--cq-text: rgb(10, 20, 30)"></chocabloc-question>`);
+    (el as HTMLElement & { question: unknown }).question = {
+      id: 'CMP-2',
+      skillIds: ['COMPARE-NUMBERS-WITHIN-1000'],
+      format: 'text',
+      content: { stem: 'Compare: 4 □ 7' },
+      answer: '<',
+      distractors: [{ value: '>', errorType: 'reversed' }],
+    };
+    await new Promise((r) => requestAnimationFrame(r));
+    const prompt = el.shadowRoot!.querySelector('[part="prompt"]') as HTMLElement;
+    expect(getComputedStyle(prompt).color).to.equal('rgb(10, 20, 30)');
+  });
+});
