@@ -7,6 +7,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 _No unreleased changes._
 
+## [0.6.0-beta.9] — 2026-08-17
+
+### Added
+
+- **The library now owns the host protocol and architecture docs.** `docs/host-protocol.md`
+  (the full `chocabloc:*` contract), `docs/architecture.md` (how host / bridge / `/host`
+  facade / game fit together, and who holds security) and `docs/MIGRATING-A-GAME.md` moved
+  here from the game template. They describe *this library's* contract rather than any one
+  game's implementation of it, so they now version with the pin: a game on a given tag reads
+  that tag's protocol doc. The template keeps stubs at both paths, so existing references
+  still resolve.
+- The move corrected drift the template had accumulated: `architecture.md` §7 was a spec for
+  lifting the host glue out of the template and into this library, which shipped in
+  `v0.6.0-beta.5` — so §1, §4 and §5 still described a `src/kit/` layout that no longer
+  matched. They now describe the `chocabloc-questions/host` entrypoint that actually does
+  the work.
+
+### Fixed
+
+- **The contract docs are now included in the published package.** `files[]` excluded
+  `docs/`, so `node_modules/chocabloc-questions/docs/` did not exist and the package-relative
+  paths consumers are pointed at would not have resolved at any tag. The three contract docs
+  are listed explicitly, keeping the internal `docs/superpowers/` plans and specs out of
+  every consumer's install.
+
 ## [0.6.0-beta.8] — 2026-07-17
 
 ### Fixed
