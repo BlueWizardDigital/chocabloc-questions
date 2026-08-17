@@ -68,7 +68,10 @@
     "README.md",
     "CHANGELOG.md",
     "PARTS-AND-VARS.md",
-    "LICENSE"
+    "LICENSE",
+    "docs/host-protocol.md",
+    "docs/architecture.md",
+    "docs/MIGRATING-A-GAME.md"
   ],
   "scripts": {
     "build": "vite build",
