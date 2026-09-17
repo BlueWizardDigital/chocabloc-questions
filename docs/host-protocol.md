@@ -201,7 +201,12 @@ progress for the concept. See [Concepts](#concepts-grade-tiered-game-loop-rules)
 | `bridge.exit()` | `chocabloc:exit` | — | Optional, on explicit "quit". Host also handles its own back button. |
 
 Field notes the host enforces:
-- `studentAnswer` on an attempt is only forwarded if it's a **string**.
+- `studentAnswer` on an attempt is forwarded as a string: a string as-is, a **number or
+  boolean** converted with `String()` (so a `0` answer survives), anything else dropped.
+- Send `skillIds` (from the question) and a measured `timeToAnswerMs` whenever you have them.
+  Mastery doesn't need them — the server looks up a question's skills itself — but the
+  stored attempt keeps what you send, and the parent/teacher stats that count skills
+  practised and answer times read those columns. A non-finite `timeToAnswerMs` is dropped.
 - `answerToken` on an attempt makes the server **re-derive** `isCorrect` from the
   token-verified question and ignore the client flag (anti-cheat — see below).
 - **Token-less attempts are non-authoritative.** Only **bank** questions (from
@@ -224,8 +229,16 @@ questions** ready to render with `<chocabloc-question>` or to read in your own r
 As of **`v0.6.0-beta.4`** the bridge owns question acquisition — call its methods rather
 than posting raw messages:
 
-- `bridge.requestQuestions({ count })` — **bulk** batch (board/pack games). Returns
-  `Promise<unknown[]>`; `[]` on standalone / timeout / error / empty (never throws).
+- `bridge.requestQuestions({ count, grade?, recipe? })` — **bulk** batch (board/pack games).
+  Returns `Promise<unknown[]>`; `[]` on standalone / timeout / error / empty (never throws).
+  - **`grade` is a fallback, not a choice.** A signed-in child is always served **their own
+    grade**; the server uses the grade you send only when the player has none (and never for
+    a child in a game whose recipe is chosen by grade). So never label bank questions with a
+    fixed grade ("Grade 4 maths") — an older child sees their own grade's questions under it.
+    Read `ctx.grade` if you need to show one.
+  - `recipe` names a different recipe. Most games honour it, but a game whose recipe is
+    chosen by grade refuses it for a child (`400 RECIPE_OVERRIDE_NOT_ALLOWED`). Normally send
+    nothing and let the game's binding choose.
 - `bridge.requestNextQuestion({ skillId?, recipeSlug? })` — **adaptive**, one at a time.
   Returns `Promise<unknown | null>`.
 
