@@ -7,6 +7,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 _No unreleased changes._
 
+## [0.6.0-beta.11] — 2026-09-23
+
+Grade K–2 rendering gaps reported by Adventure 101 (2026-09-23). Grade K lost ~60% of its
+bank pool to these.
+
+### Added
+
+- **`TextOnlyQuestion.content.coinScene?: MoneyContent`.** `money_coin_colour`, `_denomination`,
+  `_name` and `_size` rows still normalize to `text` (string answers, plain choice labels), but
+  now carry the coins to show. `<chocabloc-question>` renders a text question that has a
+  `coinScene` through `<choca-coin-pile>`, so "Which of these coins is the largest?" shows the
+  coins. The game still supplies coin images through the existing per-denomination CSS vars.
+  The bank's `coins: ["nickel", ...]` list becomes a name → count map; unknown names are
+  dropped; currency comes from `content.currency`, else the skill-id suffix. No coins, or no
+  currency → no scene (text only, as before). In a scene, coins are labelled "coin" for
+  screen readers, not by name, since the name is often the answer.
+
+### Fixed
+
+- **F6 (`choices`-only) rows now get the same format routing as answer-bearing rows.** They
+  used to keep their raw `format`, so plain arithmetic (`addition`, `multiplication` with no
+  visual `imageType`, …) went to the canvas renderer instead of rendering as text. Stem formats
+  and non-visual multiplication now normalize to `text`; `choices` and `answerToken` are kept.
+  Unknown formats still pass through unchanged. **Visible change for F6 consumers.**
+- **A pattern row with no `sequence` no longer crashes the renderer.** The normalizer turns it
+  into a `text` question when it has `questionText` (the bank puts the pattern there), and still
+  throws when it has neither. `<choca-pattern-question>` also guards on its own: with no
+  sequence it hides the sequence row, shows the prompt and choices, and `console.warn`s.
+
 ## [0.6.0-beta.10] — 2026-09-23
 
 ### Fixed
