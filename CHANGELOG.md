@@ -7,6 +7,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 _No unreleased changes._
 
+## [0.6.0-beta.10] — 2026-09-23
+
+### Fixed
+
+- **A repeated placeholder now names the same thing twice.** `resolveContext` excluded
+  already-used words per *base* key, so a template using `{ingredient}` twice rendered two
+  different words — "gathered 34 enchanted berries ... How many moonpetal were collected?".
+  The choice is now memoised per full placeholder name, while distinct keys sharing a base
+  (`{item}` vs `{item2}`) keep preferring distinct words. 229 of 830 templates repeat a
+  placeholder, across 78 of 142 skills; `{name}` repeats in 85 of them, so the character
+  could change mid-question.
+- **Singular/plural no longer inherits a cue from the previous sentence.** `pluralCount`
+  scanned back over the whole stem, so "... added 1 more. How many {item} ...?" and
+  "... more for the potion. How many {ingredient} ...?" both rendered singular. The scan now
+  stops at the nearest `.`, `!` or `?`. The word lists were not at fault: only 3 of 429 pool
+  entries lack a slash form, and two of those (`deer`, `fish`) are correct invariant plurals.
+- **A role directly before a person's name is treated as a title, so it stays singular.**
+  "cartographers Olivia" now renders "cartographer Olivia". The name pool is derived from
+  `characters.names` rather than a hard-coded `{name}`, so any name slot the data defines is
+  recognised. This also corrects six templates that were already wrong before the plural
+  change ("explorers Emma was tallying ...").
+
 ## [0.6.0-beta.9] — 2026-08-17
 
 ### Added
