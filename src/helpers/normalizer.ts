@@ -556,12 +556,16 @@ function normalizeTimeRow(r: Record<string, unknown>): TimeQuestion {
   };
 }
 
-function normalizePatternRow(r: Record<string, unknown>): PatternQuestion {
+function normalizePatternRow(r: Record<string, unknown>): PatternQuestion | TextOnlyQuestion {
   const base = extractBase(r);
   const c = requireContent(r);
   const sequence = c['sequence'];
-  if (!Array.isArray(sequence))
+  if (!Array.isArray(sequence)) {
+    // The bank serves some pattern rows with the sequence only in questionText
+    // ("What comes next: A, A, B, ?"). That's answerable as text.
+    if (base.questionText) return normalizeWithStem(r);
     throw new NormalizeError('pattern missing sequence array', r);
+  }
   const strSeq = sequence.map((x) => String(x));
   return {
     ...base, format: 'pattern', imageType: 'pattern_visual',
@@ -862,17 +866,60 @@ function buildStem(format: string, c: Record<string, unknown>): string {
   }
 }
 
-function normalizeWithStem(r: Record<string, unknown>): TextOnlyQuestion {
-  const base = extractBase(r);
-  const c = requireContent(r);
+const COIN_SCENE_FORMATS: ReadonlySet<string> = new Set([
+  'money_coin_colour', 'money_coin_denomination', 'money_coin_name', 'money_coin_size',
+]);
+
+// money_coin_* rows carry `coins` as a list of names (the scene to show).
+// Convert to the coin pile's name → count map. Unknown names are dropped; no
+// usable coins or no determinable currency → undefined (render as text only).
+function buildCoinScene(
+  format: string,
+  c: Record<string, unknown>,
+  skillIds: string[],
+): MoneyContent | undefined {
+  if (!COIN_SCENE_FORMATS.has(format)) return undefined;
+  const list = c['coins'];
+  if (!Array.isArray(list) || list.length === 0) return undefined;
+  let currency: Currency;
+  if (c['currency'] === 'USD' || c['currency'] === 'CAD') {
+    currency = c['currency'];
+  } else {
+    try {
+      currency = inferCurrency(skillIds);
+    } catch {
+      return undefined;
+    }
+  }
+  const valid: readonly string[] = currency === 'USD' ? USD_COIN_KEYS : CAD_COIN_KEYS;
+  const coins: Record<string, number> = {};
+  for (const name of list) {
+    if (typeof name === 'string' && valid.includes(name)) coins[name] = (coins[name] ?? 0) + 1;
+  }
+  if (Object.keys(coins).length === 0) return undefined;
+  return { coins, currency } as MoneyContent;
+}
+
+function stemContent(
+  r: Record<string, unknown>,
+  base: ReturnType<typeof extractBase>,
+  c: Record<string, unknown>,
+): TextOnlyQuestion['content'] {
   const format = r['format'] as string;
   // v0.2.0: prefer canonical questionText if present; fall back to format-derived
   // stem for legacy bank rows that don't ship one. Once server-side recipe
   // resolver always populates questionText, this OR becomes a noop.
   const stem = base.questionText || buildStem(format, c);
+  const coinScene = buildCoinScene(format, c, base.skillIds);
+  return coinScene ? { stem, coinScene } : { stem };
+}
+
+function normalizeWithStem(r: Record<string, unknown>): TextOnlyQuestion {
+  const base = extractBase(r);
+  const c = requireContent(r);
   return {
     ...base, format: 'text', imageType: undefined,
-    content: { stem },
+    content: stemContent(r, base, c),
     answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
   };
 }
@@ -943,6 +990,20 @@ const STEM_FORMATS = [
   'coordinate', 'number_line',
 ] as const;
 for (const f of STEM_FORMATS) FORMAT_NORMALIZERS[f] = normalizeWithStem;
+const STEM_FORMAT_SET: ReadonlySet<string> = new Set(STEM_FORMATS);
+
+// Mirrors the per-format normalizers' text routing for choices-only rows,
+// which skip those normalizers (they require `answer`).
+function choicesRowIsText(
+  r: Record<string, unknown>,
+  format: string,
+  content: Record<string, unknown>,
+): boolean {
+  if (STEM_FORMAT_SET.has(format)) return true;
+  if (format === 'multiplication') return !resolveImageType(r, ['array', 'number_line']);
+  if (format === 'pattern') return !Array.isArray(content['sequence']);
+  return false;
+}
 
 function doNormalize(raw: unknown): NormalizedQuestion {
   if (!isQuestionLike(raw)) {
@@ -965,6 +1026,13 @@ function doNormalize(raw: unknown): NormalizedQuestion {
       typeof r['content'] === 'object' && r['content'] !== null
         ? (r['content'] as Record<string, unknown>)
         : {};
+    if (choicesRowIsText(r, format, content)) {
+      const text: TextOnlyQuestion = {
+        ...base, format: 'text', imageType: undefined,
+        content: stemContent(r, base, content), choices,
+      };
+      return text;
+    }
     const imageType = typeof r['imageType'] === 'string' ? r['imageType']
       : typeof r['image_type'] === 'string' ? r['image_type']
       : undefined;

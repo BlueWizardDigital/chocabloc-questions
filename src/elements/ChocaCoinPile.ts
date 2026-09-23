@@ -1,7 +1,9 @@
 import type {
   CADCoinName,
   Choice,
+  MoneyContent,
   MoneyQuestion,
+  TextOnlyQuestion,
   USDCoinName,
 } from '../types';
 import { syncChoicePad, handlePick } from './shared-pad';
@@ -103,9 +105,17 @@ const COIN_ORDER: readonly (USDCoinName | CADCoinName)[] = [
 
 const DEFAULT_PROMPT = 'How much money is shown?';
 
+// v0.6.0-beta.11+: a text question with `content.coinScene` (money_coin_*
+// identify questions) renders its scene here too; answers stay text.
+type CoinPileQuestion = MoneyQuestion | TextOnlyQuestion;
+
+function coinContent(q: CoinPileQuestion): MoneyContent | undefined {
+  return q.format === 'money' ? q.content : q.content.coinScene;
+}
+
 export class ChocaCoinPile extends HTMLElement {
   private _shadow: ShadowRoot;
-  private _question: MoneyQuestion | null = null;
+  private _question: CoinPileQuestion | null = null;
   private _prompt: string = DEFAULT_PROMPT;
   private _renderedAt = 0;
   private _defaultPad!: HTMLElement;
@@ -141,13 +151,14 @@ export class ChocaCoinPile extends HTMLElement {
     this._render();
   }
 
-  set question(q: MoneyQuestion) {
+  set question(q: CoinPileQuestion) {
     // Defensive: if a non-money question slipped through TypeScript at runtime,
     // log and skip rather than crash. The dispatcher (ChocablocQuestion) routes
     // by format, so this guard catches direct misuse only.
-    if ((q as { format: string }).format !== 'money') {
+    const format = (q as { format: string }).format;
+    if (format !== 'money' && !(format === 'text' && (q as TextOnlyQuestion).content?.coinScene)) {
       console.error(
-        `[chocabloc-questions] ChocaCoinPile only renders money questions, got: ${(q as { format: string }).format}`,
+        `[chocabloc-questions] ChocaCoinPile only renders money questions or text with a coinScene, got: ${format}`,
       );
       return;
     }
@@ -156,11 +167,13 @@ export class ChocaCoinPile extends HTMLElement {
     // override via the `prompt` setter AFTER assigning question.
     if (typeof q.questionText === 'string' && q.questionText.length > 0) {
       this._prompt = q.questionText;
+    } else if (q.format === 'text') {
+      this._prompt = q.content.stem;
     }
     this._render();
   }
 
-  get question(): MoneyQuestion | null {
+  get question(): CoinPileQuestion | null {
     return this._question;
   }
 
@@ -197,7 +210,12 @@ export class ChocaCoinPile extends HTMLElement {
 
   private _renderCoins(): void {
     if (!this._question) return;
-    const coins = this._question.content.coins as Partial<Record<USDCoinName | CADCoinName, number>>;
+    const content = coinContent(this._question);
+    if (!content) return;
+    const coins = content.coins as Partial<Record<USDCoinName | CADCoinName, number>>;
+    // In a scene (text question) the coin names are often the answer, so
+    // label coins generically for assistive tech.
+    const isScene = this._question.format === 'text';
     this._canvas.replaceChildren();
     for (const name of COIN_ORDER) {
       const count = coins[name] ?? 0;
@@ -208,7 +226,7 @@ export class ChocaCoinPile extends HTMLElement {
         const span = document.createElement('span');
         span.setAttribute('part', `coin coin-${name}`);
         span.setAttribute('role', 'img');
-        span.setAttribute('aria-label', name);
+        span.setAttribute('aria-label', isScene ? 'coin' : name);
         span.style.zIndex = String(i + 1);
         row.appendChild(span);
       }
@@ -223,8 +241,16 @@ export class ChocaCoinPile extends HTMLElement {
 
   private _renderLiveRegion(): void {
     if (!this._question) return;
-    const coins = this._question.content.coins as Partial<Record<USDCoinName | CADCoinName, number>>;
-    const text = formatCoinCountForScreenReader(coins, this._question.content.currency);
+    const content = coinContent(this._question);
+    if (!content) return;
+    const coins = content.coins as Partial<Record<USDCoinName | CADCoinName, number>>;
+    let text: string;
+    if (this._question.format === 'text') {
+      const n = Object.values(coins).reduce((sum, c) => sum + (c ?? 0), 0);
+      text = `${n} ${n === 1 ? 'coin' : 'coins'} shown`;
+    } else {
+      text = formatCoinCountForScreenReader(coins, content.currency);
+    }
     // R2.8: textContent only
     this._liveRegion.textContent = text;
   }

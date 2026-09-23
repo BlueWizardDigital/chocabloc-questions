@@ -184,6 +184,76 @@ describe('<chocabloc-question> dispatcher routing', () => {
   });
 });
 
+describe('<chocabloc-question> text question with a coin scene', () => {
+  const sceneQ = () => ({
+    id: 'COIN-SIZE-1',
+    skillIds: ['MONEY-COIN-ID-CAD'],
+    format: 'text',
+    content: {
+      stem: 'Which of these coins is the largest?',
+      coinScene: { coins: { dime: 1, loonie: 1, quarter: 1 }, currency: 'CAD' },
+    },
+    answer: 'loonie',
+    distractors: [
+      { value: 'dime', errorType: 'other-coin-in-scene' },
+      { value: 'quarter', errorType: 'other-coin-in-scene' },
+    ],
+  });
+
+  async function mountScene(): Promise<{ el: HTMLElement; pile: HTMLElement }> {
+    const el = mount(`<chocabloc-question seed="42"></chocabloc-question>`);
+    (el as HTMLElement & { question: unknown }).question = sceneQ();
+    await new Promise((r) => requestAnimationFrame(r));
+    const pile = el.shadowRoot!.querySelector('choca-coin-pile') as HTMLElement;
+    return { el, pile };
+  }
+
+  it('renders the coins through <choca-coin-pile>', async () => {
+    const { pile } = await mountScene();
+    expect(pile).to.not.be.null;
+    const coins = pile.shadowRoot!.querySelectorAll('[part~="coin"]');
+    expect(coins.length).to.equal(3);
+    expect(pile.shadowRoot!.querySelector('[part~="coin-loonie"]')).to.not.be.null;
+  });
+
+  it('uses the stem as the prompt and plain coin names as choice labels', async () => {
+    const { pile } = await mountScene();
+    const prompt = pile.shadowRoot!.querySelector('[part="prompt"]') as HTMLElement;
+    expect(prompt.textContent).to.equal('Which of these coins is the largest?');
+    const pad = pile.shadowRoot!.querySelector('choca-choice-pad') as HTMLElement;
+    const correct = pad.shadowRoot!.querySelector('[part~="choice-correct"]') as HTMLElement;
+    expect(correct.textContent).to.equal('loonie');
+  });
+
+  it('does not name the coins to assistive tech (that would give the answer away)', async () => {
+    const { pile } = await mountScene();
+    const labels = Array.from(pile.shadowRoot!.querySelectorAll('[part~="coin"]'))
+      .map((c) => c.getAttribute('aria-label'));
+    expect(labels).to.deep.equal(['coin', 'coin', 'coin']);
+    const live = pile.shadowRoot!.querySelector('[aria-live="polite"]') as HTMLElement;
+    expect(live.textContent).to.not.contain('loonie');
+  });
+
+  it('validates as a text question (string answer)', async () => {
+    const { el, pile } = await mountScene();
+    let captured: { correct?: boolean; studentAnswer?: unknown } | null = null;
+    el.addEventListener('answered', (e) => { captured = (e as CustomEvent).detail; });
+    const pad = pile.shadowRoot!.querySelector('choca-choice-pad') as HTMLElement;
+    (pad.shadowRoot!.querySelector('[part~="choice-correct"]') as HTMLButtonElement).click();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(captured!.correct).to.equal(true);
+    expect(captured!.studentAnswer).to.equal('loonie');
+  });
+
+  it('text question without a coin scene keeps the plain fallback', async () => {
+    const el = mount(`<chocabloc-question></chocabloc-question>`);
+    const q = sceneQ();
+    (el as HTMLElement & { question: unknown }).question = { ...q, content: { stem: q.content.stem } };
+    await new Promise((r) => requestAnimationFrame(r));
+    expect(el.shadowRoot!.querySelector('choca-coin-pile')).to.be.null;
+  });
+});
+
 describe('<chocabloc-question> text-format stem contrast', () => {
   // Regression: a text-format (choices-only, no visual) stem rendered via
   // buildFallback did not pin a text color, so inside a host "Try Again" modal

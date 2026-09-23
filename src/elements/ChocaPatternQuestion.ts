@@ -147,7 +147,16 @@ export class ChocaPatternQuestion extends HTMLElement {
     this._container.setAttribute('aria-label', `Question: ${this._promptEl.textContent}`);
 
     this._sequenceEl.replaceChildren();
-    q.content.sequence.forEach((el, i) => {
+    // Wire payloads can arrive without a sequence (the pattern lives in
+    // questionText). Render prompt + choices rather than crash.
+    const sequence: unknown = q.content?.sequence;
+    this._sequenceEl.hidden = !Array.isArray(sequence);
+    if (!Array.isArray(sequence)) {
+      console.warn(`[chocabloc-questions] pattern question ${q.id} has no sequence; rendering prompt only`);
+      this._finishRender();
+      return;
+    }
+    (sequence as string[]).forEach((el, i) => {
       const span = document.createElement('span');
       const display = elementDisplay(el);
       let partStr = `pattern-item pattern-item-${i}`;
@@ -174,6 +183,10 @@ export class ChocaPatternQuestion extends HTMLElement {
     missing.textContent = '?';
     this._sequenceEl.appendChild(missing);
 
+    this._finishRender();
+  }
+
+  private _finishRender(): void {
     this._renderChoices();
     this._renderedAt = performance.now();
     this.dispatchEvent(

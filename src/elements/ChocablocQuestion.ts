@@ -2,6 +2,7 @@ import type {
   AnswerValue,
   MoneyQuestion,
   NormalizedQuestion,
+  TextOnlyQuestion,
   ToolName,
   ValidateAnswer,
 } from '../types';
@@ -136,7 +137,7 @@ export class ChocablocQuestion extends HTMLElement {
 
     const isInput = this.getAttribute('answer-mode') === 'input';
 
-    if (this._question.format === 'text') {
+    if (this._question.format === 'text' && !this._question.content.coinScene) {
       const { fragment, promptEl } = buildFallback();
       promptEl.textContent = this._question.content.stem;
 
@@ -163,10 +164,11 @@ export class ChocablocQuestion extends HTMLElement {
 
     let inner: HTMLElement;
 
-    if (this._question.format === 'money') {
+    if (this._question.format === 'money' || this._question.format === 'text') {
+      // text reaches here only with a coinScene (money_coin_* identify questions).
       inner = document.createElement('choca-coin-pile');
       this._passAttrs(inner);
-      (inner as HTMLElement & { question: MoneyQuestion }).question = this._question as MoneyQuestion;
+      (inner as HTMLElement & { question: MoneyQuestion | TextOnlyQuestion }).question = this._question;
     } else {
       let tag: string;
       if (this._question.format === 'money_budget_adjust') {

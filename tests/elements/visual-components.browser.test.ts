@@ -314,6 +314,35 @@ describe('<choca-pattern-question>', () => {
   });
 });
 
+describe('<choca-pattern-question> — no sequence (K–2 gap)', () => {
+  const noSeqQ = () => ({
+    ...patternQ(),
+    questionText: 'What comes next: A, A, B, B, A, A, ?',
+    content: { operation: 'pattern' },
+  });
+
+  it('renders the prompt and choices instead of throwing', async () => {
+    const el = mount(`<choca-pattern-question answer-mode="mc" seed="42"></choca-pattern-question>`);
+    await setQuestion(el, noSeqQ());
+    const prompt = el.shadowRoot!.querySelector('[part="prompt"]') as HTMLElement;
+    expect(prompt.textContent).to.equal('What comes next: A, A, B, B, A, A, ?');
+    expect(el.shadowRoot!.querySelectorAll('[part~="pattern-item"]').length).to.equal(0);
+    const seq = el.shadowRoot!.querySelector('[part="sequence"]') as HTMLElement;
+    expect(seq.hidden).to.equal(true);
+    const pad = el.shadowRoot!.querySelector('choca-choice-pad') as HTMLElement;
+    expect(pad.shadowRoot!.querySelector('[part~="choice-correct"]')).to.not.be.null;
+  });
+
+  it('shows the sequence again when a later question has one', async () => {
+    const el = mount(`<choca-pattern-question answer-mode="mc" seed="42"></choca-pattern-question>`);
+    await setQuestion(el, noSeqQ());
+    await setQuestion(el, patternQ());
+    const seq = el.shadowRoot!.querySelector('[part="sequence"]') as HTMLElement;
+    expect(seq.hidden).to.equal(false);
+    expect(el.shadowRoot!.querySelectorAll('[part~="pattern-item"]').length).to.equal(7);
+  });
+});
+
 /* ================================================================
    <choca-number-line-question>
    ================================================================ */

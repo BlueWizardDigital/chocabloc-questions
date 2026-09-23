@@ -92,7 +92,10 @@ export type MoneyQuestion = BaseQuestion & {
 export type TextOnlyQuestion = BaseQuestion & {
   format: 'text';
   imageType?: undefined;
-  content: { stem: string };
+  // v0.6.0-beta.11+: `coinScene` — coins to show alongside the stem (money_coin_*
+  // identify questions). The dispatcher renders these via the coin pile; the
+  // question itself stays text (string answers, plain choice labels).
+  content: { stem: string; coinScene?: MoneyContent };
   answer?: AnswerValue;
   distractors?: Distractor[];
 };
