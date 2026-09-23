@@ -21,9 +21,10 @@ const data: WordProblemData = {
     'VERB-X': { intermediate: ['{name} {verb_gain} {a} and {b}. {question_total}'] },
     'RES-X': { intermediate: ['{a} plus {b} equals {result}. Right?'] },
     'UNRENDER': { intermediate: ['{a} {b} {nopool}'] },
+    'REPEAT-X': { intermediate: ['{name} had {a} {item}. {name} found {b} more {item}. {question_total}'] },
   },
   context: {
-    themes: { cave: { item: ['gem/gems'] } },
+    themes: { cave: { item: ['gem/gems', 'ruby/rubies', 'crystal/crystals'] } },
     characters: { names: ['Emma'] },
     verbs: { addition: { gain: ['found'] } },
     question_phrases: { total: ['How many in all?'] },
@@ -131,6 +132,14 @@ describe('createWordProblemEngine', () => {
     const row = { id: 'nr', skill_ids: ['UNRENDER'], content: { operands: [1, 2] } };
     expect(engine().applyWordProblem(row, { theme: 'cave' })).toBe(row);
     expect(() => engine().applyWordProblem(row, { strict: true, theme: 'cave' })).toThrow(/no renderable template/);
+  });
+
+  it('keeps a repeated placeholder naming the same thing all the way through', () => {
+    const row = { id: 'rp1', skill_ids: ['REPEAT-X'], content: { operands: [3, 2] }, answer: 5 };
+    const out = engine().applyWordProblem(row, { theme: 'cave' });
+    // The `item` pool holds three options, so a second draw would visibly differ.
+    const [, i1, i2] = /had 3 (\w+)\. \w+ found 2 more (\w+)\./.exec(out.questionText as string)!;
+    expect(i2).toBe(i1); // the thing being counted does not change mid-question
   });
 
   it('returns non-object inputs unchanged and exposes supportedSkills', () => {

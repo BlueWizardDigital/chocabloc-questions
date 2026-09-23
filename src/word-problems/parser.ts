@@ -3,11 +3,14 @@ import { pick, type Rng } from './rng';
 
 const PLACEHOLDER = /\{([a-z_0-9]+)\}/g; // lowercase-only by contract
 const MARKER = /\{~([^/}]+)\/([^}]+)\}/g;
+const NEXT_PLACEHOLDER = /^\s*\{([a-z_0-9]+)\}/; // lookahead for an apposed name slot
 const SINGULAR_WORDS = new Set(['a', 'an', 'each', 'every', 'the', 'one', '1']);
 
-/** Nearest preceding number wins; else a singular keyword; else plural (2). */
+/** Nearest preceding number in the same sentence wins; else a singular keyword; else plural (2). */
 export function pluralCount(before: string): number {
-  const tokens = before.toLowerCase().split(/\s+/).filter(Boolean);
+  // Cues do not carry across a sentence boundary: "... 1 more. How many {item}" is plural.
+  const clause = before.slice(before.search(/[^.!?]*$/));
+  const tokens = clause.toLowerCase().split(/\s+/).filter(Boolean);
   for (let i = tokens.length - 1; i >= 0; i--) {
     const t = (tokens[i] as string).replace(/[^\w-]/g, '');
     if (/^-?\d+$/.test(t)) return Math.abs(parseInt(t, 10));
@@ -27,6 +30,22 @@ export function templateText(t: Template): string {
   return typeof t === 'string' ? t : t.template;
 }
 
+/**
+ * Keys whose pool IS the character-name list, plus the pool key itself, so a
+ * template may use any spelling the data provides rather than a hard-coded "name".
+ */
+function personNameBases(ctx: ContextData): Set<string> {
+  const names = ctx.characters?.names;
+  const out = new Set<string>();
+  if (!Array.isArray(names)) return out;
+  for (const [k, v] of Object.entries(ctx.characters ?? {})) {
+    if (v !== names) continue;
+    out.add(k);
+    out.add(k.replace(/s$/, '')); // resolveContext reaches "names" via the base "name"
+  }
+  return out;
+}
+
 /** Theme-specific templates replace universal ones when present for a theme. */
 export function selectForTheme(list: Template[], theme: string): Template[] {
   const themed = list.filter(
@@ -44,7 +63,12 @@ function resolveContext(
   operation: string | undefined,
   rng: Rng,
   used: Map<string, Set<string>>,
+  chosen: Map<string, string>,
 ): string | null {
+  // The same placeholder twice in one template is the same thing twice.
+  const prior = chosen.get(key);
+  if (prior !== undefined) return prior;
+
   const base = key.replace(/\d+$/, ''); // name2 -> name
   let pool: string[] | undefined;
 
@@ -65,11 +89,13 @@ function resolveContext(
 
   if (!pool || !pool.length) return null;
 
+  // Distinct keys sharing a base ({item} vs {item2}) still prefer distinct words.
   const usedSet = used.get(base) ?? new Set<string>();
   const avail = pool.filter((v) => !usedSet.has(v));
   const choice = pick(rng, avail.length ? avail : pool);
   usedSet.add(choice);
   used.set(base, usedSet);
+  chosen.set(key, choice);
   return choice;
 }
 
@@ -89,9 +115,16 @@ export function renderTemplate(
 
   // Pass 2: context placeholders, singular/plural from the preceding number.
   const used = new Map<string, Set<string>>();
+  const chosen = new Map<string, string>();
+  const nameBases = personNameBases(ctx);
   text = text.replace(PLACEHOLDER, (m, key: string, offset: number, full: string) => {
-    const val = resolveContext(key, ctx, theme, operation, rng, used);
-    return val == null ? m : slash(val, pluralCount(full.slice(0, offset)));
+    const val = resolveContext(key, ctx, theme, operation, rng, used, chosen);
+    if (val == null) return m;
+    // A slot sitting directly before a person's name is a title in apposition
+    // ("guide Evelyn"), which is singular whatever the sentence counts.
+    const ahead = NEXT_PLACEHOLDER.exec(full.slice(offset + m.length));
+    const isTitle = ahead != null && nameBases.has((ahead[1] as string).replace(/\d+$/, ''));
+    return slash(val, isTitle ? 1 : pluralCount(full.slice(0, offset)));
   });
 
   // Pass 3: inline {~singular/plural} markers.
