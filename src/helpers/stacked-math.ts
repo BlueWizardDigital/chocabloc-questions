@@ -4,7 +4,10 @@ export interface StackedMathLayout {
   kind: 'stacked';
   operands: string[];
   operator: StackedOperator;
+  /** Digits in the widest integer part. Excludes the point and any decimals. */
   maxDigits: number;
+  /** Decimals in the longest fractional part. 0 when no operand has one. */
+  maxDecimals: number;
 }
 
 export interface LongDivisionLayout {
@@ -23,8 +26,35 @@ const NORMALIZE: Record<string, string> = {
 
 const STACKED_OPS = new Set(['+', '-', '×']);
 
-const OPERATOR_RE = /^(\d+)\s+([+\-x*×÷/])\s+(\d+)$/;
-const MULTI_OPERAND_RE = /^(\d+)(?:\s+([+\-x*×÷/])\s+(\d+))+$/;
+// An operand is digits with an optional fractional part. A bare point (`.5`),
+// a trailing point (`4.`) and a second point (`4.3.9`) are malformed, not
+// decimals, and must not parse.
+const NUMBER = String.raw`\d+(?:\.\d+)?`;
+const OPERAND_RE = new RegExp(`^${NUMBER}$`);
+const OPERATOR_RE = new RegExp(`^(${NUMBER})\\s+([+\\-x*×÷/])\\s+(${NUMBER})$`);
+const MULTI_OPERAND_RE = new RegExp(`^(${NUMBER})(?:\\s+([+\\-x*×÷/])\\s+(${NUMBER}))+$`);
+
+/** Digits before the decimal point. */
+function integerDigits(operand: string): number {
+  const dot = operand.indexOf('.');
+  return dot === -1 ? operand.length : dot;
+}
+
+/** Digits after the decimal point, 0 when there is none. */
+function decimalDigits(operand: string): number {
+  const dot = operand.indexOf('.');
+  return dot === -1 ? 0 : operand.length - dot - 1;
+}
+
+function stackedLayout(operands: string[], operator: StackedOperator): StackedMathLayout {
+  return {
+    kind: 'stacked',
+    operands,
+    operator,
+    maxDigits: Math.max(...operands.map(integerDigits)),
+    maxDecimals: Math.max(...operands.map(decimalDigits)),
+  };
+}
 
 export function parseMathExpression(expr: string): MathLayout | null {
   if (!expr) return null;
@@ -41,12 +71,7 @@ export function parseMathExpression(expr: string): MathLayout | null {
       return { kind: 'long-division', divisor: right, dividend: left };
     }
     if (STACKED_OPS.has(op)) {
-      return {
-        kind: 'stacked',
-        operands: [left, right],
-        operator: op as StackedOperator,
-        maxDigits: Math.max(left.length, right.length),
-      };
+      return stackedLayout([left, right], op as StackedOperator);
     }
     return null;
   }
@@ -59,7 +84,7 @@ export function parseMathExpression(expr: string): MathLayout | null {
 
   for (let i = 0; i < parts.length; i++) {
     if (i % 2 === 0) {
-      if (!/^\d+$/.test(parts[i]!)) return null;
+      if (!OPERAND_RE.test(parts[i]!)) return null;
       operands.push(parts[i]!);
     } else {
       const raw = parts[i]!;
@@ -72,10 +97,5 @@ export function parseMathExpression(expr: string): MathLayout | null {
 
   if (!op || operands.length < 2) return null;
 
-  return {
-    kind: 'stacked',
-    operands,
-    operator: op as StackedOperator,
-    maxDigits: Math.max(...operands.map(o => o.length)),
-  };
+  return stackedLayout(operands, op as StackedOperator);
 }

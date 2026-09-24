@@ -273,16 +273,29 @@ export class ChocaWhiteboard extends HTMLElement {
     const carrySpace = 40;
     const opWidth = charWidth * 2;
     const digitWidth = charWidth * layout.maxDigits;
-    const rightEdge = (this._canvas.width + opWidth + digitWidth) / 2;
-    const ruleLeft = rightEdge - opWidth - digitWidth - charWidth;
+    // Point + decimals. 0 for integer-only input, which leaves every coordinate
+    // below identical to the integer-only layout.
+    const fracWidth = layout.maxDecimals > 0 ? charWidth * (layout.maxDecimals + 1) : 0;
+    const rightEdge = (this._canvas.width + opWidth + digitWidth + fracWidth) / 2;
+    // Operands align on the decimal point, not the right edge, so ones sit under
+    // ones and tenths under tenths. `pointX` is the right edge of the integer
+    // column — where the widest operand's decimal point starts.
+    const pointX = rightEdge - fracWidth;
+    const ruleLeft = pointX - opWidth - digitWidth - charWidth;
 
     for (let i = 0; i < layout.operands.length; i++) {
+      const operand = layout.operands[i]!;
       const y = carrySpace + i * lineHeight;
+      const dot = operand.indexOf('.');
+      // Width of this operand from its own point onwards, so right-aligning at
+      // `pointX + tailWidth` lands the point on `pointX`. An operand with no
+      // point has no tail, which parks its units digit on the integer column.
+      const tailWidth = dot === -1 ? 0 : charWidth * (operand.length - dot);
       ctx.textAlign = 'right';
-      ctx.fillText(layout.operands[i]!, rightEdge, y);
-      if (i === 1) {
+      ctx.fillText(operand, pointX + tailWidth, y);
+      if (i === layout.operands.length - 1) {
         ctx.textAlign = 'left';
-        ctx.fillText(layout.operator, rightEdge - digitWidth - opWidth, y);
+        ctx.fillText(layout.operator, pointX - digitWidth - opWidth, y);
       }
     }
 
