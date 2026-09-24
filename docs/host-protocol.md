@@ -245,7 +245,9 @@ than posting raw messages:
 Embedded, the bridge runs the host question channel for you (pinning this game's gameId +
 default recipe — you send neither); host-less but same-origin, it falls back to a relative
 `fetch(/api/v1/games/:gameId/...)`. Both return canonical, **un-normalized** questions, so
-keep applying your own `normalizeQuestion`. (Through `v0.6.0-beta.3` the bridge couldn't do
+keep applying your own `normalizeQuestion` — and branch on what it returns, not on the raw
+row: it rewrites `format`, overrides `imageType` and rebuilds `content`
+([`normalizer-contract.md`](./normalizer-contract.md)). (Through `v0.6.0-beta.3` the bridge couldn't do
 this — `requestNextQuestion()` hardcoded one game's URL and `requestQuestions()` wasn't on
 the interface — so games hand-rolled the `postMessage` channel shown below; that's no longer
 necessary.)

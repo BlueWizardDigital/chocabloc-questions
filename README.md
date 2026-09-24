@@ -297,6 +297,11 @@ geometry, time, patterns, and base-10 fall back to their normal stem by design. 
 
 ## Supported formats
 
+> **Before you write a guard against these:** `normalizeQuestion` rewrites `format`, overrides
+> `imageType` and rebuilds `content`. Branch on the normalised question, not the bank row —
+> see [`docs/normalizer-contract.md`](docs/normalizer-contract.md) for the full in → out tables.
+
+
 20-member discriminated union on `format`:
 
 | Format | Image type | Renderer |
