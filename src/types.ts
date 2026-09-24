@@ -131,7 +131,7 @@ export type GeometryClassifyQuestion = VisualQuestion<
 export type GeometryPropertiesContent = { shape: string; property: string };
 export type GeometryPropertiesQuestion = VisualQuestion<
   'geometry_properties',
-  'shape_3d',
+  'shape_2d' | 'shape_3d',
   GeometryPropertiesContent
 >;
 

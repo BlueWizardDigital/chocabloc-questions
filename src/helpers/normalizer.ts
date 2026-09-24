@@ -286,8 +286,9 @@ function normalizeGeometryPropertiesRow(r: Record<string, unknown>): GeometryPro
   const shape = getString(c, 'shape');
   const property = getString(c, 'property');
   if (!shape || !property) throw new NormalizeError('geometry_properties missing shape/property', r);
+  const imageType = resolveImageType(r, ['shape_2d', 'shape_3d']) as 'shape_2d' | 'shape_3d';
   return {
-    ...base, format: 'geometry_properties', imageType: 'shape_3d',
+    ...base, format: 'geometry_properties', imageType: imageType ?? 'shape_3d',
     content: { shape, property }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
   };
 }

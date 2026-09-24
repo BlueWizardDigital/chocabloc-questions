@@ -33,6 +33,18 @@
       { "value": "8", "error_type": "confused-vertices" }
     ]
   },
+  "geometry_properties_2d": {
+    "id": "GEOM-2D-SHAPE-PROPERTIES-BASIC-circle-sides",
+    "format": "geometry_properties",
+    "image_type": "shape_2d",
+    "content": { "shape": "circle", "property": "sides", "operation": "geometry_properties" },
+    "answer": "0",
+    "skill_ids": ["GEOM-2D-SHAPE-PROPERTIES-BASIC"],
+    "distractors": [
+      { "value": "1", "error_type": "off-by-one" },
+      { "value": "4", "error_type": "wrong-shape" }
+    ]
+  },
   "pythagorean": {
     "id": "GEOM-PYTHAGOREAN-BASIC-3-4",
     "format": "pythagorean",

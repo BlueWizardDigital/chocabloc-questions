@@ -309,7 +309,7 @@ geometry, time, patterns, and base-10 fall back to their normal stem by design. 
 | `multiplication` | `array` | `ChocaCanvasQuestion` (canvas) |
 | `geometry_attributes` | `shape_2d` | `ChocaCanvasQuestion` |
 | `geometry_classify` | `shape_2d` / `shape_3d` | `ChocaCanvasQuestion` |
-| `geometry_properties` | `shape_3d` | `ChocaCanvasQuestion` |
+| `geometry_properties` | `shape_2d` / `shape_3d` | `ChocaCanvasQuestion` |
 | `pythagorean` | `right_triangle` | `ChocaCanvasQuestion` |
 | `geometry_area` | `compound_shape` | `ChocaCanvasQuestion` |
 | `geometry_angles` | — | `ChocaCanvasQuestion` |

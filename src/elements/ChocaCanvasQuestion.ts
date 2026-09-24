@@ -166,7 +166,8 @@ export class ChocaCanvasQuestion extends HTMLElement {
         else drawShape2D(ctx, w, h, q.content.shape);
         break;
       case 'geometry_properties':
-        drawShape3D(ctx, w, h, q.content.shape);
+        if (q.imageType === 'shape_2d') drawShape2D(ctx, w, h, q.content.shape);
+        else drawShape3D(ctx, w, h, q.content.shape);
         break;
       case 'pythagorean':
         drawRightTriangle(ctx, w, h, q.content.legs);

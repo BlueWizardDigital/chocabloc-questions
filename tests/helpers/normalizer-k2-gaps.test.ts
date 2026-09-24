@@ -71,6 +71,21 @@ describe('choices-only path — format routing', () => {
     })!;
     expect(q.format).toBe('pattern');
   });
+
+  // The choices-only path never ran the per-format normalizer, so it was already
+  // passing shape_2d through while the answer-bearing path discarded it. This
+  // pins that pass-through so the two paths stay in step.
+  it('keeps shape_2d on a geometry_properties row', () => {
+    const q = normalizeQuestion({
+      id: 'GEOM-2D-SHAPE-PROPERTIES-BASIC-circle-sides', format: 'geometry_properties',
+      imageType: 'shape_2d', skillIds: ['GEOM-2D-SHAPE-PROPERTIES-BASIC'],
+      questionText: 'How many sides does a circle have?',
+      content: { shape: 'circle', property: 'sides' },
+      choices: [{ value: '0' }, { value: '4' }], answerToken: 'tok',
+    })!;
+    expect(q.format).toBe('geometry_properties');
+    expect(q.imageType).toBe('shape_2d');
+  });
 });
 
 describe('pattern — answer-bearing row with no sequence', () => {

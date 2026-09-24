@@ -125,6 +125,43 @@ describe('normalizeQuestion — visual formats', () => {
     }
   });
 
+  it('geometry_properties: 3D content has shape + property, imageType preserved', () => {
+    const q = normalizeQuestion(fixtures.geometry_properties)!;
+    expect(q.format).toBe('geometry_properties');
+    if (q.format === 'geometry_properties') {
+      expect(q.content.shape).toBe('cube');
+      expect(q.content.property).toBe('edges');
+      expect(q.imageType).toBe('shape_3d');
+    }
+  });
+
+  it('geometry_properties: 2D content has shape + property, imageType preserved', () => {
+    const q = normalizeQuestion(fixtures.geometry_properties_2d)!;
+    expect(q.format).toBe('geometry_properties');
+    if (q.format === 'geometry_properties') {
+      expect(q.content.shape).toBe('circle');
+      expect(q.content.property).toBe('sides');
+      expect(q.imageType).toBe('shape_2d');
+    }
+  });
+
+  it('geometry_properties: defaults to shape_3d when the row carries no image_type', () => {
+    const { image_type: _omitted, ...raw } = fixtures.geometry_properties;
+    const q = normalizeQuestion(raw)!;
+    expect(q.format).toBe('geometry_properties');
+    if (q.format === 'geometry_properties') {
+      expect(q.imageType).toBe('shape_3d');
+    }
+  });
+
+  it('geometry_properties: ignores an image_type outside shape_2d/shape_3d', () => {
+    const q = normalizeQuestion({ ...fixtures.geometry_properties, image_type: 'coins' })!;
+    expect(q.format).toBe('geometry_properties');
+    if (q.format === 'geometry_properties') {
+      expect(q.imageType).toBe('shape_3d');
+    }
+  });
+
   it('geometry_face_identify: content has shape + face_shape, imageType preserved', () => {
     const q = normalizeQuestion(fixtures.geometry_face_identify)!;
     expect(q.format).toBe('geometry_face_identify');
