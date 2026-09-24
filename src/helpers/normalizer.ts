@@ -993,6 +993,15 @@ const STEM_FORMATS = [
 for (const f of STEM_FORMATS) FORMAT_NORMALIZERS[f] = normalizeWithStem;
 const STEM_FORMAT_SET: ReadonlySet<string> = new Set(STEM_FORMATS);
 
+/**
+ * Every format key `doNormalize` dispatches on, map order. Internal: it is not
+ * re-exported from `helpers-only.ts`, so it is not public surface. The format
+ * conformance test reads this instead of keeping its own copy of the list — a
+ * copy would rot the moment a format is added, which is how a format the
+ * renderer cannot draw got in unnoticed.
+ */
+export const DISPATCH_FORMATS: readonly string[] = Object.freeze(Object.keys(FORMAT_NORMALIZERS));
+
 // Mirrors the per-format normalizers' text routing for choices-only rows,
 // which skip those normalizers (they require `answer`).
 function choicesRowIsText(
