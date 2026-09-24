@@ -7,6 +7,39 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 _No unreleased changes._
 
+## [0.6.0-beta.12] — 2026-09-24
+
+Two defects in the whiteboard's stacked-math template, found while wiring Adventure 101's
+whiteboard to the live question.
+
+### Added
+
+- **`StackedMathLayout.maxDecimals`.** Decimals in the longest fractional part, `0` when no
+  operand has one. `maxDigits` keeps its name and meaning but now counts the **integer part
+  only** — the same number for integer-only input, so no existing consumer moves.
+
+### Fixed
+
+- **The operator is drawn beside the last operand, not operand index 1.** A three-addend stack
+  put the sign next to the middle row. Two-operand stacks are unaffected (`length - 1` is still
+  `1`), and the canonical 2-operand draw sequence is asserted unchanged as a back-compat golden.
+- **Decimal operands parse and render.** `parseMathExpression` was integer-only, so
+  `4.39 + 26.86` returned `null` and the board stayed blank. Operands now take an optional
+  fractional part; a bare point (`.5`), a trailing point (`4.`) and a second point (`4.3.9`)
+  are still malformed and still reject.
+- **Decimal operands align on the decimal point, not the right edge.** Right-aligning `4.5`
+  under `26.86` put the 5 in the hundredths column, so adding down the columns gave a wrong
+  answer by construction. The shorter operand is **not** zero-padded — annexing the zero is the
+  step the child is practising. An integer mixed into a decimal stack parks its units digit on
+  the ones column.
+
+### Note
+
+- Widening the operand pattern also widened the long-division branch: `5.5 / 2` now parses as
+  `long-division` where it returned `null`. **Inert** — nothing renders that layout, and
+  `setMathExpression` rejects every non-stacked kind, so this changes only which error reason a
+  consumer sees.
+
 ## [0.6.0-beta.11] — 2026-09-23
 
 Grade K–2 rendering gaps reported by Adventure 101 (2026-09-23). Grade K lost ~60% of its
