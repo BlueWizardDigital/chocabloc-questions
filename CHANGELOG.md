@@ -7,6 +7,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 _No unreleased changes._
 
+## [0.6.0-beta.13] — 2026-09-24
+
+A `geometry_properties` question about a 2D shape drew a grey "?" instead of the shape. Grade K
+is the only grade that serves these, so this is the first grade whose geometry content renders.
+
+### Fixed
+
+- **`geometry_properties` routes on `imageType`, not unconditionally to 3D.**
+  `ChocaCanvasQuestion` sent every `geometry_properties` row to `drawShape3D`, whose shape list
+  is cube / rectangular prism / sphere / cylinder / cone / pyramid / triangular prism. `circle`
+  and `square` fell through to its `fillText('?')` default, so "How many sides does a circle
+  have?" showed no circle. A row with `imageType: 'shape_2d'` now draws with `drawShape2D`;
+  everything else still draws with `drawShape3D`, so "How many faces does a cube have?" is
+  unchanged.
+- **The normalizer keeps the `image_type` the bank sent.** `normalizeGeometryPropertiesRow`
+  hardcoded `imageType: 'shape_3d'`, discarding `shape_2d` before the renderer could see it. It
+  now resolves it the way `geometry_classify` does — `resolveImageType(r, ['shape_2d',
+  'shape_3d'])`, falling back to `shape_3d` when the row carries none or carries an unrecognised
+  value. Rows that arrive on the choices-only (F6) path were already passing `shape_2d` through
+  untouched, so the renderer fix alone is what moves the live Adventure 101 build; this one
+  fixes the answer-bearing path.
+
+### Changed
+
+- **`GeometryPropertiesQuestion['imageType']` widens from `'shape_3d'` to `'shape_2d' |
+  'shape_3d'`.** Type-level only and additive — existing `shape_3d` values still typecheck. A
+  consumer that narrowed on the old literal (e.g. assigned `q.imageType` to a `'shape_3d'`
+  variable) will need to widen with it.
+
 ## [0.6.0-beta.12] — 2026-09-24
 
 Two defects in the whiteboard's stacked-math template, found while wiring Adventure 101's
