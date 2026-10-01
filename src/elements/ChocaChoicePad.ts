@@ -17,14 +17,17 @@ function choiceValue(choice: unknown): string {
 const COIN_ORDER: readonly string[] = ['toonie', 'loonie', 'quarter', 'dime', 'nickel', 'penny'];
 
 /**
- * A value that is a list of coin names, sorted into pile order (repeats kept).
- * `null` for anything else — scalars, or a list holding a non-coin string —
- * so those keep their text label.
+ * A set of coins, sorted into pile order (repeats kept). Accepts a list of
+ * names or, as the platform sends it (TEXT columns), a comma-joined string;
+ * `''` is the empty set. `null` for anything holding a non-coin name, so it
+ * keeps its text label. Display only: the choice value is never rewritten.
  */
 function coinList(value: unknown): string[] | null {
-  if (!Array.isArray(value)) return null;
-  if (!value.every((v) => typeof v === 'string' && COIN_ORDER.includes(v))) return null;
-  return [...(value as string[])].sort((a, b) => COIN_ORDER.indexOf(a) - COIN_ORDER.indexOf(b));
+  const items =
+    typeof value === 'string' ? (value === '' ? [] : value.split(',').map((s) => s.trim())) : value;
+  if (!Array.isArray(items)) return null;
+  if (!items.every((v) => typeof v === 'string' && COIN_ORDER.includes(v))) return null;
+  return [...(items as string[])].sort((a, b) => COIN_ORDER.indexOf(a) - COIN_ORDER.indexOf(b));
 }
 
 const TEMPLATE = `

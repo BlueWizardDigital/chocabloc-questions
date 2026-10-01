@@ -1,5 +1,6 @@
 import { expect } from '@esm-bundle/chai';
 import '../../src/elements/ChocablocQuestion';
+import { normalizeQuestion } from '../../src/helpers/normalizer';
 
 function mount(html: string): HTMLElement {
   const wrapper = document.createElement('div');
@@ -245,26 +246,21 @@ describe('<chocabloc-question> text question with a coin scene', () => {
     expect(captured!.studentAnswer).to.equal('loonie');
   });
 
-  it('draws coin-list answers as coins (Trello 312: "Which of these coins are silver?")', async () => {
+  // Platform wire rows (serializeQuestionForGame output; token replaced).
+  it('draws coin-set answers as coins (Trello 312: "Which of these coins are gold?")', async () => {
     const el = mount(`<chocabloc-question seed="7"></chocabloc-question>`);
-    (el as HTMLElement & { question: unknown }).question = {
-      id: 'MONEY-COIN-COLOUR-CAD-identify-silver',
+    (el as HTMLElement & { question: unknown }).question = normalizeQuestion({
+      id: 'MONEY-COIN-COLOUR-CAD-identify-gold-dime-loonie-quarter-toonie',
       skillIds: ['MONEY-COIN-COLOUR-CAD'],
-      format: 'text',
-      content: {
-        stem: 'Which of these coins are silver?',
-        coinScene: { coins: { nickel: 2, quarter: 1, toonie: 1, loonie: 1 }, currency: 'CAD' },
-      },
-      choices: [
-        { value: ['nickel'] },
-        { value: ['nickel', 'quarter', 'toonie', 'nickel'] },
-        { value: ['dime', 'loonie', 'nickel', 'quarter', 'toonie'] },
-        { value: ['nickel', 'quarter', 'toonie'] },
-      ],
-      answerToken: 'opaque',
-    };
+      content: { coins: ['quarter', 'loonie', 'dime', 'toonie'], attribute: 'colour', operation: 'money_coin_colour' },
+      format: 'money_coin_colour', imageType: 'coins', difficulty: 'medium',
+      questionText: 'Which of these coins are gold?',
+      choices: [{ value: 'loonie,quarter,toonie' }, { value: 'loonie,toonie' }, { value: 'loonie' }, { value: 'dime,quarter,toonie' }],
+      answerToken: 'token',
+    });
     await new Promise((r) => requestAnimationFrame(r));
     const pile = el.shadowRoot!.querySelector('choca-coin-pile') as HTMLElement;
+    expect(pile.shadowRoot!.querySelectorAll('[part~="coin"]').length).to.equal(4);
     const pad = pile.shadowRoot!.querySelector('choca-choice-pad') as HTMLElement;
     const buttons = Array.from(pad.shadowRoot!.querySelectorAll('button'));
     expect(buttons.length).to.equal(4);
@@ -272,6 +268,26 @@ describe('<chocabloc-question> text question with a coin scene', () => {
       expect(btn.textContent).to.equal('');
       expect(btn.querySelectorAll('[part~="choice-coin"]').length).to.be.greaterThan(0);
     }
+  });
+
+  it('draws the coins of a choices-only money_count_mixed question', async () => {
+    const el = mount(`<chocabloc-question seed="7"></chocabloc-question>`);
+    (el as HTMLElement & { question: unknown }).question = normalizeQuestion({
+      id: 'MONEY-COIN-VALUE-CAD-5n-5d-4q-2l-3t',
+      skillIds: ['MONEY-COIN-VALUE-CAD'],
+      content: { coins: { dime: 5, loonie: 2, nickel: 5, toonie: 3, quarter: 4 }, operation: 'money_count_mixed' },
+      format: 'money_count_mixed', imageType: 'coins', difficulty: 'hard',
+      questionText: '5 nickels + 5 dimes + 4 quarters + 2 loonies + 3 toonies = ?',
+      choices: [{ value: '985' }, { value: '974' }, { value: '980' }, { value: '975' }],
+      answerToken: 'token',
+    });
+    await new Promise((r) => requestAnimationFrame(r));
+    const pile = el.shadowRoot!.querySelector('choca-coin-pile') as HTMLElement;
+    expect(pile).to.not.be.null;
+    expect(pile.shadowRoot!.querySelectorAll('[part~="coin"]').length).to.equal(19);
+    const pad = pile.shadowRoot!.querySelector('choca-choice-pad') as HTMLElement;
+    const labels = Array.from(pad.shadowRoot!.querySelectorAll('button')).map((b) => b.textContent);
+    expect(labels).to.include('CA$9.75');
   });
 
   it('keeps single-name answers as text in a scene', async () => {

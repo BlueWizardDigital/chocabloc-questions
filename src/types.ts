@@ -95,7 +95,9 @@ export type TextOnlyQuestion = BaseQuestion & {
   // v0.6.0-beta.11+: `coinScene` — coins to show alongside the stem (money_coin_*
   // identify questions). The dispatcher renders these via the coin pile; the
   // question itself stays text (string answers, plain choice labels).
-  content: { stem: string; coinScene?: MoneyContent };
+  // v0.6.0-beta.16+: `coinChoices` — the answers are sets of coins
+  // (money_coin_colour: "nickel,quarter"), so the pad draws them as coins.
+  content: { stem: string; coinScene?: MoneyContent; coinChoices?: boolean };
   answer?: AnswerValue;
   distractors?: Distractor[];
 };

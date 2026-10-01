@@ -912,7 +912,10 @@ function stemContent(
   // resolver always populates questionText, this OR becomes a noop.
   const stem = base.questionText || buildStem(format, c);
   const coinScene = buildCoinScene(format, c, base.skillIds);
-  return coinScene ? { stem, coinScene } : { stem };
+  if (!coinScene) return { stem };
+  // Colour answers are sets of coins; the other money_coin_* answers name one
+  // coin, and naming it is the question, so those stay text.
+  return format === 'money_coin_colour' ? { stem, coinScene, coinChoices: true } : { stem, coinScene };
 }
 
 function normalizeWithStem(r: Record<string, unknown>): TextOnlyQuestion {
@@ -1036,6 +1039,19 @@ function doNormalize(raw: unknown): NormalizedQuestion {
       typeof r['content'] === 'object' && r['content'] !== null
         ? (r['content'] as Record<string, unknown>)
         : {};
+    // Same money routing as normalizeMoneyRow: the coins become a pile. The
+    // platform strips content.currency, so it comes from the -USD/-CAD skill id.
+    if (format === 'money' || format === 'money_count_mixed') {
+      const currency =
+        content['currency'] === 'USD' || content['currency'] === 'CAD'
+          ? content['currency']
+          : inferCurrency(base.skillIds);
+      const money: MoneyQuestion = {
+        ...base, format: 'money', imageType: 'coins',
+        content: normalizeMoneyContent(content, currency), choices,
+      };
+      return money;
+    }
     if (choicesRowIsText(r, format, content)) {
       const text: TextOnlyQuestion = {
         ...base, format: 'text', imageType: undefined,

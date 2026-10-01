@@ -108,14 +108,18 @@ element via `getComputedStyle` and passed to the canvas draw function.
 
 ### Coin-list choices (`coin-choices`) — v0.6.0-beta.14+
 
-`<choca-coin-pile>` sets `coin-choices` on its pad for a text question with a
-`coinScene` (the `money_coin_*` identify family). A choice whose value is a list
-of coin names (`["nickel", "quarter"]`) then draws as coins, in pile order with
-repeats kept, instead of the text `nickel,quarter`. The button's `aria-label`
-names the coins. An empty list reads "None". Single names (`"loonie"`) and
-lists holding anything but coin names stay text, since naming the coin is often
-the question. Coin images come from the same `--cq-coin-<denom>-img` vars as
-the pile, so a game that themes the pile needs nothing new.
+`<choca-coin-pile>` sets `coin-choices` on its pad when the question's
+`content.coinChoices` is true. The normalizer sets that for `money_coin_colour`
+only, whose answers are sets of coins (v0.6.0-beta.16+; beta.14 set it for every
+coin scene). A choice value that is a set of coin names then draws as coins, in
+pile order with repeats kept: a comma-joined string as the platform sends it
+(`"nickel,quarter"`; a single name is a set of one) or a list. The button's
+`aria-label` names the coins; an empty set (`""` or `[]`) reads "None". A value
+holding anything but coin names stays text. Display only: the value a pick
+reports is the original, unchanged. The other `money_coin_*` formats keep text
+labels, since naming the coin is the question. Coin images come from the same
+`--cq-coin-<denom>-img` vars as the pile, so a game that themes the pile needs
+nothing new.
 
 ### Review mode (`answer-mode="review"`) — v0.2.0+
 

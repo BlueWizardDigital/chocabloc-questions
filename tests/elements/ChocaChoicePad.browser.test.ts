@@ -230,12 +230,50 @@ describe('<choca-choice-pad coin-choices>', () => {
     expect(coinParts(btn)).to.deep.equal([]);
   });
 
-  it('keeps a single coin name as text (naming the coin is often the question)', async () => {
+  // The platform's wire: answer/distractors are TEXT, so coin sets arrive
+  // comma-joined and the server compares picks as exact strings.
+  it('draws a comma-joined coin string as coins', async () => {
+    const el = mount(`<choca-choice-pad mode="mc" coin-choices></choca-choice-pad>`);
+    await setChoicesAndAwait(el, [{ value: 'quarter,dime,dime,dime' }]);
+    const btn = el.shadowRoot!.querySelector('button')!;
+    expect(coinParts(btn)).to.deep.equal([
+      'choice-coin choice-coin-quarter',
+      'choice-coin choice-coin-dime',
+      'choice-coin choice-coin-dime',
+      'choice-coin choice-coin-dime',
+    ]);
+    expect(btn.textContent).to.equal('');
+    expect(btn.getAttribute('aria-label')).to.equal('quarter, dime, dime, dime');
+  });
+
+  it('draws a single coin name as one coin (a set of one)', async () => {
     const el = mount(`<choca-choice-pad mode="mc" coin-choices></choca-choice-pad>`);
     await setChoicesAndAwait(el, [{ value: 'loonie' }]);
     const btn = el.shadowRoot!.querySelector('button')!;
-    expect(btn.textContent).to.equal('loonie');
-    expect(coinParts(btn)).to.deep.equal([]);
+    expect(coinParts(btn)).to.deep.equal(['choice-coin choice-coin-loonie']);
+  });
+
+  it('labels an empty string "None" (the empty-set distractor)', async () => {
+    const el = mount(`<choca-choice-pad mode="mc" coin-choices></choca-choice-pad>`);
+    await setChoicesAndAwait(el, [{ value: '' }]);
+    expect(el.shadowRoot!.querySelector('button')!.textContent).to.equal('None');
+  });
+
+  it('keeps a string that is not all coin names as text', async () => {
+    const el = mount(`<choca-choice-pad mode="mc" coin-choices></choca-choice-pad>`);
+    await setChoicesAndAwait(el, [{ value: 'nickel,button' }, { value: '975' }]);
+    const buttons = el.shadowRoot!.querySelectorAll('button');
+    expect(buttons[0]!.textContent).to.equal('nickel,button');
+    expect(buttons[1]!.textContent).to.equal('975');
+  });
+
+  it('picking a comma-joined choice reports the exact original string', async () => {
+    const el = mount(`<choca-choice-pad mode="mc" coin-choices></choca-choice-pad>`);
+    await setChoicesAndAwait(el, [{ value: 'quarter,dime,dime,dime' }]);
+    let captured: { value?: unknown } | null = null;
+    el.addEventListener('picked', (e) => { captured = (e as CustomEvent).detail; });
+    (el.shadowRoot!.querySelector('button') as HTMLButtonElement).click();
+    expect(captured!.value).to.equal('quarter,dime,dime,dime');
   });
 
   it('falls back to text when the list holds anything but coin names', async () => {

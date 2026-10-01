@@ -32,9 +32,14 @@ export function formatAnswerForDisplay(
   format: QuestionFormat,
   opts: CurrencyFormatOptions = {},
 ): string {
-  if (format === 'money' && typeof answer === 'number') {
-    if (answer >= 0 && answer < 100) return `${answer}¢`;
-    return formatCurrency(answer, opts);
+  // The platform's choices-only wire sends cents as strings ("200").
+  const cents =
+    typeof answer === 'number' ? answer
+      : typeof answer === 'string' && /^\d+$/.test(answer) ? Number(answer)
+        : undefined;
+  if (format === 'money' && cents !== undefined) {
+    if (cents >= 0 && cents < 100) return `${cents}¢`;
+    return formatCurrency(cents, opts);
   }
   if (format === 'money_budget_adjust' && typeof answer === 'string') {
     const cents = Number(answer);
