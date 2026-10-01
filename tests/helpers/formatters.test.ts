@@ -61,6 +61,24 @@ describe('formatAnswerForDisplay', () => {
   it('formats coordinate tuple', () => {
     expect(formatAnswerForDisplay([8, -4], 'text')).toBe('(8, -4)');
   });
+
+  // money_coin_colour answers are coin-name lists; 27 of the bank's 100 have
+  // exactly two coins, which used to read like a point: "(toonie, toonie)".
+  it('reads a two-word list as a list, not a coordinate', () => {
+    expect(formatAnswerForDisplay(['toonie', 'toonie'], 'text')).toBe('toonie, toonie');
+  });
+
+  it('separates longer lists with a comma and a space', () => {
+    expect(formatAnswerForDisplay(['nickel', 'dime', 'quarter'], 'text')).toBe('nickel, dime, quarter');
+  });
+
+  it('shows a one-item list as the item', () => {
+    expect(formatAnswerForDisplay(['nickel'], 'text')).toBe('nickel');
+  });
+
+  it('labels an empty list "None" instead of a blank', () => {
+    expect(formatAnswerForDisplay([], 'text')).toBe('None');
+  });
 });
 
 describe('formatCoinCountForScreenReader (R2.10)', () => {

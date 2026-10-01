@@ -43,8 +43,13 @@ export function formatAnswerForDisplay(
       return formatCurrency(cents, opts);
     }
   }
-  if (Array.isArray(answer) && answer.length === 2) {
-    return `(${answer[0]}, ${answer[1]})`;
+  if (Array.isArray(answer)) {
+    // Only a pair of numbers is a coordinate point. Any other list (e.g. the
+    // coin names in money_coin_colour answers) reads as a list.
+    if (answer.length === 2 && answer.every((v) => typeof v === 'number')) {
+      return `(${answer[0]}, ${answer[1]})`;
+    }
+    return answer.length === 0 ? 'None' : answer.join(', ');
   }
   return String(answer);
 }
