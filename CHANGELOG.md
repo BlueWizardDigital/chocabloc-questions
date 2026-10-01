@@ -7,6 +7,41 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 _No unreleased changes._
 
+## [0.6.0-beta.16] — 2026-09-30
+
+beta.14 and beta.15 were tested against hand-built rows. The platform's real
+choices-only wire is different: `answer` and `distractors` are TEXT columns, so
+every choice value is a **string**. Coin sets arrive comma-joined
+(`"loonie,quarter,toonie"`, `""` for none), money arrives as cents (`"975"`), and
+the content allow-list drops `currency`. The server checks a pick with an exact
+string compare, so every fix below is display-only and reports the value
+unchanged. Found by checking Monkey Money (Trello 312) against
+`serializeQuestionForGame` output.
+
+### Fixed
+
+- **Choices-only `money` / `money_count_mixed` rows draw their coins.** They
+  skipped `normalizeMoneyRow`, kept their raw format, and went to the canvas
+  renderer, which drew nothing ("2 loonies = ?" with no coins). They now normalize
+  to `money` the same way, with currency from `content.currency` or the
+  `-USD`/`-CAD` skill id (still an error when neither says). `choices` and
+  `answerToken` are kept.
+- **Money labels format cents sent as strings.** `formatAnswerForDisplay('975',
+  'money')` printed `975`; it now prints the same as `975` the number. Only
+  whole-number strings count. CAD keeps the existing `CA$` convention.
+- **Coin-set answers draw as coins on the real wire.** With `coin-choices`, the pad
+  reads a comma-joined string of coin names as a set, so `"loonie,toonie"` draws two
+  coins, `"loonie"` one, and `""` reads "None" (it was a blank button).
+
+### Changed
+
+- **`coin-choices` is now set only for `money_coin_colour`.** The normalizer marks it
+  with the new `TextOnlyQuestion.content.coinChoices`, and `<choca-coin-pile>` reads
+  that flag instead of turning the mode on for every coin scene. On the real wire a
+  colour answer of one coin (`"toonie"`) looks the same as a coin-name answer, so
+  only the format can tell them apart. Coin-name, -size and -denomination answers
+  stay text.
+
 ## [0.6.0-beta.15] — 2026-09-30
 
 ### Fixed
