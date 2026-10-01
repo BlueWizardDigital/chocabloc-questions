@@ -7,6 +7,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 _No unreleased changes._
 
+## [0.6.0-beta.14] — 2026-09-30
+
+"Which of these coins are silver?" (`money_coin_colour`) showed its answers as
+`nickel,quarter,toonie,nickel`. Its answers are lists of coins, and the choice pad
+printed every value with `String()`. Reported from Monkey Money (Trello 312).
+
+### Added
+
+- **`coin-choices` attribute on `<choca-choice-pad>`.** A choice whose value is a list
+  of coin names draws as a row of coins, in pile order with repeats kept, using the
+  game's existing `--cq-coin-<denom>-img` vars. The button's `aria-label` names the
+  coins; an empty list reads "None" (it rendered a blank button). Single coin names and
+  lists holding anything else stay text. New parts `choice-coins`, `choice-coin`,
+  `choice-coin-<denom>`; new vars `--cq-choice-coin-size` (32px) and
+  `--cq-choice-coin-gap` (4px). See `PARTS-AND-VARS.md`.
+- **`<choca-coin-pile>` turns it on for coin scenes** (text questions with a
+  `coinScene`). Money questions (numeric answers) and every other format are
+  unchanged. **Visible change for games serving `money_coin_colour`.**
+
 ## [0.6.0-beta.13] — 2026-09-24
 
 A `geometry_properties` question about a 2D shape drew a grey "?" instead of the shape. Grade K
