@@ -7,6 +7,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 _No unreleased changes._
 
+## [0.6.0-beta.15] — 2026-09-30
+
+### Fixed
+
+- **`formatAnswerForDisplay` only formats a pair of numbers as a coordinate.** Any
+  two-item list became `(a, b)`, so a two-coin `money_coin_colour` answer read like a
+  point: `(toonie, toonie)`. 27 of that skill's 100 bank questions have two coins.
+  Other lists printed with no spaces (`nickel,dime,quarter`). Lists now read
+  `toonie, toonie` and `nickel, dime, quarter`, and an empty list reads `None` (it was
+  blank; every `money_coin_colour` row ships an empty-list distractor). `[8, -4]` still
+  formats as `(8, -4)`. Bank coordinate answers are strings like `"(9, 10)"` and pass
+  through unchanged. **Visible change** in choice labels for list answers. Coin
+  scenes already draw coin lists as coins (beta.14); this covers the text path, e.g.
+  a coin question that arrives with no usable coins.
+
 ## [0.6.0-beta.14] — 2026-09-30
 
 "Which of these coins are silver?" (`money_coin_colour`) showed its answers as
