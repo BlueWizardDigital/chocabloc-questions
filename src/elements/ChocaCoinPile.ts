@@ -236,6 +236,9 @@ export class ChocaCoinPile extends HTMLElement {
 
   private _renderChoices(): void {
     if (!this._question) return;
+    // A scene's coin-list answers ("Which of these coins are silver?") draw
+    // as coins. Set it before syncChoicePad so the new choices render in coin mode.
+    this._defaultPad.toggleAttribute('coin-choices', this._question.format === 'text');
     syncChoicePad(this._question, this._defaultPad, this);
   }
 

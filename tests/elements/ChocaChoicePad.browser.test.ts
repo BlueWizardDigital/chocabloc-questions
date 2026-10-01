@@ -194,3 +194,81 @@ describe('<choca-choice-pad> M2 a11y', () => {
     expect(picks).to.equal(0);
   });
 });
+
+describe('<choca-choice-pad coin-choices>', () => {
+  const coinParts = (btn: Element): string[] =>
+    Array.from(btn.querySelectorAll('[part~="choice-coin"]')).map((s) => s.getAttribute('part')!);
+
+  it('draws a coin-list value as coins in pile order, keeping repeats', async () => {
+    const el = mount(`<choca-choice-pad mode="mc" coin-choices></choca-choice-pad>`);
+    await setChoicesAndAwait(el, [{ value: ['nickel', 'quarter', 'toonie', 'nickel'] }]);
+    const btn = el.shadowRoot!.querySelector('button')!;
+    expect(coinParts(btn)).to.deep.equal([
+      'choice-coin choice-coin-toonie',
+      'choice-coin choice-coin-quarter',
+      'choice-coin choice-coin-nickel',
+      'choice-coin choice-coin-nickel',
+    ]);
+    expect(btn.textContent).to.equal('');
+    expect(btn.getAttribute('aria-label')).to.equal('toonie, quarter, nickel, nickel');
+  });
+
+  it('shows the coin image the game supplies', async () => {
+    const el = mount(`<choca-choice-pad mode="mc" coin-choices></choca-choice-pad>`);
+    el.style.setProperty('--cq-coin-loonie-img', 'url("data:image/gif;base64,R0lGODlhAQABAAAAACw=")');
+    await setChoicesAndAwait(el, [{ value: ['loonie'] }]);
+    const coin = el.shadowRoot!.querySelector('[part~="choice-coin-loonie"]') as HTMLElement;
+    expect(getComputedStyle(coin).backgroundImage).to.contain('data:image/gif');
+    expect(coin.getBoundingClientRect().width).to.be.greaterThan(0);
+  });
+
+  it('labels an empty coin list "None" instead of a blank button', async () => {
+    const el = mount(`<choca-choice-pad mode="mc" coin-choices></choca-choice-pad>`);
+    await setChoicesAndAwait(el, [{ value: [] }]);
+    const btn = el.shadowRoot!.querySelector('button')!;
+    expect(btn.textContent).to.equal('None');
+    expect(coinParts(btn)).to.deep.equal([]);
+  });
+
+  it('keeps a single coin name as text (naming the coin is often the question)', async () => {
+    const el = mount(`<choca-choice-pad mode="mc" coin-choices></choca-choice-pad>`);
+    await setChoicesAndAwait(el, [{ value: 'loonie' }]);
+    const btn = el.shadowRoot!.querySelector('button')!;
+    expect(btn.textContent).to.equal('loonie');
+    expect(coinParts(btn)).to.deep.equal([]);
+  });
+
+  it('falls back to text when the list holds anything but coin names', async () => {
+    const el = mount(`<choca-choice-pad mode="mc" coin-choices></choca-choice-pad>`);
+    await setChoicesAndAwait(el, [{ value: ['nickel', 'button'] }]);
+    const btn = el.shadowRoot!.querySelector('button')!;
+    expect(btn.textContent).to.equal('nickel,button');
+    expect(coinParts(btn)).to.deep.equal([]);
+  });
+
+  it('draws coins even when the pool supplied a text label', async () => {
+    const el = mount(`<choca-choice-pad mode="mc" coin-choices></choca-choice-pad>`);
+    await setChoicesAndAwait(el, [{ value: ['nickel', 'quarter'], label: '(nickel, quarter)' }]);
+    const btn = el.shadowRoot!.querySelector('button')!;
+    expect(btn.textContent).to.equal('');
+    expect(coinParts(btn).length).to.equal(2);
+  });
+
+  it('without the attribute, coin lists render as text (unchanged)', async () => {
+    const el = mount(`<choca-choice-pad mode="mc"></choca-choice-pad>`);
+    await setChoicesAndAwait(el, [{ value: ['nickel', 'dime'] }]);
+    const btn = el.shadowRoot!.querySelector('button')!;
+    expect(btn.textContent).to.equal('nickel,dime');
+    expect(coinParts(btn)).to.deep.equal([]);
+  });
+
+  it('picking a coin choice reports the original value', async () => {
+    const el = mount(`<choca-choice-pad mode="mc" coin-choices></choca-choice-pad>`);
+    const value = ['nickel', 'quarter', 'toonie', 'nickel'];
+    await setChoicesAndAwait(el, [{ value }]);
+    let captured: { value?: unknown } | null = null;
+    el.addEventListener('picked', (e) => { captured = (e as CustomEvent).detail; });
+    (el.shadowRoot!.querySelector('button') as HTMLButtonElement).click();
+    expect(captured!.value).to.deep.equal(['nickel', 'quarter', 'toonie', 'nickel']);
+  });
+});

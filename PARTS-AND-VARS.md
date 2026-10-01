@@ -88,6 +88,8 @@ element via `getComputedStyle` and passed to the canvas draw function.
 | `choice-correct` | Correct choice (review mode marks visually; retry mode post-answer) |
 | `choice-wrong` | Student's prior wrong pick (review mode only, requires `student-answer` attr) |
 | `choice-other` | Non-correct, non-picked choices (review mode only, dimmed) |
+| `choice-coins` | Row of coins inside a coin-list choice (`coin-choices` only) — v0.6.0-beta.14+ |
+| `choice-coin`, `choice-coin-<denom>` | One coin in that row; image from `--cq-coin-<denom>-img` — v0.6.0-beta.14+ |
 
 | Var | Default | Purpose |
 |-----|---------|---------|
@@ -101,6 +103,19 @@ element via `getComputedStyle` and passed to the canvas draw function.
 | `--cq-choice-correct-border` | `#10b981` | Border on correct choice in review mode |
 | `--cq-choice-wrong-border` | `#ef4444` | Border on student's wrong pick in review mode |
 | `--cq-choice-disabled-opacity` | `0.5` | Opacity for non-marked choices in review mode |
+| `--cq-choice-coin-size` | `32px` | Coin size inside a coin-list choice — v0.6.0-beta.14+ |
+| `--cq-choice-coin-gap` | `4px` | Gap between those coins — v0.6.0-beta.14+ |
+
+### Coin-list choices (`coin-choices`) — v0.6.0-beta.14+
+
+`<choca-coin-pile>` sets `coin-choices` on its pad for a text question with a
+`coinScene` (the `money_coin_*` identify family). A choice whose value is a list
+of coin names (`["nickel", "quarter"]`) then draws as coins, in pile order with
+repeats kept, instead of the text `nickel,quarter`. The button's `aria-label`
+names the coins. An empty list reads "None". Single names (`"loonie"`) and
+lists holding anything but coin names stay text, since naming the coin is often
+the question. Coin images come from the same `--cq-coin-<denom>-img` vars as
+the pile, so a game that themes the pile needs nothing new.
 
 ### Review mode (`answer-mode="review"`) — v0.2.0+
 

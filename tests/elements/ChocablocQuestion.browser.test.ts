@@ -245,6 +245,41 @@ describe('<chocabloc-question> text question with a coin scene', () => {
     expect(captured!.studentAnswer).to.equal('loonie');
   });
 
+  it('draws coin-list answers as coins (Trello 312: "Which of these coins are silver?")', async () => {
+    const el = mount(`<chocabloc-question seed="7"></chocabloc-question>`);
+    (el as HTMLElement & { question: unknown }).question = {
+      id: 'MONEY-COIN-COLOUR-CAD-identify-silver',
+      skillIds: ['MONEY-COIN-COLOUR-CAD'],
+      format: 'text',
+      content: {
+        stem: 'Which of these coins are silver?',
+        coinScene: { coins: { nickel: 2, quarter: 1, toonie: 1, loonie: 1 }, currency: 'CAD' },
+      },
+      choices: [
+        { value: ['nickel'] },
+        { value: ['nickel', 'quarter', 'toonie', 'nickel'] },
+        { value: ['dime', 'loonie', 'nickel', 'quarter', 'toonie'] },
+        { value: ['nickel', 'quarter', 'toonie'] },
+      ],
+      answerToken: 'opaque',
+    };
+    await new Promise((r) => requestAnimationFrame(r));
+    const pile = el.shadowRoot!.querySelector('choca-coin-pile') as HTMLElement;
+    const pad = pile.shadowRoot!.querySelector('choca-choice-pad') as HTMLElement;
+    const buttons = Array.from(pad.shadowRoot!.querySelectorAll('button'));
+    expect(buttons.length).to.equal(4);
+    for (const btn of buttons) {
+      expect(btn.textContent).to.equal('');
+      expect(btn.querySelectorAll('[part~="choice-coin"]').length).to.be.greaterThan(0);
+    }
+  });
+
+  it('keeps single-name answers as text in a scene', async () => {
+    const { pile } = await mountScene();
+    const pad = pile.shadowRoot!.querySelector('choca-choice-pad') as HTMLElement;
+    expect(pad.shadowRoot!.querySelectorAll('[part~="choice-coin"]').length).to.equal(0);
+  });
+
   it('text question without a coin scene keeps the plain fallback', async () => {
     const el = mount(`<chocabloc-question></chocabloc-question>`);
     const q = sceneQ();

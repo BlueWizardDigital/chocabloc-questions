@@ -12,6 +12,21 @@ function choiceValue(choice: unknown): string {
   return String(choice);
 }
 
+// v0.6.0-beta.14: same order as the coin pile, so a coin-list answer reads
+// like the scene above it.
+const COIN_ORDER: readonly string[] = ['toonie', 'loonie', 'quarter', 'dime', 'nickel', 'penny'];
+
+/**
+ * A value that is a list of coin names, sorted into pile order (repeats kept).
+ * `null` for anything else — scalars, or a list holding a non-coin string —
+ * so those keep their text label.
+ */
+function coinList(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  if (!value.every((v) => typeof v === 'string' && COIN_ORDER.includes(v))) return null;
+  return [...(value as string[])].sort((a, b) => COIN_ORDER.indexOf(a) - COIN_ORDER.indexOf(b));
+}
+
 const TEMPLATE = `
   <style>
     :host {
@@ -66,6 +81,31 @@ const TEMPLATE = `
     :host([mode="review"]) [part~="choice"] {
       pointer-events: none;
     }
+    /* v0.6.0-beta.14: coin-list answers drawn as coins (coin-choices attr) */
+    [part~="choice-coins"] {
+      display: inline-flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: var(--cq-choice-coin-gap, 4px);
+      vertical-align: middle;
+    }
+    [part~="choice-coin"] {
+      width: var(--cq-choice-coin-size, 32px);
+      height: var(--cq-choice-coin-size, 32px);
+      border-radius: 50%;
+      background-color: var(--cq-coin-fallback-bg, #d4af37);
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      flex: 0 0 auto;
+    }
+    [part~="choice-coin-toonie"]  { background-image: var(--cq-coin-toonie-img, none); }
+    [part~="choice-coin-loonie"]  { background-image: var(--cq-coin-loonie-img, none); }
+    [part~="choice-coin-quarter"] { background-image: var(--cq-coin-quarter-img, none); }
+    [part~="choice-coin-dime"]    { background-image: var(--cq-coin-dime-img, none); }
+    [part~="choice-coin-nickel"]  { background-image: var(--cq-coin-nickel-img, none); }
+    [part~="choice-coin-penny"]   { background-image: var(--cq-coin-penny-img, none); }
   </style>
   <div part="pad" role="radiogroup"></div>
 `;
@@ -78,7 +118,7 @@ export class ChocaChoicePad extends HTMLElement {
   private _pickedValueKey: string | null = null;
 
   static get observedAttributes(): string[] {
-    return ['mode', 'disabled', 'aria-label', 'student-answer'];
+    return ['mode', 'disabled', 'aria-label', 'student-answer', 'coin-choices'];
   }
 
   constructor() {
@@ -114,6 +154,7 @@ export class ChocaChoicePad extends HTMLElement {
     const studentAnswer = this.getAttribute('student-answer');
     // Review mode is always non-interactive regardless of `disabled` attr.
     const disabled = this.hasAttribute('disabled') || isReview;
+    const coinChoices = this.hasAttribute('coin-choices');
     this._pad.setAttribute('aria-disabled', String(disabled));
     if (this.hasAttribute('aria-label')) {
       this._pad.setAttribute('aria-label', this.getAttribute('aria-label')!);
@@ -141,8 +182,23 @@ export class ChocaChoicePad extends HTMLElement {
       const isChecked = this._pickedValueKey === key;
       btn.setAttribute('aria-checked', String(isChecked));
       btn.setAttribute('aria-disabled', String(disabled));
-      // R2.8: textContent only, never innerHTML
-      btn.textContent = c.label ?? String(c.value);
+      // buildChoicePool always fills `label` (String(value), or "(a, b)" for a
+      // pair), so in coin mode a coin list ignores it.
+      const coins = coinChoices ? coinList(c.value) : null;
+      if (coins && coins.length > 0) {
+        btn.setAttribute('aria-label', coins.join(', '));
+        const row = document.createElement('span');
+        row.setAttribute('part', 'choice-coins');
+        for (const name of coins) {
+          const coin = document.createElement('span');
+          coin.setAttribute('part', `choice-coin choice-coin-${name}`);
+          row.appendChild(coin);
+        }
+        btn.appendChild(row);
+      } else {
+        // R2.8: textContent only, never innerHTML
+        btn.textContent = coins ? 'None' : (c.label ?? String(c.value));
+      }
       if (!isReview) btn.addEventListener('click', () => this._pick(i));
       this._pad.appendChild(btn);
     });
