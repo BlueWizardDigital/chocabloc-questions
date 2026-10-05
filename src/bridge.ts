@@ -902,8 +902,8 @@ async function requestConcept(
 // null on timeout / error / no host. NO standalone fetch fallback: the POST is
 // CSRF-protected (only the host holds the token) and the conceptId is
 // host-resolved, so a report is only meaningful embedded. Never throws. The
-// host pins the conceptId + gameId; the payload here carries only the bounded
-// counters. Call after bridge.onReady, and after at least one requestConcept
+// host pins the gameId; conceptId is optional and the server checks it belongs
+// to the game. The payload here carries only the bounded counters. Call after bridge.onReady, and after at least one requestConcept
 // (the host needs a resolved conceptId to attribute the session).
 async function reportConceptSession(
   payload: ConceptSessionPayload

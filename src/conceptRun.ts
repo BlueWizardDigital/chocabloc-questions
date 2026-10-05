@@ -121,15 +121,7 @@ function whole(n: unknown): number {
 }
 
 function settle(concept: unknown): Promise<boolean> {
-  try {
-    return Promise.resolve(concept).then(
-      (c) => Boolean(c),
-      () => false,
-    );
-  } catch {
-    /* v8 ignore next */
-    return Promise.resolve(false);
-  }
+  return new Promise<unknown>((r) => r(concept)).then(Boolean, () => false);
 }
 
 export function createConceptRun(options: ConceptRunOptions): ConceptRun {
@@ -299,11 +291,13 @@ export function createConceptRun(options: ConceptRunOptions): ConceptRun {
     }),
     setConcept: safe((id: string | null) => {
       perConcept = true;
+      const next = typeof id === 'string' && id.length > 0 ? id : null;
+      if (next === conceptId) return; // same sub-topic: the stretch just continues
       if (live) {
         bank(env.now());
         piece(false); // under the OLD concept (or dropped if there was none)
       }
-      conceptId = typeof id === 'string' && id.length > 0 ? id : null;
+      conceptId = next;
     }),
     abandon: safe(() => endRun(false)),
     finish: safe((result?: ConceptRunResult) => endRun(true, result)),
@@ -312,7 +306,7 @@ export function createConceptRun(options: ConceptRunOptions): ConceptRun {
       disposed = true;
       live = false;
       stopTimer();
-      for (const type of INPUT_EVENTS) env.window?.removeEventListener(type, onInput, { capture: true });
+      for (const type of INPUT_EVENTS) env.window?.removeEventListener(type, onInput, INPUT_OPTS);
       env.document?.removeEventListener('visibilitychange', onVisibility);
     }),
   };

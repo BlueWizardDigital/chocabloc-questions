@@ -231,12 +231,15 @@ import { createConceptRun } from 'chocabloc-questions/concept-run';
 
 const saver = createConceptRun({
   report: bridge.reportConceptSession,
-  concept: bridge.requestConcept(),   // nothing is sent until this settles to a concept
+  concept: new Promise((r) => bridge.onReady(r)).then(() => bridge.requestConcept()), // nothing is sent until this settles to a concept
 });
 // run starts: saver.start()           Restart/Home/quit mid-run: saver.abandon()
 // pause menu: saver.pause(true|false) run ends: saver.finish({ levels, xp })
 // right answer: saver.correct()       levels/XP mid-run: saver.add({ levels, xp })
 ```
+
+Create one saver per page. If you tear it down mid-run, call `saver.abandon()` then `saver.dispose()`.
+`correct(n)` takes an optional count.
 
 A game that files practice per sub-topic creates it with `perConcept: true` and calls
 `saver.setConcept(id | null)` per item. A stretch with no concept is dropped, never sent

@@ -398,6 +398,10 @@ interface ConceptProgress {
 }
 ```
 
+> **XP note.** As with `bridge.score` (see [Scoring & XP](#scoring--xp)), `xpEarned` here is
+> game-supplied and server-authoritative XP is still a pending redesign — don't build a
+> leaderboard-grade feature on it without coordinating with the platform team.
+
 ### Concept saver (`chocabloc-questions/concept-run`, beta.17+)
 
 Use this instead of calling `reportConceptSession` yourself. It counts **active play only**:
@@ -414,20 +418,19 @@ import { createConceptRun } from 'chocabloc-questions/concept-run';
 
 const saver = createConceptRun({
   report: bridge.reportConceptSession,
-  concept: bridge.requestConcept(),   // nothing is sent until this settles to a concept
+  concept: new Promise((r) => bridge.onReady(r)).then(() => bridge.requestConcept()), // nothing is sent until this settles to a concept
 });
 // run starts: saver.start()           Restart/Home/quit mid-run: saver.abandon()
 // pause menu: saver.pause(true|false) run ends: saver.finish({ levels, xp })
 // right answer: saver.correct()       levels/XP mid-run: saver.add({ levels, xp })
 ```
 
+Create one saver per page. If you tear it down mid-run, call `saver.abandon()` then `saver.dispose()`.
+`correct(n)` takes an optional count.
+
 A game that files practice per sub-topic creates it with `perConcept: true` and calls
 `saver.setConcept(id | null)` per item. A stretch with no concept is dropped, never sent
 without one.
-
-> **XP note.** As with `bridge.score` (see [Scoring & XP](#scoring--xp)), `xpEarned` here is
-> game-supplied and server-authoritative XP is still a pending redesign — don't build a
-> leaderboard-grade feature on it without coordinating with the platform team.
 
 ### Via the host kit
 

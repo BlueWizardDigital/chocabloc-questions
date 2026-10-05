@@ -379,6 +379,18 @@ describe('createConceptRun: concept gating', () => {
     ]);
   });
 
+  it('setConcept with an unchanged concept sends nothing: the stretch just continues', async () => {
+    const h = harness();
+    h.saver.start();
+    for (let i = 0; i < 5; i++) {
+      h.saver.setConcept('SMS');
+      h.play(6 * SEC);
+    }
+    h.saver.finish();
+    await flush();
+    expect(h.reports.map((r) => [r.conceptId, r.timePlayedMs])).toEqual([['SMS', 30000]]);
+  });
+
   it('with perConcept, a stretch with no concept is dropped, never sent without one', async () => {
     const h = harness({ perConcept: true });
     h.saver.start();
