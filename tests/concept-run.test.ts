@@ -330,3 +330,98 @@ describe('createConceptRun: clock and pieces', () => {
     expect(typeof reports[0].clientSessionId).toBe('string');
   });
 });
+
+describe('createConceptRun: concept gating', () => {
+  it('a concept that arrives late gets the whole run, in order', async () => {
+    let resolve!: (v: unknown) => void;
+    const concept = new Promise((r) => (resolve = r));
+    const h = harness({ concept });
+    h.saver.start();
+    h.play(2.5 * MIN);
+    await flush();
+    expect(h.reports).toHaveLength(0); // nothing goes out before the concept
+    resolve({ concept_id: 'C' });
+    await flush();
+    expect(h.reports.map((r) => r.timePlayedMs)).toEqual([60000, 60000]);
+    h.saver.finish();
+    await flush();
+    expect(sum(h.reports, 'timePlayedMs')).toBe(150000);
+  });
+
+  // Factories, not values: a Promise.reject() built at table time is an unhandled
+  // rejection before the test attaches to it.
+  it.each([
+    ['null', () => null],
+    ['a promise of null', () => Promise.resolve(null)],
+    ['a rejected promise', () => Promise.reject(new Error('no concept'))],
+  ])('no concept (%s) means nothing is ever sent', async (_label, makeConcept) => {
+    const h = harness({ concept: makeConcept() });
+    h.saver.start();
+    h.play(2 * MIN);
+    h.saver.finish({ levels: 1 });
+    await flush();
+    expect(h.reports).toHaveLength(0);
+  });
+
+  it('setConcept files each stretch under its own concept, levels and xp included', async () => {
+    const h = harness();
+    h.saver.start();
+    h.saver.setConcept('SMS');
+    h.play(30 * SEC);
+    h.saver.add({ levels: 1, xp: 10 });
+    h.saver.setConcept('EMAIL');
+    h.play(20 * SEC);
+    h.saver.finish({ levels: 1, xp: 10 });
+    await flush();
+    expect(h.reports.map((r) => [r.conceptId, r.timePlayedMs, r.levelsCompleted, r.xpEarned])).toEqual([
+      ['SMS', 30000, 1, 10],
+      ['EMAIL', 20000, 1, 10],
+    ]);
+  });
+
+  it('with perConcept, a stretch with no concept is dropped, never sent without one', async () => {
+    const h = harness({ perConcept: true });
+    h.saver.start();
+    h.play(20 * SEC); // before the first setConcept: dropped
+    h.saver.setConcept('SMS');
+    h.play(10 * SEC);
+    h.saver.setConcept(null); // an unknown channel: dropped
+    h.play(30 * SEC);
+    h.saver.setConcept('DM');
+    h.play(10 * SEC);
+    h.saver.finish();
+    await flush();
+    expect(h.reports.map((r) => [r.conceptId, r.timePlayedMs])).toEqual([
+      ['SMS', 10000],
+      ['DM', 10000],
+    ]);
+    expect(h.reports.every((r) => typeof r.conceptId === 'string')).toBe(true);
+  });
+
+  it('a new run never inherits the last run’s concept', async () => {
+    const h = harness({ perConcept: true });
+    h.saver.start();
+    h.saver.setConcept('SMS');
+    h.play(10 * SEC);
+    h.saver.finish();
+    h.saver.start();
+    h.play(20 * SEC); // run 2, before its first setConcept: dropped, NOT filed under SMS
+    h.saver.setConcept('DM');
+    h.play(10 * SEC);
+    h.saver.finish();
+    await flush();
+    expect(h.reports.map((r) => [r.clientSessionId, r.conceptId, r.timePlayedMs])).toEqual([
+      ['run-1', 'SMS', 10000],
+      ['run-2', 'DM', 10000],
+    ]);
+  });
+
+  it('without perConcept or setConcept, pieces carry no conceptId (the host resolves it)', async () => {
+    const h = harness();
+    h.saver.start();
+    h.play(10 * SEC);
+    h.saver.finish();
+    await flush();
+    expect(h.reports[0]).not.toHaveProperty('conceptId');
+  });
+});
