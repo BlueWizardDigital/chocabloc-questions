@@ -18,7 +18,8 @@
 // A format may render as bare text only if it is listed in TEXT_ONLY_BY_DESIGN
 // below, with a reason. A format in neither bucket fails. Adding a format
 // therefore forces a deliberate choice: wire a renderer, or say why none is
-// needed.
+// needed. A canvas format may paint nothing only if it is listed in
+// NO_PICTURE_BY_DESIGN, and then its canvas must be hidden, not a blank box.
 
 import { expect } from '@esm-bundle/chai';
 import '../../src/full';
@@ -124,6 +125,13 @@ const TEXT_ONLY_BY_DESIGN: Record<string, string> = {
   // synthesised content.coinScene that routes them to the coin pile, and their
   // representative rows below all have usable coins. Allowlisting them would
   // excuse exactly the bug that shipped: "What coin is this?" with no coins.
+};
+
+// A format here reaches <choca-canvas-question> but must paint nothing and hide
+// the canvas, because any picture would give the answer away. The reason must
+// say why, and the stem must be answerable alone.
+const NO_PICTURE_BY_DESIGN: Record<string, string> = {
+  geometry_attributes: '"Which shape has …?" asks for a shape, so drawing one shows the answer',
 };
 
 /* ================================================================
@@ -245,9 +253,16 @@ const REPRESENTATIVE_ROWS: Record<string, Row | Row[]> = {
   geometry_area: row('geometry_area', {
     content: { shape: 'rectangle', operands: [4, 5] }, answer: 20,
   }),
-  geometry_perimeter: row('geometry_perimeter', {
-    content: { shape: 'rectangle', operands: [4, 5] }, answer: 18,
-  }),
+  // The operand count picks the draw: two are length and width, three or more
+  // are the sides of a polygon.
+  geometry_perimeter: [
+    row('geometry_perimeter', {
+      content: { shape: 'rectangle', operands: [4, 5] }, answer: 18,
+    }),
+    row('geometry_perimeter', {
+      imageType: 'shape_2d', content: { shape: 'triangle', operands: [13, 17, 20] }, answer: 50,
+    }),
+  ],
   geometry_circumference: row('geometry_circumference', {
     content: { radius: 3 }, answer: 18.85,
   }),
@@ -400,6 +415,8 @@ type Rendered = {
   visualNodes: number;
   /** True when the only thing painted was a "?" — the shape-fallback signature. */
   drewOnlyFallbackGlyph: boolean;
+  /** The canvas renderer's `[part="canvas"]` carries `hidden`. */
+  canvasHidden: boolean;
   stem: string;
 };
 
@@ -426,7 +443,9 @@ async function render(q: NormalizedQuestion): Promise<Rendered> {
     const fallbackGlyph = isFallbackGlyph(spy.paints, spy.glyphs);
 
     if (!inner) {
-      return { renderer: 'text-fallback', visualNodes: 0, drewOnlyFallbackGlyph: false, stem };
+      return {
+        renderer: 'text-fallback', visualNodes: 0, drewOnlyFallbackGlyph: false, canvasHidden: false, stem,
+      };
     }
 
     const tag = inner.tagName.toLowerCase();
@@ -435,9 +454,11 @@ async function render(q: NormalizedQuestion): Promise<Rendered> {
       ? spy.paints.length
       : VISUAL_NODES[tag]!(inner.shadowRoot!);
 
+    const canvas = inner.shadowRoot?.querySelector('[part="canvas"]') as HTMLElement | null;
+
     return {
       renderer: tag, visualNodes: count,
-      drewOnlyFallbackGlyph: fallbackGlyph, stem: stem || innerStem,
+      drewOnlyFallbackGlyph: fallbackGlyph, canvasHidden: canvas?.hidden ?? false, stem: stem || innerStem,
     };
   } finally {
     spy.restore();
@@ -485,6 +506,14 @@ describe('format conformance — every dispatched format renders something', () 
           return;
         }
 
+        if (NO_PICTURE_BY_DESIGN[format]) {
+          expect(out.renderer, `${label}: expected the canvas renderer`).to.equal('choca-canvas-question');
+          expect(out.visualNodes, `${label}: painted a picture that gives the answer away`).to.equal(0);
+          expect(out.canvasHidden, `${label}: an unused canvas must be hidden, not an empty box`).to.equal(true);
+          expect(out.stem, `${label}: no picture and an empty stem`).to.not.equal('');
+          return;
+        }
+
         expect(
           out.drewOnlyFallbackGlyph,
           `${label}: the renderer drew the "?" fallback and nothing else — ` +
@@ -501,15 +530,17 @@ describe('format conformance — every dispatched format renders something', () 
 });
 
 describe('the allowlist itself', () => {
+  const allowlisted = { ...TEXT_ONLY_BY_DESIGN, ...NO_PICTURE_BY_DESIGN };
+
   it('every allowlisted format is still a dispatched format', () => {
     const dispatched = new Set(DISPATCH_FORMATS);
-    const stale = Object.keys(TEXT_ONLY_BY_DESIGN).filter((f) => !dispatched.has(f));
+    const stale = Object.keys(allowlisted).filter((f) => !dispatched.has(f));
     expect(stale, `allowlist entries for formats that no longer exist: ${stale.join(', ')}`)
       .to.have.lengthOf(0);
   });
 
   it('every allowlist entry carries a reason', () => {
-    const empty = Object.entries(TEXT_ONLY_BY_DESIGN)
+    const empty = Object.entries(allowlisted)
       .filter(([, reason]) => reason.trim().length === 0)
       .map(([f]) => f);
     expect(empty, `allowlist entries with no reason: ${empty.join(', ')}`).to.have.lengthOf(0);

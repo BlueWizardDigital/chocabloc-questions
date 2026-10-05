@@ -152,15 +152,21 @@ export class ChocaCanvasQuestion extends HTMLElement {
 
   private _renderCanvas(): void {
     const q = this._question!;
+    // "Which shape has …?" asks for a shape, so any picture of one is the
+    // answer (and bank rows carry no `answer` to draw). No picture, and the
+    // canvas is hidden so there is no empty box above the choices.
+    const noPicture = q.format === 'geometry_attributes';
+    this._canvas.hidden = noPicture;
     const ctx = this._canvas.getContext('2d');
     if (!ctx) return;
     const w = this._canvas.width;
     const h = this._canvas.height;
+    if (noPicture) {
+      ctx.clearRect(0, 0, w, h);
+      return;
+    }
 
     switch (q.format) {
-      case 'geometry_attributes':
-        drawShape2D(ctx, w, h, q.answer as string);
-        break;
       case 'geometry_classify':
         if (q.content.dimension === '3D') drawShape3D(ctx, w, h, q.content.shape);
         else drawShape2D(ctx, w, h, q.content.shape);

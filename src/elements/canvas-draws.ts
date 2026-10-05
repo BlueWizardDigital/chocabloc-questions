@@ -366,11 +366,51 @@ export function drawTriangleAngles(
   ctx.fillText('?', cx + size * 0.8 + 10, cy + size * 0.6 + 5);
 }
 
+// A polygon's sides in order, as a regular outline with each side labelled
+// just outside its midpoint. Not to scale: bank side lists often can't close a
+// real shape (a "triangle" with sides 20, 2, 9).
+function drawLabeledPolygon(
+  ctx: CanvasRenderingContext2D, w: number, h: number, sides: readonly number[],
+): void {
+  const n = sides.length;
+  const r = Math.min(w, h) * 0.36;
+  const apothem = r * Math.cos(Math.PI / n);
+  // Vertices at π/2 ± π/n straddle straight down, so the bottom edge is flat.
+  const start = Math.PI / 2 + Math.PI / n;
+  // An odd polygon has a vertex on top, not an edge: nudge it down to centre it.
+  const cx = w / 2;
+  const cy = h / 2 + ((n % 2 === 1 ? r : apothem) - apothem) / 2;
+  ctx.fillStyle = '#fff3e0'; ctx.strokeStyle = '#ff9800'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  drawRegularPolygon(ctx, cx, cy, r, n, start);
+  ctx.fill(); ctx.stroke();
+  ctx.save();
+  ctx.fillStyle = '#333'; ctx.font = '11px Arial';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const step = (Math.PI * 2) / n;
+  const labelR = apothem + 14;
+  sides.forEach((len, i) => {
+    // Side i runs from vertex i to vertex i + 1.
+    const a = start + (i + 0.5) * step;
+    ctx.fillText(String(len), cx + labelR * Math.cos(a), cy + labelR * Math.sin(a));
+  });
+  ctx.restore();
+}
+
+/**
+ * Two operands are a length and a width (GEOM-PERIMETER-RECTANGLE / -DECIMAL):
+ * a rectangle to scale. Three or more are a polygon's sides in order
+ * (GEOM-PERIMETER-POLYGON). The perimeter is the answer, so it is never drawn.
+ */
 export function drawPerimeterShape(
-  ctx: CanvasRenderingContext2D, w: number, h: number, operands: [number, number],
+  ctx: CanvasRenderingContext2D, w: number, h: number, operands: readonly number[],
 ): void {
   ctx.clearRect(0, 0, w, h);
-  const [l, wd] = operands;
+  if (operands.length >= 3) {
+    drawLabeledPolygon(ctx, w, h, operands);
+    return;
+  }
+  const l = operands[0]!, wd = operands[1]!;
   const scale = Math.min((w - 60) / l, (h - 40) / wd);
   const rectW = l * scale, rectH = wd * scale;
   const x = (w - rectW) / 2, y = (h - rectH) / 2;

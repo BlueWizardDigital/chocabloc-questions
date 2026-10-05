@@ -23,7 +23,7 @@ themes are expected to meet the same bar.
 |------|-----------------|
 | `container` | Outer flex column wrapping prompt + canvas + choices |
 | `prompt` | Question stem text |
-| `canvas` | Visual area (coin pile, graph, etc.) |
+| `canvas` | Visual area (coin pile, graph, etc.). Carries `hidden` on `geometry_attributes` questions, which have no picture (beta.18+); a `display` set on this part would show an empty box |
 
 ## `<choca-coin-pile>` specific
 
