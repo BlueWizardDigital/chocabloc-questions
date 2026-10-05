@@ -68,6 +68,18 @@ export function drawShape2D(
       ctx.closePath();
       break;
     }
+    // The same size as 'trapezoid', but with a square left side: no line of
+    // symmetry. Symmetry questions draw this one (see ChocaCanvasQuestion).
+    case 'right trapezoid': {
+      const tw = size * 1.2;
+      const th = size * 0.8;
+      ctx.moveTo(cx - tw / 2, cy - th / 2);
+      ctx.lineTo(cx + tw * 0.2, cy - th / 2);
+      ctx.lineTo(cx + tw / 2, cy + th / 2);
+      ctx.lineTo(cx - tw / 2, cy + th / 2);
+      ctx.closePath();
+      break;
+    }
     case 'parallelogram': {
       const pw = size * 1.3;
       const ph = size * 0.8;
@@ -756,17 +768,6 @@ const B10D = 20;
 const B10_FILL = {
   ones: '#90caf9', tens: '#a5d6a7', hundreds: '#ffcc80', thousands: '#ef9a9a',
 };
-const B10_HIGHLIGHT = '#e91e63';
-
-function b10Decompose(n: number): B10 {
-  const out: B10 = {};
-  if (n >= 1000) { out.thousands = Math.floor(n / 1000); n %= 1000; }
-  if (n >= 100) { out.hundreds = Math.floor(n / 100); n %= 100; }
-  if (n >= 10) { out.tens = Math.floor(n / 10); n %= 10; }
-  if (n > 0) out.ones = n;
-  return out;
-}
-
 function b10W(blocks: B10): number {
   let w = 0;
   if ((blocks.thousands ?? 0) > 0) w += (blocks.thousands!) * (B10RH + B10D + 8);
@@ -789,7 +790,7 @@ type B10Fills = { ones: string; tens: string; hundreds: string; thousands: strin
 function b10Render(
   ctx: CanvasRenderingContext2D, blocks: B10,
   x0: number, y0: number,
-  fills: B10Fills, stroke: string, highlight?: string,
+  fills: B10Fills, stroke: string,
 ): void {
   let x = x0;
   const kCount = blocks.thousands ?? 0;
@@ -797,14 +798,12 @@ function b10Render(
   const tCount = blocks.tens ?? 0;
   const oCount = blocks.ones ?? 0;
   const flatS = B10RH;
-  const hl = (place: string) => highlight === place;
+  const lw = 1.5;
 
   for (let i = 0; i < kCount; i++) {
-    const sk = hl('thousands') ? B10_HIGHLIGHT : stroke;
-    const lw = hl('thousands') ? 2.5 : 1.5;
     ctx.fillStyle = fills.thousands;
     ctx.fillRect(x, y0 + B10D, flatS, flatS);
-    ctx.strokeStyle = sk; ctx.lineWidth = lw;
+    ctx.strokeStyle = stroke; ctx.lineWidth = lw;
     ctx.strokeRect(x, y0 + B10D, flatS, flatS);
     ctx.lineWidth = 1;
     for (let r = 1; r < 10; r++) {
@@ -823,7 +822,7 @@ function b10Render(
     ctx.lineTo(x + flatS, y0 + B10D);
     ctx.closePath();
     ctx.fill(); ctx.globalAlpha = 1;
-    ctx.strokeStyle = sk; ctx.lineWidth = lw; ctx.stroke();
+    ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke();
     ctx.fillStyle = fills.thousands; ctx.globalAlpha = 0.8;
     ctx.beginPath();
     ctx.moveTo(x + flatS, y0 + B10D);
@@ -836,11 +835,9 @@ function b10Render(
   }
 
   for (let i = 0; i < hCount; i++) {
-    const sh = hl('hundreds') ? B10_HIGHLIGHT : stroke;
-    const lw = hl('hundreds') ? 2.5 : 1.5;
     ctx.fillStyle = fills.hundreds;
     ctx.fillRect(x, y0, flatS, flatS);
-    ctx.strokeStyle = sh; ctx.lineWidth = lw;
+    ctx.strokeStyle = stroke; ctx.lineWidth = lw;
     ctx.strokeRect(x, y0, flatS, flatS);
     ctx.lineWidth = 1;
     for (let r = 1; r < 10; r++) {
@@ -856,11 +853,9 @@ function b10Render(
 
   const rodTop = y0;
   for (let i = 0; i < tCount; i++) {
-    const st = hl('tens') ? B10_HIGHLIGHT : stroke;
-    const lw = hl('tens') ? 2.5 : 1.5;
     ctx.fillStyle = fills.tens;
     ctx.fillRect(x, rodTop, B10C, B10RH);
-    ctx.strokeStyle = st; ctx.lineWidth = lw;
+    ctx.strokeStyle = stroke; ctx.lineWidth = lw;
     ctx.strokeRect(x, rodTop, B10C, B10RH);
     ctx.lineWidth = 1;
     for (let r = 1; r < 10; r++) {
@@ -871,8 +866,6 @@ function b10Render(
   }
 
   if (oCount > 0) {
-    const so = hl('ones') ? B10_HIGHLIGHT : stroke;
-    const lw = hl('ones') ? 2.5 : 1.5;
     const cols = Math.min(oCount, 5);
     const rows = Math.ceil(oCount / 5);
     const hasVertical = hCount > 0 || tCount > 0 || kCount > 0;
@@ -886,7 +879,7 @@ function b10Render(
         const by = cubeTop + r * (B10C + B10G);
         ctx.fillStyle = fills.ones;
         ctx.fillRect(bx, by, B10C, B10C);
-        ctx.strokeStyle = so; ctx.lineWidth = lw;
+        ctx.strokeStyle = stroke; ctx.lineWidth = lw;
         ctx.strokeRect(bx, by, B10C, B10C);
         drawn++;
       }
@@ -897,7 +890,7 @@ function b10Render(
 function b10ScaledSet(
   ctx: CanvasRenderingContext2D, blocks: B10,
   ox: number, oy: number, availW: number, availH: number,
-  fills: B10Fills, stroke: string, highlight?: string,
+  fills: B10Fills, stroke: string,
 ): void {
   const natW = b10W(blocks);
   const natH = b10H(blocks);
@@ -909,14 +902,14 @@ function b10ScaledSet(
   ctx.save();
   ctx.translate(offX, offY);
   ctx.scale(scale, scale);
-  b10Render(ctx, blocks, 0, 0, fills, stroke, highlight);
+  b10Render(ctx, blocks, 0, 0, fills, stroke);
   ctx.restore();
 }
 
 export function drawBase10Blocks(
   ctx: CanvasRenderingContext2D, w: number, h: number,
   content: {
-    operation?: string; blocks?: B10; number?: number; place?: string;
+    operation?: string; blocks?: B10;
     tens_shown?: number; ones_shown?: number;
     set_a?: { number: number; blocks: B10 };
     set_b?: { number: number; blocks: B10 };
@@ -948,17 +941,11 @@ export function drawBase10Blocks(
     return;
   }
 
-  let blocks: B10;
-  let highlightPlace: string | undefined;
-  if (op === 'base10_regroup') {
-    blocks = { tens: content.tens_shown ?? 0, ones: content.ones_shown ?? 0 };
-  } else if (op === 'base10_block_count' && content.number !== undefined) {
-    blocks = b10Decompose(content.number);
-    highlightPlace = content.place;
-  } else {
-    blocks = content.blocks ?? {};
-  }
-  b10ScaledSet(ctx, blocks, 0, 0, w, h, fills, stroke, highlightPlace);
+  // base10_block_count never gets here: it has no picture (ChocaCanvasQuestion).
+  const blocks: B10 = op === 'base10_regroup'
+    ? { tens: content.tens_shown ?? 0, ones: content.ones_shown ?? 0 }
+    : content.blocks ?? {};
+  b10ScaledSet(ctx, blocks, 0, 0, w, h, fills, stroke);
 }
 
 export function drawLabeled3D(

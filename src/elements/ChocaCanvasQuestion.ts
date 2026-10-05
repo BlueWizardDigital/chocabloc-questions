@@ -140,7 +140,11 @@ export class ChocaCanvasQuestion extends HTMLElement {
       else if (q.format === 'base10_blocks') {
         const op = q.content.operation;
         if (op === 'base10_compare') text = 'Which set shows a greater number?';
-        else if (op === 'base10_block_count' && q.content.place) text = `How many ${q.content.place} blocks?`;
+        else if (op === 'base10_block_count' && q.content.place) {
+          // No picture for this one, so the stem must name the number.
+          const n = q.content.number;
+          text = n === undefined ? `How many ${q.content.place} blocks?` : `How many ${q.content.place} blocks are in ${n}?`;
+        }
         else if (op === 'base10_regroup') text = 'How can you regroup these blocks?';
         else text = 'What number do these blocks show?';
       }
@@ -152,10 +156,16 @@ export class ChocaCanvasQuestion extends HTMLElement {
 
   private _renderCanvas(): void {
     const q = this._question!;
-    // "Which shape has …?" asks for a shape, so any picture of one is the
-    // answer (and bank rows carry no `answer` to draw). No picture, and the
-    // canvas is hidden so there is no empty box above the choices.
-    const noPicture = q.format === 'geometry_attributes';
+    // No picture, and the canvas hidden so there is no empty box above the
+    // choices, where any picture would give the answer away:
+    // - "Which shape has …?" asks for a shape, so a picture of one is the answer
+    //   (and bank rows carry no `answer` to draw).
+    // - "How many tens blocks are in 6378?" names the number; drawing it in
+    //   blocks counts out the answer (beta.19). A choices-only bank row keeps
+    //   its own format name, base10_block_count, instead of base10_blocks.
+    const format: string = q.format;
+    const noPicture = format === 'geometry_attributes' || format === 'base10_block_count'
+      || (q.format === 'base10_blocks' && q.content.operation === 'base10_block_count');
     this._canvas.hidden = noPicture;
     const ctx = this._canvas.getContext('2d');
     if (!ctx) return;
@@ -207,8 +217,10 @@ export class ChocaCanvasQuestion extends HTMLElement {
         break;
       case 'geometry_symmetry':
         // The shape only: the child finds the lines. Drawing them (as before
-        // beta.19) let the child count the answer off the picture.
-        drawShape2D(ctx, w, h, q.content.shape);
+        // beta.19) let the child count the answer off the picture. The bank's
+        // trapezoid rows have 0 lines, but the usual trapezoid is drawn
+        // isosceles (1 line), so these questions get a right trapezoid.
+        drawShape2D(ctx, w, h, q.content.shape.toLowerCase() === 'trapezoid' ? 'right trapezoid' : q.content.shape);
         break;
       case 'geometry_classify_triangle':
         drawShape2D(ctx, w, h, 'triangle');

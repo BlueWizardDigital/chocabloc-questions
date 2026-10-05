@@ -134,6 +134,7 @@ const TEXT_ONLY_BY_DESIGN: Record<string, string> = {
 // say why, and the stem must be answerable alone.
 const NO_PICTURE_BY_DESIGN: Record<string, string> = {
   geometry_attributes: '"Which shape has …?" asks for a shape, so drawing one shows the answer',
+  base10_block_count: '"How many tens blocks are in 6378?" names the number; drawing it in blocks counts out the answer',
 };
 
 // A picture must not print its own answer (beta.19: a radius label on "What is
@@ -340,7 +341,7 @@ const REPRESENTATIVE_ROWS: Record<string, Row | Row[]> = {
     content: { operation: 'base10_count', blocks: { tens: 2, ones: 5 }, number: 25 }, answer: 25,
   }),
   base10_block_count: row('base10_block_count', {
-    content: { operation: 'base10_block_count', blocks: { tens: 4, ones: 1 }, place: 'tens' },
+    content: { operation: 'base10_block_count', number: 41, place: 'tens' },
     answer: 4,
   }),
   base10_regroup: row('base10_regroup', {

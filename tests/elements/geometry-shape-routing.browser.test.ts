@@ -494,18 +494,72 @@ const SYMMETRY: { shape: string; lines: number; distractors: number[] }[] = [
   { shape: 'trapezoid', lines: 0, distractors: [3, 4, 2] },
 ];
 
+/** The drawn outline's corners: a rect's four, or the path's points without the closing repeat. */
+function outlineCorners(calls: CtxCall[]): Pt[] {
+  const rect = named('rect', calls)[0];
+  if (rect) {
+    const [x, y, w, h] = rect.args as number[];
+    return [{ x: x!, y: y! }, { x: x! + w!, y: y! }, { x: x! + w!, y: y! + h! }, { x: x!, y: y! + h! }];
+  }
+  const path = calls.filter((c) => c.fn === 'moveTo' || c.fn === 'lineTo').map(pt);
+  return path.filter((p, i) => !path.slice(0, i).some((q) => dist(p, q) < 1e-6));
+}
+
+/**
+ * How many lines of symmetry a convex polygon has. Every axis passes through
+ * the centre of the corners and through a corner or the middle of a side, so
+ * those are the only candidates. An axis counts when reflecting every corner
+ * across it lands on a corner.
+ */
+function symmetryLines(corners: Pt[]): number {
+  const n = corners.length;
+  const c = { x: corners.reduce((s, p) => s + p.x, 0) / n, y: corners.reduce((s, p) => s + p.y, 0) / n };
+  const through = [...corners, ...corners.map((p, i) => ({
+    x: (p.x + corners[(i + 1) % n]!.x) / 2, y: (p.y + corners[(i + 1) % n]!.y) / 2,
+  }))];
+  const angles: number[] = [];
+  for (const q of through) {
+    if (dist(q, c) < 1e-9) continue;
+    const a = ((Math.atan2(q.y - c.y, q.x - c.x) % Math.PI) + Math.PI) % Math.PI;
+    if (!angles.some((b) => Math.abs(b - a) < 1e-6 || Math.abs(Math.abs(b - a) - Math.PI) < 1e-6)) angles.push(a);
+  }
+  return angles.filter((a) => {
+    const ux = Math.cos(a), uy = Math.sin(a);
+    return corners.every((p) => {
+      const vx = p.x - c.x, vy = p.y - c.y;
+      const d = vx * ux + vy * uy;
+      const mirrored = { x: c.x + 2 * d * ux - vx, y: c.y + 2 * d * uy - vy };
+      return corners.some((q) => dist(q, mirrored) < 1e-6);
+    });
+  }).length;
+}
+
 describe('geometry_symmetry draws the shape, not its lines of symmetry', () => {
   for (const s of SYMMETRY) {
-    it(`${s.shape}: the same picture as "What shape is this?", nothing more`, () => {
-      const { calls, el } = render(symmetryWire(s.shape, s.lines, s.distractors));
-      const shapeOnly = render(identify(s.shape, 'shape_2d')).calls;
+    describe(s.shape, () => {
+      it('draws one outline and nothing else: no dashed lines, no text', () => {
+        const { calls, el } = render(symmetryWire(s.shape, s.lines, s.distractors));
 
-      expect(calls, `${s.shape}: drew more than the shape (${s.lines} lines would be the answer)`)
-        .to.deep.equal(shapeOnly);
-      expect(named('setLineDash', calls), 'no dashed lines').to.have.lengthOf(0);
-      expect(choiceLabels(el)).to.have.lengthOf(4);
+        expect(named('setLineDash', calls), 'no dashed lines').to.have.lengthOf(0);
+        expect(labels(calls)).to.deep.equal([]);
+        expect(named('moveTo', calls).length + named('rect', calls).length, 'one outline').to.equal(1);
+        expect(choiceLabels(el)).to.have.lengthOf(4);
+      });
+
+      it(`the drawn shape has ${s.lines} lines of symmetry, the row's answer`, () => {
+        const { calls } = render(symmetryWire(s.shape, s.lines, s.distractors));
+
+        expect(symmetryLines(outlineCorners(calls))).to.equal(s.lines);
+      });
     });
   }
+
+  it('every shape but the trapezoid is the same picture as "What shape is this?"', () => {
+    for (const s of SYMMETRY.filter((x) => x.shape !== 'trapezoid')) {
+      expect(render(symmetryWire(s.shape, s.lines, s.distractors)).calls, s.shape)
+        .to.deep.equal(render(identify(s.shape, 'shape_2d')).calls);
+    }
+  });
 
   it('a row that carries the answer draws the same', () => {
     const { calls } = render({
@@ -713,5 +767,73 @@ describe('geometry_angle_classify draws every type of angle the same colour', ()
     for (const a of angles) {
       expect(labels(render(angleWire(a, ANGLE_TYPES)).calls)).to.deep.equal([`${a}°`]);
     }
+  });
+});
+
+/* ---------- base10_block_count: "How many tens blocks are in 6378?" ----------
+   The picture drew the number in blocks with the asked place highlighted, so
+   counting the highlighted blocks was the answer. The stem names the number,
+   so it is answerable alone: no picture, as for geometry_attributes. */
+
+// What the bank sends: its content allow-list keeps only `operation` here.
+const blockCountWire = () => wire({
+  id: 'BASE10-BLOCK-COUNT-6378-tens',
+  skillIds: ['BASE10-BLOCK-COUNT'],
+  format: 'base10_block_count',
+  imageType: 'base10_blocks',
+  content: { operation: 'base10_block_count' },
+  questionText: 'How many tens blocks are in 6378?',
+  choices: ['7', '6', '3', '8'].map((value) => ({ value })),
+});
+
+// The generator's row, as an assignment snapshot carries it: number and place.
+const blockCountRow = (extra: Record<string, unknown> = {}) => normalizeQuestion({
+  id: 'BASE10-BLOCK-COUNT-347-tens',
+  skill_ids: ['BASE10-BLOCK-COUNT'],
+  format: 'base10_block_count',
+  content: { number: 347, place: 'tens', operation: 'base10_block_count' },
+  answer: 4,
+  distractors: [{ value: 3, error_type: 'wrong-place' }, { value: 7, error_type: 'wrong-place' }],
+  ...extra,
+});
+
+describe('base10_block_count draws no picture', () => {
+  it('a choices-only row renders its prompt and four choices', () => {
+    const { el } = render(blockCountWire());
+
+    expect(el.shadowRoot!.querySelector('[part="prompt"]')!.textContent).to.equal('How many tens blocks are in 6378?');
+    expect(choiceLabels(el)).to.have.members(['7', '6', '3', '8']);
+  });
+
+  it('a row that carries the number paints nothing', () => {
+    const { calls, el } = render(blockCountRow({ questionText: 'How many tens blocks are in 347?' }));
+
+    expect(calls, 'the blocks for 347 count out the answer').to.have.lengthOf(0);
+    expect(choiceLabels(el)).to.include('4');
+  });
+
+  it('hides the canvas, so there is no empty box between the prompt and the choices', () => {
+    for (const [label, q] of [['choices-only', blockCountWire()], ['with number', blockCountRow()]] as const) {
+      const canvas = canvasOf(render(q).el);
+      expect(canvas.hidden, `${label}: hidden`).to.equal(true);
+      expect(getComputedStyle(canvas).display, `${label}: display`).to.equal('none');
+    }
+  });
+
+  it('shows the canvas again for a base-10 question that has a picture', () => {
+    const { el } = render(blockCountRow());
+    (el as HTMLElement & { question: unknown }).question = normalizeQuestion({
+      id: 'BASE10-ONES-TENS-VISUAL-34', skill_ids: ['BASE10-ONES-TENS-VISUAL'], format: 'base10_count',
+      content: { number: 34, blocks: { tens: 3, ones: 4 }, operation: 'base10_count' },
+      answer: 34, distractors: [{ value: 43, error_type: 'swapped-places' }],
+    });
+
+    expect(canvasOf(el).hidden).to.equal(false);
+  });
+
+  it('with no question text, the stem names the number', () => {
+    const { el } = render(blockCountRow());
+
+    expect(el.shadowRoot!.querySelector('[part="prompt"]')!.textContent).to.equal('How many tens blocks are in 347?');
   });
 });

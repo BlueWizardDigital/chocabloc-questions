@@ -7,16 +7,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [0.6.0-beta.19] — 2026-10-05
 
-**Patch**: five pictures no longer show the child the answer. No export, attribute, part or CSS
+**Patch**: six pictures no longer show the child the answer. No export, attribute, part or CSS
 var added, renamed or removed. Recipes named below are from server-new's `recipes.json`.
 
 ### Fixed
 
 - **`geometry_symmetry` no longer draws the lines of symmetry.** "How many lines of symmetry does
   a hexagon have?" drew `lines_of_symmetry` dashed lines through the shape, so the child could
-  count the answer. It now draws the shape only, the same picture as "What shape is this?".
-  **Visible change for games serving GEOM-SYMMETRY-BASIC** (`bloc-hero-geo`,
-  `geometry-blocs-default`).
+  count the answer. It now draws the shape only, the same picture as "What shape is this?",
+  except the trapezoid: the usual one is isosceles (1 line of symmetry) but the bank's trapezoid
+  rows answer 0, so these questions draw a right trapezoid, which has none. The other seven
+  shapes already had exactly as many lines as their answer. **Visible change for games serving
+  GEOM-SYMMETRY-BASIC** (`bloc-hero-geo`, `geometry-blocs-default`).
+- **`base10_block_count` has no picture.** "How many tens blocks are in 6378?" drew 6378 in blocks
+  with the tens highlighted, so counting the highlighted blocks gave the answer. The stem names
+  the number, so the canvas is now cleared and hidden, as for `geometry_attributes` in beta.18.
+  A row with no question text gets a stem that names the number ("How many tens blocks are in
+  347?"). **Visible change:** no picture on these questions; no recipe serves BASE10-BLOCK-COUNT
+  today. A page that sets `display` on `::part(canvas)` overrides `hidden` and shows an empty box.
 - **`geometry_face_identify` highlights the face it asks about, and never names it.** The stem is
   "What shape is the highlighted face of this pyramid?". Only the cube and the rectangular prism
   had a highlighted face; the other six rows (pyramid ×2, triangular prism ×2, cylinder, cone)
