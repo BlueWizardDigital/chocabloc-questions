@@ -4,6 +4,7 @@ import '../../src/elements/ChocaTableQuestion';
 import '../../src/elements/ChocaPatternQuestion';
 import '../../src/elements/ChocaNumberLineQuestion';
 import '../../src/elements/ChocaChoicePad';
+import { normalizeQuestion } from '../../src/helpers/normalizer';
 
 /* ---------- helpers ---------- */
 
@@ -404,5 +405,54 @@ describe('<choca-number-line-question>', () => {
     expect(captured).to.not.be.null;
     expect(captured!.correct).to.equal(true);
     expect(captured!.studentAnswer).to.equal(12);
+  });
+});
+
+/* ================================================================
+   beta.19 — the number line's last tick was the product, printed.
+   INT-MULT-NUMBER-LINE rows (200 on dev), sent choices-only.
+   ================================================================ */
+
+const numberLineWire = (a: number, b: number, choices: number[]) => normalizeQuestion({
+  id: `INT-MULT-NUMBER-LINE-${a}-${b}`,
+  skillIds: ['INT-MULT-NUMBER-LINE'],
+  format: 'multiplication',
+  imageType: 'number_line',
+  difficulty: 'medium',
+  content: { operands: [a, b], operation: 'multiplication' },
+  questionText: `${a < 0 ? `(${a})` : a} × ${b < 0 ? `(${b})` : b} = ?`,
+  choices: choices.map((v) => ({ value: String(v) })),
+  answerToken: 'test-token-not-real',
+});
+
+/** The tick labels, left to right. */
+function tickLabels(el: HTMLElement): string[] {
+  return [...el.shadowRoot!.querySelectorAll('[part="number-line"] svg text')].map((t) => t.textContent ?? '');
+}
+
+describe('<choca-number-line-question> never prints the product', () => {
+  // [jumps, step, product]: negative and positive, both directions.
+  const ROWS: [number, number, number][] = [[-6, 4, -24], [3, -10, -30], [-9, 3, -27], [3, 4, 12], [-3, -4, 12]];
+
+  for (const [a, b, product] of ROWS) {
+    it(`${a} × ${b}: the end tick reads "?", every other tick keeps its value`, async () => {
+      const el = mount(`<choca-number-line-question answer-mode="mc" seed="42"></choca-number-line-question>`);
+      await setQuestion(el, numberLineWire(a, b, [product, product + 1, -product, product - 1]));
+
+      const step = a < 0 ? -b : b;
+      const ticks = Array.from({ length: Math.abs(a) + 1 }, (_, i) => i * step).sort((x, y) => x - y);
+      const expected = ticks.map((v) => (v === product ? '?' : String(v)));
+
+      expect(tickLabels(el)).to.deep.equal(expected);
+      expect(tickLabels(el), 'the product is the answer').to.not.include(String(product));
+      expect(el.shadowRoot!.querySelectorAll('path'), 'one arc per jump').to.have.lengthOf(Math.abs(a));
+    });
+  }
+
+  it('a row that carries the answer hides it the same way', async () => {
+    const el = mount(`<choca-number-line-question answer-mode="mc" seed="42"></choca-number-line-question>`);
+    await setQuestion(el, numberLineQ());
+
+    expect(tickLabels(el)).to.deep.equal(['0', '4', '8', '?']);
   });
 });

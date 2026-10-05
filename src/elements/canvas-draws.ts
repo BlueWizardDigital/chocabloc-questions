@@ -91,48 +91,59 @@ export function drawShape2D(
   ctx.stroke();
 }
 
-type IsoFn = (x: number, y: number, z: number) => { x: number; y: number };
+type Pt = { x: number; y: number };
+type IsoFn = (x: number, y: number, z: number) => Pt;
 
-function drawCube(ctx: CanvasRenderingContext2D, iso: IsoFn): void {
-  const v = [
-    iso(-1, -1, -1), iso(1, -1, -1), iso(1, -1, 1), iso(-1, -1, 1),
-    iso(-1, 1, -1), iso(1, 1, -1), iso(1, 1, 1), iso(-1, 1, 1),
+// The 3D shapes' geometry lives in the *Points / *Geom helpers below, so the
+// face highlight (drawFaceHighlight) outlines exactly the face that was drawn.
+
+/** Centre and scale every 3D shape is drawn at. */
+function frame3D(w: number, h: number): { cx: number; cy: number; s: number } {
+  return { cx: w / 2, cy: h / 2, s: Math.min(w, h) * 0.3 };
+}
+
+function isoProjection(cx: number, cy: number, s: number): IsoFn {
+  return (x, y, z) => ({
+    x: cx + (x - z) * 0.866 * s,
+    y: cy - y * s + (x + z) * 0.5 * s,
+  });
+}
+
+// Half-sizes along x, y, z.
+const CUBE_DIMS: readonly [number, number, number] = [1, 1, 1];
+const RECT_PRISM_DIMS: readonly [number, number, number] = [1.3, 0.7, 0.7];
+
+/** A box's eight corners: the bottom face is 0–3, the top face 4–7. */
+function boxCorners(iso: IsoFn, [sx, sy, sz]: readonly [number, number, number]): Pt[] {
+  return [
+    iso(-sx, -sy, -sz), iso(sx, -sy, -sz), iso(sx, -sy, sz), iso(-sx, -sy, sz),
+    iso(-sx, sy, -sz), iso(sx, sy, -sz), iso(sx, sy, sz), iso(-sx, sy, sz),
   ];
-  const faces: [number[], string][] = [
-    [[4, 5, 6, 7], '#ede7f6'],
-    [[3, 2, 6, 7], '#d1c4e9'],
-    [[2, 1, 5, 6], '#b39ddb'],
-  ];
-  for (const [indices, fill] of faces) {
+}
+
+function tracePath(ctx: CanvasRenderingContext2D, pts: readonly Pt[]): void {
+  ctx.moveTo(pts[0]!.x, pts[0]!.y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y);
+  ctx.closePath();
+}
+
+function fillFaces(ctx: CanvasRenderingContext2D, faces: readonly [Pt[], string][]): void {
+  for (const [pts, fill] of faces) {
     ctx.fillStyle = fill;
     ctx.beginPath();
-    ctx.moveTo(v[indices[0]!]!.x, v[indices[0]!]!.y);
-    for (let i = 1; i < indices.length; i++) ctx.lineTo(v[indices[i]!]!.x, v[indices[i]!]!.y);
-    ctx.closePath();
+    tracePath(ctx, pts);
     ctx.fill();
     ctx.stroke();
   }
 }
 
-function drawRectPrism(ctx: CanvasRenderingContext2D, iso: IsoFn): void {
-  const v = [
-    iso(-1.3, -0.7, -0.7), iso(1.3, -0.7, -0.7), iso(1.3, -0.7, 0.7), iso(-1.3, -0.7, 0.7),
-    iso(-1.3, 0.7, -0.7), iso(1.3, 0.7, -0.7), iso(1.3, 0.7, 0.7), iso(-1.3, 0.7, 0.7),
-  ];
-  const faces: [number[], string][] = [
-    [[4, 5, 6, 7], '#ede7f6'],
-    [[3, 2, 6, 7], '#d1c4e9'],
-    [[2, 1, 5, 6], '#b39ddb'],
-  ];
-  for (const [indices, fill] of faces) {
-    ctx.fillStyle = fill;
-    ctx.beginPath();
-    ctx.moveTo(v[indices[0]!]!.x, v[indices[0]!]!.y);
-    for (let i = 1; i < indices.length; i++) ctx.lineTo(v[indices[i]!]!.x, v[indices[i]!]!.y);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-  }
+/** A cube or a rectangular prism: its top, front and right faces. */
+function drawBox(ctx: CanvasRenderingContext2D, v: readonly Pt[]): void {
+  fillFaces(ctx, [
+    [[v[4]!, v[5]!, v[6]!, v[7]!], '#ede7f6'],
+    [[v[3]!, v[2]!, v[6]!, v[7]!], '#d1c4e9'],
+    [[v[2]!, v[1]!, v[5]!, v[6]!], '#b39ddb'],
+  ]);
 }
 
 function drawSphere(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number): void {
@@ -148,9 +159,19 @@ function drawSphere(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: nu
   ctx.stroke();
 }
 
+type RoundGeom = { rx: number; ry: number; top: number; bot: number };
+
+function cylinderGeom(cy: number, s: number): RoundGeom {
+  const h = s * 1.4;
+  return { rx: s * 0.7, ry: s * 0.25, top: cy - h / 2, bot: cy + h / 2 };
+}
+
+function coneGeom(cy: number, s: number): RoundGeom {
+  return { rx: s * 0.7, ry: s * 0.25, top: cy - s * 0.8, bot: cy + s * 0.6 };
+}
+
 function drawCylinder(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number): void {
-  const rx = s * 0.7, ry = s * 0.25, h = s * 1.4;
-  const top = cy - h / 2, bot = cy + h / 2;
+  const { rx, ry, top, bot } = cylinderGeom(cy, s);
   ctx.fillStyle = '#d1c4e9';
   ctx.beginPath(); ctx.ellipse(cx, bot, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#ede7f6';
@@ -165,8 +186,7 @@ function drawCylinder(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: 
 }
 
 function drawCone(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number): void {
-  const rx = s * 0.7, ry = s * 0.25;
-  const bot = cy + s * 0.6, top = cy - s * 0.8;
+  const { rx, ry, top, bot } = coneGeom(cy, s);
   ctx.fillStyle = '#ede7f6';
   ctx.beginPath();
   ctx.moveTo(cx, top); ctx.lineTo(cx + rx, bot);
@@ -176,45 +196,44 @@ function drawCone(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: numb
   ctx.beginPath(); ctx.ellipse(cx, bot, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 }
 
-function drawPyramid(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number): void {
-  const apex = { x: cx, y: cy - s * 0.9 };
-  const base = [
-    { x: cx - s * 0.6, y: cy + s * 0.5 }, { x: cx + s * 0.6, y: cy + s * 0.5 },
-    { x: cx + s * 0.3, y: cy + s * 0.8 }, { x: cx - s * 0.3, y: cy + s * 0.8 },
-  ];
-  const faces: [[number, number], string][] = [
-    [[0, 3], '#ede7f6'], [[0, 1], '#d1c4e9'], [[1, 2], '#b39ddb'],
-  ];
-  for (const [[a, b], fill] of faces) {
-    ctx.fillStyle = fill;
-    ctx.beginPath();
-    ctx.moveTo(apex.x, apex.y);
-    ctx.lineTo(base[a]!.x, base[a]!.y);
-    ctx.lineTo(base[b]!.x, base[b]!.y);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-  }
+/** The apex, and the base corners: back-left, back-right, front-right, front-left. */
+function pyramidPoints(cx: number, cy: number, s: number): { apex: Pt; base: Pt[] } {
+  return {
+    apex: { x: cx, y: cy - s * 0.9 },
+    base: [
+      { x: cx - s * 0.6, y: cy + s * 0.5 }, { x: cx + s * 0.6, y: cy + s * 0.5 },
+      { x: cx + s * 0.3, y: cy + s * 0.8 }, { x: cx - s * 0.3, y: cy + s * 0.8 },
+    ],
+  };
 }
 
-function drawTriangularPrism(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number): void {
+function drawPyramid(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number): void {
+  const { apex, base } = pyramidPoints(cx, cy, s);
+  fillFaces(ctx, [
+    [[apex, base[0]!, base[3]!], '#ede7f6'],
+    [[apex, base[0]!, base[1]!], '#d1c4e9'],
+    [[apex, base[1]!, base[2]!], '#b39ddb'],
+  ]);
+}
+
+/** The two triangular ends, corners in the same order: bottom-left, bottom-right, top. */
+function triPrismPoints(cx: number, cy: number, s: number): { front: Pt[]; back: Pt[] } {
   const front = [
     { x: cx - s * 0.5, y: cy + s * 0.6 },
     { x: cx + s * 0.5, y: cy + s * 0.6 },
     { x: cx, y: cy - s * 0.4 },
   ];
   const offset = { x: s * 0.5, y: -s * 0.4 };
-  const back = front.map((p) => ({ x: p.x + offset.x, y: p.y + offset.y }));
-  const draws: [{ x: number; y: number }[], string][] = [
+  return { front, back: front.map((p) => ({ x: p.x + offset.x, y: p.y + offset.y })) };
+}
+
+function drawTriangularPrism(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number): void {
+  const { front, back } = triPrismPoints(cx, cy, s);
+  fillFaces(ctx, [
     [[back[0]!, back[1]!, back[2]!], '#ede7f6'],
     [[front[2]!, back[2]!, back[1]!, front[1]!], '#d1c4e9'],
     [[front[0]!, front[1]!, front[2]!], '#b39ddb'],
-  ];
-  for (const [pts, fill] of draws) {
-    ctx.fillStyle = fill;
-    ctx.beginPath();
-    ctx.moveTo(pts[0]!.x, pts[0]!.y);
-    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-  }
+  ]);
   ctx.beginPath();
   ctx.moveTo(front[0]!.x, front[0]!.y); ctx.lineTo(back[0]!.x, back[0]!.y);
   ctx.stroke();
@@ -226,14 +245,11 @@ export function drawShape3D(
   ctx.clearRect(0, 0, w, h);
   ctx.strokeStyle = '#7c4dff';
   ctx.lineWidth = 2;
-  const cx = w / 2, cy = h / 2, s = Math.min(w, h) * 0.3;
-  const iso: IsoFn = (x, y, z) => ({
-    x: cx + (x - z) * 0.866 * s,
-    y: cy - y * s + (x + z) * 0.5 * s,
-  });
+  const { cx, cy, s } = frame3D(w, h);
+  const iso = isoProjection(cx, cy, s);
   switch (shapeName.toLowerCase()) {
-    case 'cube': drawCube(ctx, iso); break;
-    case 'rectangular prism': drawRectPrism(ctx, iso); break;
+    case 'cube': drawBox(ctx, boxCorners(iso, CUBE_DIMS)); break;
+    case 'rectangular prism': drawBox(ctx, boxCorners(iso, RECT_PRISM_DIMS)); break;
     case 'sphere': drawSphere(ctx, cx, cy, s); break;
     case 'cylinder': drawCylinder(ctx, cx, cy, s); break;
     case 'cone': drawCone(ctx, cx, cy, s); break;
@@ -454,17 +470,41 @@ export function drawAreaShape(
   }
 }
 
-export function drawCircumference(
-  ctx: CanvasRenderingContext2D, w: number, h: number, radius: number,
+/** A circle with a radius or a diameter drawn and labelled, or neither (null). */
+function drawCircleWithSegment(
+  ctx: CanvasRenderingContext2D, w: number, h: number,
+  segment: 'radius' | 'diameter' | null, label: string,
 ): void {
   ctx.clearRect(0, 0, w, h);
   const r = Math.min(w, h) * 0.35;
   ctx.fillStyle = '#fce4ec'; ctx.strokeStyle = '#e91e63'; ctx.lineWidth = 3;
   ctx.beginPath(); ctx.arc(w / 2, h / 2, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  if (!segment) return;
+  const isRadius = segment === 'radius';
   ctx.strokeStyle = '#c2185b'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(w / 2, h / 2); ctx.lineTo(w / 2 + r, h / 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(isRadius ? w / 2 : w / 2 - r, h / 2); ctx.lineTo(w / 2 + r, h / 2); ctx.stroke();
   ctx.fillStyle = '#333'; ctx.font = '11px Arial'; ctx.textAlign = 'center';
-  ctx.fillText('r=' + radius, w / 2 + r / 2, h / 2 - 8);
+  // Above the middle of the segment.
+  ctx.fillText(label, isRadius ? w / 2 + r / 2 : w / 2, h / 2 - 8);
+}
+
+export function drawCircumference(
+  ctx: CanvasRenderingContext2D, w: number, h: number, radius: number,
+): void {
+  drawCircleWithSegment(ctx, w, h, 'radius', 'r=' + radius);
+}
+
+/**
+ * geometry_circle_convert: "A circle has a diameter of 48. What is the radius?"
+ * Draws and labels the measure the question gives; the other one is the
+ * answer, so it is never drawn. An unknown given type gets the circle alone.
+ */
+export function drawCircleGiven(
+  ctx: CanvasRenderingContext2D, w: number, h: number, givenType: string, value: number,
+): void {
+  if (givenType === 'radius') drawCircleWithSegment(ctx, w, h, 'radius', 'r=' + value);
+  else if (givenType === 'diameter') drawCircleWithSegment(ctx, w, h, 'diameter', 'd=' + value);
+  else drawCircleWithSegment(ctx, w, h, null, '');
 }
 
 export function drawFractionVisual(
@@ -506,11 +546,9 @@ export function drawAngle(
   const vx = w * 0.2, vy = h * 0.75;
   const rayLen = Math.min(w, h) * 0.6;
   const rad = (degrees * Math.PI) / 180;
-  let color = '#4caf50';
-  if (degrees === 90) color = '#2196f3';
-  else if (degrees > 90 && degrees < 180) color = '#ff9800';
-  else if (degrees === 180) color = '#9c27b0';
-  ctx.strokeStyle = color; ctx.lineWidth = 3;
+  // One colour for every angle. A colour per type (acute, right, obtuse,
+  // straight) is the answer, and a child learns the code within a few rounds.
+  ctx.strokeStyle = '#4caf50'; ctx.lineWidth = 3;
   ctx.beginPath(); ctx.moveTo(vx, vy); ctx.lineTo(vx + rayLen, vy); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(vx, vy);
   ctx.lineTo(vx + rayLen * Math.cos(-rad), vy + rayLen * Math.sin(-rad)); ctx.stroke();
@@ -953,55 +991,70 @@ export function drawLabeled3D(
   }
 }
 
+type FaceOutline = { corners: Pt[] } | { ellipse: { x: number; y: number; rx: number; ry: number } };
+
+/**
+ * The face a geometry_face_identify question points at, on the shape that
+ * drawShape3D drew. A shape with one kind of flat face (cube, rectangular
+ * prism, cylinder, cone) shows that face whatever `faceShape` says. A pyramid
+ * and a triangular prism have two kinds, so `faceShape` picks the face. Null
+ * when the shape has no such face.
+ */
+function faceOutline(shape: string, faceShape: string, w: number, h: number): FaceOutline | null {
+  const { cx, cy, s } = frame3D(w, h);
+  switch (shape) {
+    case 'cube':
+    case 'rectangular prism': {
+      const v = boxCorners(isoProjection(cx, cy, s), shape === 'cube' ? CUBE_DIMS : RECT_PRISM_DIMS);
+      return { corners: [v[6]!, v[7]!, v[4]!, v[5]!] }; // the top face
+    }
+    case 'pyramid': {
+      const { apex, base } = pyramidPoints(cx, cy, s);
+      if (faceShape === 'square') return { corners: base };
+      if (faceShape === 'triangle') return { corners: [apex, base[1]!, base[2]!] }; // the right-hand side
+      return null;
+    }
+    case 'triangular prism': {
+      const { front, back } = triPrismPoints(cx, cy, s);
+      if (faceShape === 'triangle') return { corners: front };
+      if (faceShape === 'rectangle') return { corners: [front[2]!, back[2]!, back[1]!, front[1]!] };
+      return null;
+    }
+    case 'cylinder': {
+      const g = cylinderGeom(cy, s);
+      return { ellipse: { x: cx, y: g.top, rx: g.rx, ry: g.ry } };
+    }
+    case 'cone': {
+      const g = coneGeom(cy, s);
+      return { ellipse: { x: cx, y: g.bot, rx: g.rx, ry: g.ry } };
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * "What shape is the highlighted face of this pyramid?" The shape, with the
+ * face filled and outlined. The face's name is the answer, so it is never
+ * written (before beta.19 every shape but a box printed "face: <answer>").
+ */
 export function drawFaceHighlight(
   ctx: CanvasRenderingContext2D, w: number, h: number,
   shapeName: string, faceShape: string,
 ): void {
   drawShape3D(ctx, w, h, shapeName);
-  const cx = w / 2, cy = h / 2, s = Math.min(w, h) * 0.3;
+  const face = faceOutline(shapeName.toLowerCase(), faceShape.toLowerCase(), w, h);
+  if (!face) return;
   ctx.fillStyle = 'rgba(255, 152, 0, 0.4)';
   ctx.strokeStyle = '#e65100';
   ctx.lineWidth = 2;
-  const iso: IsoFn = (x, y, z) => ({
-    x: cx + (x - z) * 0.866 * s,
-    y: cy - y * s + (x + z) * 0.5 * s,
-  });
-  const name = shapeName.toLowerCase();
-  if (name === 'cube' || name === 'rectangular prism') {
-    const sx = name === 'cube' ? 1 : 1.3;
-    const sy = name === 'cube' ? 1 : 0.7;
-    const sz = name === 'cube' ? 1 : 0.7;
-    const v = [iso(sx, sy, sz), iso(-sx, sy, sz), iso(-sx, sy, -sz), iso(sx, sy, -sz)];
-    ctx.beginPath();
-    ctx.moveTo(v[0]!.x, v[0]!.y);
-    for (let i = 1; i < v.length; i++) ctx.lineTo(v[i]!.x, v[i]!.y);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+  ctx.beginPath();
+  if ('ellipse' in face) {
+    const e = face.ellipse;
+    ctx.ellipse(e.x, e.y, e.rx, e.ry, 0, 0, Math.PI * 2);
   } else {
-    ctx.fillStyle = '#333';
-    ctx.font = '11px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('face: ' + faceShape, cx, h - 10);
+    tracePath(ctx, face.corners);
   }
-}
-
-export function drawSymmetryLines(
-  ctx: CanvasRenderingContext2D, w: number, h: number,
-  shapeName: string, lineCount: number,
-): void {
-  drawShape2D(ctx, w, h, shapeName);
-  const cx = w / 2, cy = h / 2;
-  const len = Math.min(w, h) * 0.45;
-  ctx.strokeStyle = '#d32f2f';
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([6, 4]);
-  for (let i = 0; i < lineCount; i++) {
-    const angle = (Math.PI * i) / lineCount;
-    ctx.beginPath();
-    ctx.moveTo(cx + len * Math.cos(angle), cy + len * Math.sin(angle));
-    ctx.lineTo(cx - len * Math.cos(angle), cy - len * Math.sin(angle));
-    ctx.stroke();
-  }
-  ctx.setLineDash([]);
+  ctx.fill();
+  ctx.stroke();
 }

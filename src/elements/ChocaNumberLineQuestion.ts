@@ -137,7 +137,10 @@ export class ChocaNumberLineQuestion extends HTMLElement {
       'stroke-width': '2',
     }));
 
-    // Tick marks and labels
+    // Tick marks and labels. The last jump lands on the product, which is the
+    // answer, so that tick reads "?". A product of 0 lands back on the start
+    // tick, which keeps its "0".
+    const end = points[points.length - 1]!;
     const uniqueVals = [...new Set(allVals)].sort((a, b) => a - b);
     for (const v of uniqueVals) {
       const x = toX(v);
@@ -154,7 +157,7 @@ export class ChocaNumberLineQuestion extends HTMLElement {
         'font-weight': 'bold',
         fill: 'var(--cq-number-line-label-color, #555)',
       });
-      label.textContent = String(v);
+      label.textContent = v === end && end !== 0 ? '?' : String(v);
       svg.appendChild(label);
     }
 

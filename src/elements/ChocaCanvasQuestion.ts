@@ -3,10 +3,10 @@ import { syncChoicePad, handlePick } from './shared-pad';
 import {
   drawShape2D, drawShape3D, drawBarGraph, drawPictograph,
   drawRightTriangle, drawTriangleAngles, drawPerimeterShape,
-  drawAreaShape, drawCircumference, drawFractionVisual, drawAngle,
+  drawAreaShape, drawCircumference, drawCircleGiven, drawFractionVisual, drawAngle,
   drawCircleParts, drawCompoundShape, drawArray,
   drawAnalogClock, drawCoordinatePlane, drawBase10Blocks,
-  drawLabeled3D, drawFaceHighlight, drawSymmetryLines,
+  drawLabeled3D, drawFaceHighlight,
   type Base10Colors,
 } from './canvas-draws';
 import './ChocaChoicePad';
@@ -206,7 +206,9 @@ export class ChocaCanvasQuestion extends HTMLElement {
         else drawShape2D(ctx, w, h, q.content.shape);
         break;
       case 'geometry_symmetry':
-        drawSymmetryLines(ctx, w, h, q.content.shape, q.content.lines_of_symmetry);
+        // The shape only: the child finds the lines. Drawing them (as before
+        // beta.19) let the child count the answer off the picture.
+        drawShape2D(ctx, w, h, q.content.shape);
         break;
       case 'geometry_classify_triangle':
         drawShape2D(ctx, w, h, 'triangle');
@@ -218,7 +220,7 @@ export class ChocaCanvasQuestion extends HTMLElement {
         drawLabeled3D(ctx, w, h, q.content.shape, q.content.operands);
         break;
       case 'geometry_circle_convert':
-        drawCircumference(ctx, w, h, q.content.given_type === 'radius' ? q.content.value : q.content.value / 2);
+        drawCircleGiven(ctx, w, h, q.content.given_type, q.content.value);
         break;
       case 'data_graph':
         if (q.imageType === 'bar_graph') drawBarGraph(ctx, w, h, q.content.data);

@@ -20,6 +20,8 @@
 // therefore forces a deliberate choice: wire a renderer, or say why none is
 // needed. A canvas format may paint nothing only if it is listed in
 // NO_PICTURE_BY_DESIGN, and then its canvas must be hidden, not a blank box.
+// A picture may show text equal to its row's answer only if the format is in
+// PRINTS_ANSWER_BY_DESIGN.
 
 import { expect } from '@esm-bundle/chai';
 import '../../src/full';
@@ -134,6 +136,17 @@ const NO_PICTURE_BY_DESIGN: Record<string, string> = {
   geometry_attributes: '"Which shape has …?" asks for a shape, so drawing one shows the answer',
 };
 
+// A picture must not print its own answer (beta.19: a radius label on "What is
+// the radius?", the product at the end of a number line, "face: triangle").
+// A format here may show text equal to the answer, because the text is part of
+// the question itself. The reason must say why. Drawn giveaways (symmetry
+// lines, a colour per answer) are not text; geometry-shape-routing pins those.
+const PRINTS_ANSWER_BY_DESIGN: Record<string, string> = {
+  data_graph: 'reading the graph is the question: its axis numbers and category names are what it asks about',
+  coordinate_distance: 'the axis numbers label the grid the child counts on; the distance itself is never drawn',
+  pattern: 'a repeating pattern shows its own items, so the next item already appears earlier in the sequence',
+};
+
 /* ================================================================
    Representative rows
    ================================================================ */
@@ -241,8 +254,10 @@ const REPRESENTATIVE_ROWS: Record<string, Row | Row[]> = {
       imageType: 'shape_3d', content: { shape: 'cube' }, answer: 'cube',
     }),
   ],
+  // A pyramid, not a cube: the cube always showed its face highlighted, and the
+  // other shapes printed "face: <answer>" instead.
   geometry_face_identify: row('geometry_face_identify', {
-    content: { shape: 'cube', face_shape: 'square' }, answer: 'square',
+    imageType: 'shape_3d', content: { shape: 'pyramid', face_shape: 'triangle' }, answer: 'triangle',
   }),
   geometry_symmetry: row('geometry_symmetry', {
     content: { shape: 'square', lines_of_symmetry: 4 }, answer: 4,
@@ -410,6 +425,20 @@ const VISUAL_NODES: Record<string, (root: ShadowRoot) => number> = {
   'choca-number-line-question': (r) => r.querySelectorAll('svg *').length,
 };
 
+// The text each DOM renderer shows as part of its picture (not the prompt, not
+// the choices). The canvas renderer's text is whatever it passed to fillText.
+const PICTURE_TEXT: Record<string, string> = {
+  'choca-coin-pile': '[part="canvas"] *',
+  'choca-table-question': '[part="table"] td, [part="table"] th, [part="change-event"]',
+  'choca-pattern-question': '[part~="pattern-item"]',
+  'choca-number-line-question': 'svg text',
+};
+
+/** Words and numbers in a label: "r=3" → r, 3; "face: square" → face, square; "-24" → -24. */
+function tokens(text: string): string[] {
+  return text.split(/[^0-9A-Za-z.-]+/).filter(Boolean);
+}
+
 type Rendered = {
   renderer: string;
   visualNodes: number;
@@ -417,6 +446,8 @@ type Rendered = {
   drewOnlyFallbackGlyph: boolean;
   /** The canvas renderer's `[part="canvas"]` carries `hidden`. */
   canvasHidden: boolean;
+  /** Every piece of text drawn or shown as part of the picture. */
+  pictureText: string[];
   stem: string;
 };
 
@@ -444,7 +475,8 @@ async function render(q: NormalizedQuestion): Promise<Rendered> {
 
     if (!inner) {
       return {
-        renderer: 'text-fallback', visualNodes: 0, drewOnlyFallbackGlyph: false, canvasHidden: false, stem,
+        renderer: 'text-fallback', visualNodes: 0, drewOnlyFallbackGlyph: false, canvasHidden: false,
+        pictureText: [], stem,
       };
     }
 
@@ -455,10 +487,14 @@ async function render(q: NormalizedQuestion): Promise<Rendered> {
       : VISUAL_NODES[tag]!(inner.shadowRoot!);
 
     const canvas = inner.shadowRoot?.querySelector('[part="canvas"]') as HTMLElement | null;
+    const pictureText = tag === 'choca-canvas-question'
+      ? spy.glyphs.map(String)
+      : [...inner.shadowRoot!.querySelectorAll(PICTURE_TEXT[tag]!)].map((n) => n.textContent ?? '');
 
     return {
       renderer: tag, visualNodes: count,
-      drewOnlyFallbackGlyph: fallbackGlyph, canvasHidden: canvas?.hidden ?? false, stem: stem || innerStem,
+      drewOnlyFallbackGlyph: fallbackGlyph, canvasHidden: canvas?.hidden ?? false,
+      pictureText, stem: stem || innerStem,
     };
   } finally {
     spy.restore();
@@ -525,12 +561,28 @@ describe('format conformance — every dispatched format renders something', () 
           `${label}: ${out.renderer} painted nothing at all`,
         ).to.be.greaterThan(0);
       });
+
+      it(`${label} does not print its answer on the picture`, async () => {
+        if (PRINTS_ANSWER_BY_DESIGN[format]) return;
+        let q: NormalizedQuestion | null = null;
+        try { q = normalizeQuestion(raw); } catch { /* the test above reports a row that won't normalize */ }
+        const answer = q?.answer;
+        if (!q || answer === undefined || typeof answer === 'object') return;
+
+        const out = await render(q);
+        const printed = out.pictureText.filter((t) => tokens(t).includes(String(answer)));
+        expect(
+          printed,
+          `${label}: the picture shows the answer (${String(answer)}). Remove it, or add the ` +
+          'format to PRINTS_ANSWER_BY_DESIGN with a reason',
+        ).to.have.lengthOf(0);
+      });
     }
   }
 });
 
 describe('the allowlist itself', () => {
-  const allowlisted = { ...TEXT_ONLY_BY_DESIGN, ...NO_PICTURE_BY_DESIGN };
+  const allowlisted = { ...TEXT_ONLY_BY_DESIGN, ...NO_PICTURE_BY_DESIGN, ...PRINTS_ANSWER_BY_DESIGN };
 
   it('every allowlisted format is still a dispatched format', () => {
     const dispatched = new Set(DISPATCH_FORMATS);

@@ -24,12 +24,17 @@ type CtxSet = { prop: string; value: unknown };
 
 type CanvasProto = { getContext: (...a: unknown[]) => unknown };
 
-const WATCHED_CALLS = new Set(['arc', 'rect', 'fillRect', 'strokeRect', 'moveTo', 'lineTo', 'fillText']);
+const WATCHED_CALLS = new Set([
+  'arc', 'ellipse', 'rect', 'fillRect', 'strokeRect', 'moveTo', 'lineTo', 'closePath', 'fillText', 'setLineDash',
+]);
 const WATCHED_SETS = new Set(['strokeStyle', 'lineWidth']);
 
-function spyCanvas(): { calls: CtxCall[]; sets: CtxSet[]; restore: () => void } {
+// `log` holds the watched calls and sets in the order they happened; a set
+// appears as fn `set:<prop>` with the value as its only arg.
+function spyCanvas(): { calls: CtxCall[]; sets: CtxSet[]; log: CtxCall[]; restore: () => void } {
   const calls: CtxCall[] = [];
   const sets: CtxSet[] = [];
+  const log: CtxCall[] = [];
   const proto = HTMLCanvasElement.prototype as unknown as CanvasProto;
   const orig = proto.getContext;
   proto.getContext = function (this: HTMLCanvasElement, ...args: unknown[]): unknown {
@@ -41,27 +46,33 @@ function spyCanvas(): { calls: CtxCall[]; sets: CtxSet[]; restore: () => void } 
         if (typeof value !== 'function') return value;
         const fn = value as (...a: unknown[]) => unknown;
         return (...a: unknown[]): unknown => {
-          if (WATCHED_CALLS.has(prop as string)) calls.push({ fn: prop as string, args: a });
+          if (WATCHED_CALLS.has(prop as string)) {
+            calls.push({ fn: prop as string, args: a });
+            log.push({ fn: prop as string, args: a });
+          }
           return fn.apply(target, a);
         };
       },
       set(target, prop, value) {
-        if (WATCHED_SETS.has(prop as string)) sets.push({ prop: prop as string, value });
+        if (WATCHED_SETS.has(prop as string)) {
+          sets.push({ prop: prop as string, value });
+          log.push({ fn: `set:${prop as string}`, args: [value] });
+        }
         Reflect.set(target, prop, value, target);
         return true;
       },
     });
   };
-  return { calls, sets, restore: () => { proto.getContext = orig; } };
+  return { calls, sets, log, restore: () => { proto.getContext = orig; } };
 }
 
 /** Mount a canvas question with the spy installed, set `q`, return the draw calls. */
-function render(q: unknown): { calls: CtxCall[]; sets: CtxSet[]; el: HTMLElement } {
+function render(q: unknown): { calls: CtxCall[]; sets: CtxSet[]; log: CtxCall[]; el: HTMLElement } {
   const spy = spyCanvas();
   try {
     const el = mount(`<choca-canvas-question answer-mode="mc" seed="42"></choca-canvas-question>`);
     (el as HTMLElement & { question: unknown }).question = q;
-    return { calls: spy.calls, sets: spy.sets, el };
+    return { calls: spy.calls, sets: spy.sets, log: spy.log, el };
   } finally {
     spy.restore();
   }
@@ -431,5 +442,276 @@ describe('geometry_perimeter draws the shape its sides describe', () => {
     expect(named('strokeRect', calls)).to.have.lengthOf(0);
     expect(named('lineTo', calls)).to.have.lengthOf(4);
     expect(labels(calls)).to.deep.equal(['2', '6', '17', '3']);
+  });
+});
+
+/* ================================================================
+   beta.19 — pictures that showed the answer. Rows are the real ones
+   (dev, BlocHero's recipe, 2026-10-05, and the generator output), sent
+   choices-only the way the bank sends them.
+   ================================================================ */
+
+const HIGHLIGHT_STROKE = '#e65100';
+
+/** Index in `log` where the face highlight set its stroke colour, or -1. */
+function highlightStart(log: CtxCall[]): number {
+  return log.map((c) => c.fn === 'set:strokeStyle' && c.args[0] === HIGHLIGHT_STROKE).lastIndexOf(true);
+}
+
+/** The draw calls after the highlight colour was set: the highlight itself. */
+function highlightCalls(log: CtxCall[]): CtxCall[] {
+  const at = highlightStart(log);
+  return at < 0 ? [] : log.slice(at + 1).filter((c) => !c.fn.startsWith('set:'));
+}
+
+/** Every point the shape's own outlines passed through, before the highlight. */
+function shapePoints(log: CtxCall[]): Pt[] {
+  const at = highlightStart(log);
+  return log.slice(0, at < 0 ? log.length : at)
+    .filter((c) => c.fn === 'moveTo' || c.fn === 'lineTo').map(pt);
+}
+
+/* ---------- geometry_symmetry: "How many lines of symmetry …?" ---------- */
+
+const symmetryWire = (shape: string, lines: number, choices: number[]) => wire({
+  id: `GEOM-SYMMETRY-BASIC-${shape}`,
+  skillIds: ['GEOM-SYMMETRY-BASIC'],
+  format: 'geometry_symmetry',
+  content: { shape, operation: 'geometry_symmetry', lines_of_symmetry: lines },
+  questionText: `How many lines of symmetry does a ${shape} have?`,
+  choices: [lines, ...choices].map((v) => ({ value: String(v) })),
+});
+
+// GEOM-SYMMETRY-BASIC: all eight rows. The answer is lines_of_symmetry.
+const SYMMETRY: { shape: string; lines: number; distractors: number[] }[] = [
+  { shape: 'triangle', lines: 3, distractors: [4, 2, 5] },
+  { shape: 'square', lines: 4, distractors: [3, 2, 5] },
+  { shape: 'rectangle', lines: 2, distractors: [3, 4, 5] },
+  { shape: 'pentagon', lines: 5, distractors: [3, 4, 2] },
+  { shape: 'hexagon', lines: 6, distractors: [3, 4, 2] },
+  { shape: 'octagon', lines: 8, distractors: [3, 4, 2] },
+  { shape: 'rhombus', lines: 2, distractors: [3, 4, 5] },
+  { shape: 'trapezoid', lines: 0, distractors: [3, 4, 2] },
+];
+
+describe('geometry_symmetry draws the shape, not its lines of symmetry', () => {
+  for (const s of SYMMETRY) {
+    it(`${s.shape}: the same picture as "What shape is this?", nothing more`, () => {
+      const { calls, el } = render(symmetryWire(s.shape, s.lines, s.distractors));
+      const shapeOnly = render(identify(s.shape, 'shape_2d')).calls;
+
+      expect(calls, `${s.shape}: drew more than the shape (${s.lines} lines would be the answer)`)
+        .to.deep.equal(shapeOnly);
+      expect(named('setLineDash', calls), 'no dashed lines').to.have.lengthOf(0);
+      expect(choiceLabels(el)).to.have.lengthOf(4);
+    });
+  }
+
+  it('a row that carries the answer draws the same', () => {
+    const { calls } = render({
+      id: 'GEOM-SYMMETRY-BASIC-square', skillIds: ['GEOM-SYMMETRY-BASIC'],
+      format: 'geometry_symmetry', imageType: 'shape_2d',
+      content: { shape: 'square', lines_of_symmetry: 4 },
+      answer: 4, distractors: [{ value: 3, errorType: 'confused-with-triangle' }],
+    });
+
+    expect(calls).to.deep.equal(render(identify('square', 'shape_2d')).calls);
+  });
+});
+
+/* ---------- geometry_face_identify: "What shape is the highlighted face …?" ---------- */
+
+const faceWire = (shape: string, face: string, choices: string[]) => wire({
+  id: `GEOM-3D-FACES-IDENTIFY-${shape}-${face}`.replace(/ /g, '-'),
+  skillIds: ['GEOM-3D-FACES-IDENTIFY'],
+  format: 'geometry_face_identify',
+  imageType: 'shape_3d',
+  content: { shape, face_shape: face, operation: 'geometry_face_identify' },
+  questionText: `What shape is the highlighted face of this ${shape}?`,
+  choices: choices.map((value) => ({ value })),
+});
+
+// GEOM-3D-FACES-IDENTIFY: all eight rows. `corners` is the highlighted outline's
+// vertex count; 0 means an ellipse (a circle seen at an angle). The pyramid and
+// the triangular prism each have two rows, and each row offers the other true
+// face as a wrong choice, so only the highlight says which face is meant.
+const FACES: { shape: string; face: string; corners: number; choices: string[] }[] = [
+  { shape: 'cube', face: 'square', corners: 4, choices: ['square', 'rectangle', 'circle', 'triangle'] },
+  { shape: 'rectangular prism', face: 'rectangle', corners: 4, choices: ['rectangle', 'square', 'triangle', 'circle'] },
+  { shape: 'pyramid', face: 'square', corners: 4, choices: ['square', 'triangle', 'circle', 'rectangle'] },
+  { shape: 'pyramid', face: 'triangle', corners: 3, choices: ['triangle', 'square', 'circle', 'rectangle'] },
+  { shape: 'triangular prism', face: 'triangle', corners: 3, choices: ['triangle', 'square', 'circle', 'rectangle'] },
+  { shape: 'triangular prism', face: 'rectangle', corners: 4, choices: ['rectangle', 'square', 'triangle', 'circle'] },
+  { shape: 'cylinder', face: 'circle', corners: 0, choices: ['circle', 'rectangle', 'square', 'triangle'] },
+  { shape: 'cone', face: 'circle', corners: 0, choices: ['circle', 'triangle', 'square', 'rectangle'] },
+];
+
+describe('geometry_face_identify highlights the face and never names it', () => {
+  for (const f of FACES) {
+    describe(`${f.shape}, ${f.face} face`, () => {
+      it('writes nothing on the canvas', () => {
+        const { calls, el } = render(faceWire(f.shape, f.face, f.choices));
+
+        expect(labels(calls), `"face: ${f.face}" is the answer`).to.deep.equal([]);
+        expect(choiceLabels(el)).to.have.members(f.choices);
+      });
+
+      it(`outlines one ${f.face}-shaped face`, () => {
+        const h = highlightCalls(render(faceWire(f.shape, f.face, f.choices)).log);
+
+        if (f.corners === 0) {
+          expect(named('ellipse', h)).to.have.lengthOf(1);
+          expect(named('lineTo', h)).to.have.lengthOf(0);
+        } else {
+          expect(named('moveTo', h)).to.have.lengthOf(1);
+          expect(named('lineTo', h)).to.have.lengthOf(f.corners - 1);
+          expect(named('closePath', h)).to.have.lengthOf(1);
+          expect(named('ellipse', h)).to.have.lengthOf(0);
+        }
+      });
+
+      it('the outlined face is a face of the drawn shape', () => {
+        const { log } = render(faceWire(f.shape, f.face, f.choices));
+        const h = highlightCalls(log);
+
+        if (f.corners === 0) {
+          const [x, y, rx, ry] = named('ellipse', h)[0]!.args as number[];
+          const before = log.slice(0, highlightStart(log)).filter((c) => c.fn === 'ellipse');
+          const same = before.filter((c) => {
+            const [bx, by, brx, bry] = c.args as number[];
+            return Math.abs(bx! - x!) < 0.01 && Math.abs(by! - y!) < 0.01
+              && Math.abs(brx! - rx!) < 0.01 && Math.abs(bry! - ry!) < 0.01;
+          });
+          expect(same, 'the highlight ellipse matches one the shape drew').to.not.have.lengthOf(0);
+          return;
+        }
+        const corners = h.filter((c) => c.fn === 'moveTo' || c.fn === 'lineTo').map(pt);
+        const drawn = shapePoints(log);
+        corners.forEach((c, i) => {
+          const nearest = Math.min(...drawn.map((d) => dist(c, d)));
+          expect(nearest, `corner ${i} is a corner of the shape`).to.be.below(0.01);
+        });
+      });
+    });
+  }
+
+  it('a row that carries the answer is drawn the same way', () => {
+    const { calls, log } = render({
+      id: 'GEOM-3D-FACES-IDENTIFY-pyramid-square', skillIds: ['GEOM-3D-FACES-IDENTIFY'],
+      format: 'geometry_face_identify', imageType: 'shape_3d',
+      content: { shape: 'pyramid', face_shape: 'square' },
+      answer: 'square', distractors: [{ value: 'triangle', errorType: 'wrong-classification' }],
+    });
+
+    expect(labels(calls)).to.deep.equal([]);
+    expect(named('lineTo', highlightCalls(log))).to.have.lengthOf(3);
+  });
+
+  it('a face the shape does not have: the shape alone, no highlight, no text', () => {
+    const { calls, log } = render({
+      ...faceIdentify(), id: 'GEOM-3D-FACES-IDENTIFY-sphere',
+      content: { shape: 'sphere', face_shape: 'circle' }, answer: 'circle',
+    });
+
+    expect(labels(calls)).to.deep.equal([]);
+    expect(highlightStart(log)).to.equal(-1);
+    expect(named('arc', calls), 'the sphere is still drawn').to.have.lengthOf(1);
+  });
+});
+
+/* ---------- geometry_circle_convert: "A circle has a diameter of 48. What is the radius?" ---------- */
+
+const convertWire = (given: 'radius' | 'diameter', value: number, choices: number[]) => wire({
+  id: `GEOM-CIRCLE-RADIUS-DIAMETER-${given === 'radius' ? 'r' : 'd'}${value}`,
+  skillIds: ['GEOM-CIRCLE-RADIUS-DIAMETER'],
+  format: 'geometry_circle_convert',
+  content: {
+    value, given_type: given, find_type: given === 'radius' ? 'diameter' : 'radius',
+    operation: 'geometry_circle_convert',
+  },
+  questionText: `A circle has a ${given} of ${value}. What is the ${given === 'radius' ? 'diameter' : 'radius'}?`,
+  choices: choices.map((v) => ({ value: String(v) })),
+});
+
+// The element's canvas is 300x200; the circle is centred with r = 200 * 0.35.
+const CIRCLE_R = 70;
+
+describe('geometry_circle_convert labels what it gives, never what it asks', () => {
+  it('given a diameter of 48: draws and labels the diameter, never the radius 24', () => {
+    const { calls } = render(convertWire('diameter', 48, [24, 48, 96, 25]));
+
+    expect(labels(calls)).to.deep.equal(['d=48']);
+    expect(labels(calls).join(' '), 'the radius is the answer').to.not.match(/\b24\b/);
+    const [from] = named('moveTo', calls);
+    const [to] = named('lineTo', calls);
+    expect(pt(from!)).to.deep.equal({ x: CX - CIRCLE_R, y: CY });
+    expect(pt(to!)).to.deep.equal({ x: CX + CIRCLE_R, y: CY });
+  });
+
+  it('given a radius of 17: draws and labels the radius, never the diameter 34', () => {
+    const { calls } = render(convertWire('radius', 17, [34, 17, 35, 19]));
+
+    expect(labels(calls)).to.deep.equal(['r=17']);
+    const [from] = named('moveTo', calls);
+    const [to] = named('lineTo', calls);
+    expect(pt(from!)).to.deep.equal({ x: CX, y: CY });
+    expect(pt(to!)).to.deep.equal({ x: CX + CIRCLE_R, y: CY });
+  });
+
+  it('a row that carries the answer labels the same way', () => {
+    const { calls } = render(normalizeQuestion({
+      id: 'GEOM-CIRCLE-RADIUS-DIAMETER-d18', skill_ids: ['GEOM-CIRCLE-RADIUS-DIAMETER'],
+      format: 'geometry_circle_convert', image_type: 'shape_2d',
+      content: { value: 18, given_type: 'diameter', find_type: 'radius' },
+      answer: 9, distractors: [{ value: 18, error_type: 'gave-same-value' }],
+    }));
+
+    expect(labels(calls)).to.deep.equal(['d=18']);
+  });
+
+  it('an unknown given type: the circle alone, no label', () => {
+    const { calls } = render(wire({
+      id: 'GEOM-CIRCLE-CONVERT-unknown',
+      skillIds: ['GEOM-CIRCLE-RADIUS-DIAMETER'],
+      format: 'geometry_circle_convert',
+      content: { value: 5, given_type: 'circumference', find_type: 'radius' },
+      choices: [{ value: '1' }, { value: '2' }],
+    }));
+
+    expect(labels(calls)).to.deep.equal([]);
+    expect(named('arc', calls)).to.have.lengthOf(1);
+  });
+});
+
+/* ---------- geometry_angle_classify: "What type of angle is 129°?" ---------- */
+
+const angleWire = (angle: number, choices: string[]) => wire({
+  id: `GEOM-ANGLE-CLASSIFY-${angle}`,
+  skillIds: ['GEOM-ANGLE-CLASSIFY'],
+  format: 'geometry_angle_classify',
+  imageType: 'angle',
+  content: { angle, operation: 'geometry_angle_classify' },
+  questionText: `What type of angle is ${angle}°?`,
+  choices: choices.map((value) => ({ value })),
+});
+
+const ANGLE_TYPES = ['acute', 'right', 'obtuse', 'straight'];
+
+describe('geometry_angle_classify draws every type of angle the same colour', () => {
+  // One of each type: acute, right, obtuse, straight.
+  const angles = [40, 90, 129, 180];
+
+  it('the stroke colour does not depend on the answer', () => {
+    const colours = angles.map((a) => strokeStyles(render(angleWire(a, ANGLE_TYPES)).sets));
+
+    colours.slice(1).forEach((c, i) => {
+      expect(c, `${angles[i + 1]}° is drawn in a different colour from ${angles[0]}°`).to.deep.equal(colours[0]);
+    });
+  });
+
+  it('labels only the angle the stem gives, never its type', () => {
+    for (const a of angles) {
+      expect(labels(render(angleWire(a, ANGLE_TYPES)).calls)).to.deep.equal([`${a}°`]);
+    }
   });
 });
