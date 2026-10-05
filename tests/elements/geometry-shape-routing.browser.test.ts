@@ -837,3 +837,325 @@ describe('base10_block_count draws no picture', () => {
     expect(el.shadowRoot!.querySelector('[part="prompt"]')!.textContent).to.equal('How many tens blocks are in 347?');
   });
 });
+
+/* ================================================================
+   beta.19, part 3 — pictures that pointed at a wrong answer, or were
+   labelled wrongly. Real rows from mathSkills' generator output.
+   ================================================================ */
+
+/** Each moveTo starts a path; the lineTo calls after it are its points. */
+function paths(calls: CtxCall[]): Pt[][] {
+  const out: Pt[][] = [];
+  for (const c of calls) {
+    if (c.fn === 'moveTo') out.push([pt(c)]);
+    else if (c.fn === 'lineTo' && out.length > 0) out[out.length - 1]!.push(pt(c));
+  }
+  return out;
+}
+
+/** A closed outline's side lengths, in drawing order. */
+function sideLengths(corners: Pt[]): number[] {
+  return corners.map((p, i) => dist(p, corners[(i + 1) % corners.length]!));
+}
+
+/** A closed outline's interior angles in degrees, in drawing order. */
+function interiorAngles(corners: Pt[]): number[] {
+  const n = corners.length;
+  return corners.map((p, i) => {
+    const a = corners[(i + n - 1) % n]!, b = corners[(i + 1) % n]!;
+    const v1 = { x: a.x - p.x, y: a.y - p.y }, v2 = { x: b.x - p.x, y: b.y - p.y };
+    const cos = (v1.x * v2.x + v1.y * v2.y) / (Math.hypot(v1.x, v1.y) * Math.hypot(v2.x, v2.y));
+    return (Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI;
+  });
+}
+
+const near = (a: number, b: number, tol = 1e-6) => Math.abs(a - b) <= tol * Math.max(1, Math.abs(a), Math.abs(b));
+
+/** What a triangle is, read off the drawn picture. */
+function classifyDrawn(corners: Pt[], by: string): string {
+  if (by === 'sides') {
+    const s = sideLengths(corners);
+    const equalPairs = [[0, 1], [1, 2], [0, 2]].filter(([i, j]) => near(s[i]!, s[j]!)).length;
+    return equalPairs === 3 ? 'equilateral' : equalPairs === 1 ? 'isosceles' : 'scalene';
+  }
+  const biggest = Math.max(...interiorAngles(corners));
+  return Math.abs(biggest - 90) < 0.01 ? 'right' : biggest > 90 ? 'obtuse' : 'acute';
+}
+
+const allOnCanvas = (pts: Pt[]) => pts.every((p) => p.x >= 0 && p.x <= W && p.y >= 0 && p.y <= H);
+
+/* ---------- geometry_classify_triangle: "Classify this triangle by its sides." ---------- */
+
+const triangleWire = (operands: number[], by: 'sides' | 'angles') => wire({
+  id: `GEOM-CLASSIFY-TRIANGLES-${by}-${operands.join('-')}`,
+  skillIds: ['GEOM-CLASSIFY-TRIANGLES'],
+  format: 'geometry_classify_triangle',
+  content: {
+    operands, operation: 'geometry_classify_triangle', classify_by: by,
+    ...(by === 'angles' ? { known_angles: operands } : {}),
+  },
+  questionText: `Classify this triangle by its ${by}.`,
+  choices: (by === 'sides' ? ['scalene', 'isosceles', 'equilateral'] : ['acute', 'right', 'obtuse'])
+    .map((value) => ({ value })),
+});
+
+// GEOM-CLASSIFY-TRIANGLES: all eighteen rows.
+const TRIANGLES: { operands: number[]; by: 'sides' | 'angles'; answer: string }[] = [
+  { operands: [3, 4, 5], by: 'sides', answer: 'scalene' },
+  { operands: [5, 5, 8], by: 'sides', answer: 'isosceles' },
+  { operands: [6, 6, 6], by: 'sides', answer: 'equilateral' },
+  { operands: [7, 10, 12], by: 'sides', answer: 'scalene' },
+  { operands: [8, 8, 5], by: 'sides', answer: 'isosceles' },
+  { operands: [9, 9, 9], by: 'sides', answer: 'equilateral' },
+  { operands: [3, 5, 7], by: 'sides', answer: 'scalene' },
+  { operands: [10, 10, 4], by: 'sides', answer: 'isosceles' },
+  { operands: [4, 4, 4], by: 'sides', answer: 'equilateral' },
+  { operands: [60, 70, 50], by: 'angles', answer: 'acute' },
+  { operands: [90, 45, 45], by: 'angles', answer: 'right' },
+  { operands: [120, 30, 30], by: 'angles', answer: 'obtuse' },
+  { operands: [80, 60, 40], by: 'angles', answer: 'acute' },
+  { operands: [90, 60, 30], by: 'angles', answer: 'right' },
+  { operands: [100, 40, 40], by: 'angles', answer: 'obtuse' },
+  { operands: [70, 55, 55], by: 'angles', answer: 'acute' },
+  { operands: [90, 50, 40], by: 'angles', answer: 'right' },
+  { operands: [110, 35, 35], by: 'angles', answer: 'obtuse' },
+];
+
+const sortNum = (xs: number[]) => [...xs].sort((a, b) => a - b);
+
+describe('geometry_classify_triangle draws the triangle its row describes', () => {
+  for (const t of TRIANGLES) {
+    describe(`${t.by} ${t.operands.join(', ')} (${t.answer})`, () => {
+      it(`draws a triangle with exactly these ${t.by}`, () => {
+        const { calls, el } = render(triangleWire(t.operands, t.by));
+        const outline = paths(calls)[0]!;
+
+        expect(outline).to.have.lengthOf(3);
+        if (t.by === 'sides') {
+          const drawn = sortNum(sideLengths(outline));
+          const given = sortNum(t.operands);
+          drawn.forEach((d, i) => expect(d / drawn[0]!).to.be.closeTo(given[i]! / given[0]!, 1e-9));
+        } else {
+          sortNum(interiorAngles(outline)).forEach((a, i) => expect(a).to.be.closeTo(sortNum(t.operands)[i]!, 1e-6));
+        }
+        expect(allOnCanvas(outline), 'the triangle fits the canvas').to.equal(true);
+        expect(canvasOf(el).hidden).to.equal(false);
+      });
+
+      it(`the picture is a ${t.answer} triangle, the row's answer`, () => {
+        const outline = paths(render(triangleWire(t.operands, t.by)).calls)[0]!;
+
+        expect(classifyDrawn(outline, t.by)).to.equal(t.answer);
+      });
+
+      it(`labels each given ${t.by === 'sides' ? 'side' : 'angle'}, and never the answer`, () => {
+        const { calls } = render(triangleWire(t.operands, t.by));
+        const unit = t.by === 'angles' ? '°' : '';
+
+        expect([...labels(calls)].sort()).to.deep.equal(t.operands.map((n) => `${n}${unit}`).sort());
+        const placed = named('fillText', calls).map(textAt);
+        expect(allOnCanvas(placed), 'every label is on the canvas').to.equal(true);
+      });
+    });
+  }
+
+  it('a row that carries the answer draws the same triangle', () => {
+    const wireCalls = render(triangleWire([5, 5, 8], 'sides')).calls;
+    const { calls } = render(normalizeQuestion({
+      id: 'GEOM-CLASSIFY-TRIANGLES-sides-5-5-8', skill_ids: ['GEOM-CLASSIFY-TRIANGLES'],
+      format: 'geometry_classify_triangle', image_type: 'shape_2d',
+      content: { operands: [5, 5, 8], classify_by: 'sides' },
+      answer: 'isosceles', distractors: [{ value: 'scalene', error_type: 'wrong-classification' }],
+    }));
+
+    expect(calls).to.deep.equal(wireCalls);
+  });
+
+  // Content that cannot make the triangle it names: no picture, so nothing
+  // points at a wrong answer.
+  for (const [label, operands, by] of [
+    ['sides that cannot close (1, 2, 10)', [1, 2, 10], 'sides'],
+    ['angles that do not add to 180 (90, 90, 30)', [90, 90, 30], 'angles'],
+    ['only two sides', [5, 5], 'sides'],
+    ['an unknown classify_by', [3, 4, 5], 'colour'],
+  ] as const) {
+    it(`${label}: no picture, the canvas hidden`, () => {
+      const { calls, el } = render(wire({
+        id: 'GEOM-CLASSIFY-TRIANGLES-bad', skillIds: ['GEOM-CLASSIFY-TRIANGLES'],
+        format: 'geometry_classify_triangle',
+        content: { operands, classify_by: by, operation: 'geometry_classify_triangle' },
+        questionText: 'Classify this triangle.', choices: [{ value: 'acute' }, { value: 'right' }],
+      }));
+
+      expect(calls, 'nothing painted').to.have.lengthOf(0);
+      expect(canvasOf(el).hidden).to.equal(true);
+      expect(choiceLabels(el)).to.have.lengthOf(2);
+    });
+  }
+
+  it('shows the canvas again for the next triangle that can be drawn', () => {
+    const { el } = render(wire({
+      id: 'GEOM-CLASSIFY-TRIANGLES-bad', skillIds: ['GEOM-CLASSIFY-TRIANGLES'],
+      format: 'geometry_classify_triangle',
+      content: { operands: [1, 2, 10], classify_by: 'sides' },
+      choices: [{ value: 'scalene' }],
+    }));
+    (el as HTMLElement & { question: unknown }).question = triangleWire([3, 4, 5], 'sides');
+
+    expect(canvasOf(el).hidden).to.equal(false);
+  });
+});
+
+/* ---------- geometry_area: triangles, parallelograms and trapezoids ---------- */
+
+const areaWire = (skill: string, content: Record<string, unknown>, questionText: string) => wire({
+  id: `${skill}-${(content['operands'] as number[]).join('-')}`,
+  skillIds: [skill],
+  format: 'geometry_area',
+  content: { ...content, operation: 'geometry_area' },
+  questionText,
+  choices: [{ value: '1' }, { value: '2' }, { value: '3' }, { value: '4' }],
+});
+
+const top = (pts: Pt[]) => pts.filter((p) => near(p.y, Math.min(...pts.map((q) => q.y))));
+const bottom = (pts: Pt[]) => pts.filter((p) => near(p.y, Math.max(...pts.map((q) => q.y))));
+const span = (pts: Pt[]) => Math.max(...pts.map((p) => p.x)) - Math.min(...pts.map((p) => p.x));
+const tall = (pts: Pt[]) => Math.max(...pts.map((p) => p.y)) - Math.min(...pts.map((p) => p.y));
+
+describe('geometry_area draws the shape it asks about, never its area', () => {
+  it('GEOM-AREA-TRIANGLE (base 12, height 9): a triangle to scale, base and height labelled', () => {
+    const { calls } = render(areaWire('GEOM-AREA-TRIANGLE',
+      { shape: 'triangle', operands: [12, 9], dimensions: 'base 12 and height 9' },
+      'Find the area of a triangle with base 12 and height 9.'));
+    const [outline] = paths(calls);
+
+    expect(outline, 'three corners').to.have.lengthOf(3);
+    expect(bottom(outline!), 'a flat base').to.have.lengthOf(2);
+    expect(span(bottom(outline!)) / tall(outline!)).to.be.closeTo(12 / 9, 1e-9);
+    expect(named('strokeRect', calls), 'not a rectangle').to.have.lengthOf(0);
+    expect([...labels(calls)].sort()).to.deep.equal(['12', '9']);
+    expect(allOnCanvas(outline!)).to.equal(true);
+  });
+
+  it('GEOM-AREA-PARALLELOGRAM (base 6, height 2): a slanted parallelogram, base and height labelled', () => {
+    const { calls } = render(areaWire('GEOM-AREA-PARALLELOGRAM',
+      { shape: 'parallelogram', operands: [6, 2], dimensions: 'base 6 and height 2', slant: 5 },
+      'Find the area of a parallelogram with base 6 and height 2.'));
+    const [outline] = paths(calls);
+
+    expect(outline, 'four corners').to.have.lengthOf(4);
+    const [b0, b1] = bottom(outline!), [t0, t1] = top(outline!);
+    expect(span([b0!, b1!])).to.be.closeTo(span([t0!, t1!]), 1e-9);
+    expect(span([b0!, b1!]) / tall(outline!)).to.be.closeTo(6 / 2, 1e-9);
+    expect(Math.min(t0!.x, t1!.x), 'slanted, not a rectangle').to.not.be.closeTo(Math.min(b0!.x, b1!.x), 1);
+    expect([...labels(calls)].sort(), 'the slant (5) is not in the question').to.deep.equal(['2', '6']);
+  });
+
+  it('GEOM-AREA-TRAPEZOID (bases 3 and 12, height 4): a trapezoid to scale, every measure labelled', () => {
+    const { calls } = render(areaWire('GEOM-AREA-TRAPEZOID',
+      { shape: 'trapezoid', operands: [3, 12, 4], dimensions: 'bases 3 and 12 and height 4' },
+      'Find the area of a trapezoid with bases 3 and 12 and height 4.'));
+    const [outline] = paths(calls);
+
+    expect(outline, 'four corners').to.have.lengthOf(4);
+    const shortBase = span(top(outline!)), longBase = span(bottom(outline!));
+    expect(shortBase / longBase).to.be.closeTo(3 / 12, 1e-9);
+    expect(tall(outline!) / longBase).to.be.closeTo(4 / 12, 1e-9);
+    expect([...labels(calls)].sort()).to.deep.equal(['12', '3', '4']);
+  });
+
+  it('never labels the area', () => {
+    const rows = [
+      [areaWire('GEOM-AREA-TRIANGLE', { shape: 'triangle', operands: [12, 9] }, 't'), '54'],
+      [areaWire('GEOM-AREA-PARALLELOGRAM', { shape: 'parallelogram', operands: [13, 18] }, 'p'), '234'],
+      [areaWire('GEOM-AREA-TRAPEZOID', { shape: 'trapezoid', operands: [3, 12, 4] }, 'z'), '30'],
+    ] as const;
+    for (const [q, area] of rows) expect(labels(render(q).calls)).to.not.include(area);
+  });
+
+  it('a rectangle is unchanged: length and width to scale and labelled', () => {
+    const { calls } = render(areaWire('GEOM-AREA-SQUARE-RECT',
+      { shape: 'rectangle', operands: [8, 3] }, 'Find the area of a rectangle with length 8 and width 3.'));
+
+    expect(named('strokeRect', calls)).to.have.lengthOf(1);
+    expect(labels(calls)).to.deep.equal(['8', '3']);
+  });
+});
+
+/* ---------- geometry_volume / geometry_surface_area: label what the question gives ---------- */
+
+const solidWire = (format: 'geometry_volume' | 'geometry_surface_area', skill: string, shape: string,
+  operands: number[], questionText: string) => wire({
+  id: `${skill}-${operands.join('-')}`,
+  skillIds: [skill],
+  format,
+  imageType: 'shape_3d',
+  content: { shape, operands, operation: format },
+  questionText,
+  choices: [{ value: '1' }, { value: '2' }],
+});
+
+describe('volume and surface area label what the question gives', () => {
+  const ROWS: { format: 'geometry_volume' | 'geometry_surface_area'; skill: string; shape: string;
+    operands: number[]; text: string; expected: string[]; answer: string }[] = [
+    { format: 'geometry_volume', skill: 'GEOM-VOLUME-TRIANGULAR-PRISM', shape: 'triangular prism', operands: [16, 10],
+      text: 'Find the volume of a triangular prism with base area 16 and height 10.',
+      expected: ['base area=16', 'h=10'], answer: '160' },
+    { format: 'geometry_surface_area', skill: 'GEOM-SURFACE-AREA-TRIANGULAR-PRISM', shape: 'triangular prism',
+      operands: [7, 2, 3], text: 'Find the surface area of a triangular prism with base 7, height 2, and length 3.',
+      expected: ['b=7', 'h=2', 'l=3'], answer: '59' },
+    { format: 'geometry_surface_area', skill: 'GEOM-SURFACE-AREA-PYRAMID', shape: 'pyramid', operands: [10, 5],
+      text: 'Find the surface area of a square pyramid with base side 10 and slant height 5.',
+      expected: ['side=10', 'slant=5'], answer: '200' },
+    { format: 'geometry_volume', skill: 'GEOM-VOLUME-RECT-PRISM', shape: 'rectangular prism', operands: [11, 18, 14],
+      text: 'Find the volume of a rectangular prism with length 11, width 18, and height 14.',
+      expected: ['l=11', 'w=18', 'h=14'], answer: '2772' },
+    { format: 'geometry_surface_area', skill: 'GEOM-SURFACE-AREA-RECT-PRISM', shape: 'rectangular prism',
+      operands: [6, 5, 9], text: 'Find the surface area of a rectangular prism with length 6, width 5, and height 9.',
+      expected: ['l=6', 'w=5', 'h=9'], answer: '258' },
+    { format: 'geometry_volume', skill: 'GEOM-VOLUME-CYLINDER', shape: 'cylinder', operands: [7, 6],
+      text: 'Find the volume of a cylinder with radius 7 and height 6.', expected: ['r=7', 'h=6'], answer: '923.16' },
+  ];
+
+  for (const r of ROWS) {
+    it(`${r.skill}: ${r.expected.join(', ')}, on the canvas, never the answer`, () => {
+      const { calls } = render(solidWire(r.format, r.skill, r.shape, r.operands, r.text));
+
+      expect([...labels(calls)].sort()).to.deep.equal([...r.expected].sort());
+      expect(labels(calls).join(' ')).to.not.include(r.answer);
+      expect(allOnCanvas(named('fillText', calls).map(textAt)), 'every label is on the canvas').to.equal(true);
+    });
+  }
+
+  it('a pyramid volume (no such row yet): the operands have no known meaning, so no labels', () => {
+    const { calls } = render(solidWire('geometry_volume', 'GEOM-VOLUME-PYRAMID', 'pyramid', [4, 6], 'x'));
+
+    expect(labels(calls)).to.deep.equal([]);
+  });
+
+  it('the triangular prism surface area draws its triangle height as a dashed line', () => {
+    const { calls } = render(solidWire('geometry_surface_area', 'GEOM-SURFACE-AREA-TRIANGULAR-PRISM',
+      'triangular prism', [7, 2, 3], 'x'));
+
+    expect(named('setLineDash', calls).some((c) => (c.args[0] as number[]).length > 0)).to.equal(true);
+  });
+});
+
+/* ---------- the pyramid: a readable size ---------- */
+
+describe('the pyramid is drawn at a readable size', () => {
+  it('fills most of the canvas height, and stays on it', () => {
+    const pts = paths(render(identify('pyramid', 'shape_3d')).calls).flat();
+
+    expect(tall(pts), 'at least two thirds of the 200px canvas').to.be.at.least(H * 2 / 3);
+    expect(allOnCanvas(pts)).to.equal(true);
+  });
+
+  it('the face-identify base highlight is a face, not a thin strip', () => {
+    const h = highlightCalls(render(faceWire('pyramid', 'square', FACES[2]!.choices)).log);
+    const base = h.filter((c) => c.fn === 'moveTo' || c.fn === 'lineTo').map(pt);
+
+    expect(tall(base), 'at least 30px deep').to.be.at.least(30);
+    expect(span(base), 'at least 90px wide').to.be.at.least(90);
+  });
+});

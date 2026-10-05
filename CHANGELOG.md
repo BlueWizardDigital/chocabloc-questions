@@ -7,8 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [0.6.0-beta.19] — 2026-10-05
 
-**Patch**: six pictures no longer show the child the answer. No export, attribute, part or CSS
-var added, renamed or removed. Recipes named below are from server-new's `recipes.json`.
+**Patch**: six pictures no longer show the child the answer, and four pictures that pointed at a
+wrong answer, mislabelled their measures or were too small to read are redrawn. No export,
+attribute, part or CSS var added, renamed or removed. Recipes named below are from server-new's
+`recipes.json`.
 
 ### Fixed
 
@@ -49,6 +51,31 @@ var added, renamed or removed. Recipes named below are from server-new's `recipe
   the last jump lands on the product, so "(-6) × 4 = ?" ended at `-24`. That tick now reads `?`;
   the others keep their values. A product of 0 lands on the start tick, which keeps its `0`.
   **Visible change for INT-MULT-NUMBER-LINE rows**; no recipe serves that skill today.
+- **`geometry_classify_triangle` draws the triangle its row describes.** "Classify this triangle
+  by its sides." drew the same unlabelled equilateral triangle for every row, which pointed at a
+  wrong answer for 12 of GEOM-CLASSIFY-TRIANGLES' 18 rows. It now draws the triangle the three
+  sides or three angles make, to scale and sitting on its longest side, with each side or angle
+  labelled. The type is never written. Sides that can't close, angles that don't add to 180, or
+  an unknown `classify_by` get no picture (canvas hidden) rather than a wrong one. **Visible
+  change for games serving GEOM-CLASSIFY-TRIANGLES** (`geometry-blocs-default`).
+- **`geometry_area` draws triangles, parallelograms and trapezoids as themselves.** All three were
+  drawn as a rectangle from the first two numbers. Each is now its own shape, to scale, with its
+  base (or both bases) labelled and its height drawn as a labelled dashed line. A parallelogram's
+  slant side is not labelled, because the question doesn't give it. The area is never drawn.
+  Rectangles, circles and compound shapes are unchanged. **Visible change for games serving
+  GEOM-AREA-TRIANGLE, -PARALLELOGRAM or -TRAPEZOID** (`geometry-blocs-default`).
+- **Volume and surface-area pictures label what the question gives.** Every shape but a cylinder,
+  cone or sphere was labelled `l=`, `w=`, `h=` in order. A triangular prism's volume ("base area 16
+  and height 10") now reads `base area=16` and `h=10`; its surface area ("base 7, height 2, and
+  length 3") reads `b=7`, `h=2` on a dashed triangle height, and `l=3`; a pyramid's surface area
+  ("base side 10 and slant height 5") reads `side=10` and `slant=5` on a dashed slant line. A
+  box's `l`, `w` and `h` now sit on the edges they measure, and every label stays on the canvas.
+  A pyramid's volume has no rows yet, so it gets no labels rather than a guess. **Visible change
+  for games serving these skills** (`geometry-blocs-default`).
+- **The pyramid is drawn at a readable size.** It filled half the canvas height and its base was an
+  18px strip. It now fills about 70% of the height, with a parallelogram base about 40px deep, so
+  the face-identify base highlight reads as a face. **Visible change wherever a pyramid is drawn**
+  (name, properties, face identify, surface area: `bloc-hero-geo`, `geometry-blocs-default`).
 
 ## [0.6.0-beta.18] — 2026-10-05
 

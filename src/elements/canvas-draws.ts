@@ -209,22 +209,30 @@ function drawCone(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: numb
 }
 
 /** The apex, and the base corners: back-left, back-right, front-right, front-left. */
+// A square pyramid seen from the front, a little to the right and above: the
+// base is a parallelogram and the apex sits over its centre. It fills about
+// 70% of the canvas height (beta.19; it used to be half that, with a base 18px
+// deep).
 function pyramidPoints(cx: number, cy: number, s: number): { apex: Pt; base: Pt[] } {
   return {
-    apex: { x: cx, y: cy - s * 0.9 },
+    apex: { x: cx, y: cy - s * 1.25 },
     base: [
-      { x: cx - s * 0.6, y: cy + s * 0.5 }, { x: cx + s * 0.6, y: cy + s * 0.5 },
-      { x: cx + s * 0.3, y: cy + s * 0.8 }, { x: cx - s * 0.3, y: cy + s * 0.8 },
+      { x: cx - s * 0.6, y: cy + s * 0.45 }, { x: cx + s * 1.1, y: cy + s * 0.45 },
+      { x: cx + s * 0.6, y: cy + s * 1.1 }, { x: cx - s * 1.1, y: cy + s * 1.1 },
     ],
   };
 }
 
 function drawPyramid(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number): void {
   const { apex, base } = pyramidPoints(cx, cy, s);
+  const [bl, br, fr, fl] = base as [Pt, Pt, Pt, Pt];
+  // Back to front: the back and left faces end up hidden behind the front and
+  // right ones, as they would be.
   fillFaces(ctx, [
-    [[apex, base[0]!, base[3]!], '#ede7f6'],
-    [[apex, base[0]!, base[1]!], '#d1c4e9'],
-    [[apex, base[1]!, base[2]!], '#b39ddb'],
+    [[apex, bl, br], '#ede7f6'],
+    [[apex, fl, bl], '#ede7f6'],
+    [[apex, br, fr], '#b39ddb'],
+    [[apex, fl, fr], '#d1c4e9'],
   ]);
 }
 
@@ -452,12 +460,144 @@ export function drawPerimeterShape(
   ctx.restore();
 }
 
+/**
+ * Maps a shape given in its own units (y up) onto the canvas, as large as fits
+ * inside the margins, centred, y flipped so "up" is up.
+ */
+function fitToCanvas(pts: readonly Pt[], w: number, h: number, mx: number, my: number): (p: Pt) => Pt {
+  const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const scale = Math.min((w - 2 * mx) / (maxX - minX || 1), (h - 2 * my) / (maxY - minY || 1));
+  const offX = (w - (maxX - minX) * scale) / 2, offY = (h - (maxY - minY) * scale) / 2;
+  return (p) => ({ x: offX + (p.x - minX) * scale, y: offY + (maxY - p.y) * scale });
+}
+
+/** Text centred `gap` px from `at`, on the side away from `centre`. */
+function labelAway(ctx: CanvasRenderingContext2D, text: string, at: Pt, centre: Pt, gap: number): void {
+  const dx = at.x - centre.x, dy = at.y - centre.y;
+  const len = Math.hypot(dx, dy) || 1;
+  ctx.fillText(text, at.x + (dx / len) * gap, at.y + (dy / len) * gap);
+}
+
+const midpoint = (a: Pt, b: Pt): Pt => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+
+function centroid(pts: readonly Pt[]): Pt {
+  return { x: pts.reduce((t, p) => t + p.x, 0) / pts.length, y: pts.reduce((t, p) => t + p.y, 0) / pts.length };
+}
+
+/**
+ * An area question's shape, to scale: the outline, a dashed height from
+ * `heightFrom` straight down to the base, and every given measure labelled.
+ * `corners` are in the shape's own units with the base on y = 0.
+ */
+function drawAreaPolygon(
+  ctx: CanvasRenderingContext2D, w: number, h: number,
+  corners: readonly Pt[], heightFrom: Pt, baseLabel: string, heightLabel: string, topLabel?: string,
+): void {
+  const toCanvas = fitToCanvas(corners, w, h, 30, 22);
+  const pts = corners.map(toCanvas);
+  ctx.save();
+  ctx.fillStyle = '#e8f5e9'; ctx.strokeStyle = '#4caf50'; ctx.lineWidth = 2;
+  ctx.beginPath(); tracePath(ctx, pts); ctx.fill(); ctx.stroke();
+  const top = toCanvas(heightFrom), foot = toCanvas({ x: heightFrom.x, y: 0 });
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(top.x, top.y); ctx.lineTo(foot.x, foot.y); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#333'; ctx.font = '11px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  // The base is the bottom edge, corners 0 → 1.
+  ctx.fillText(baseLabel, (pts[0]!.x + pts[1]!.x) / 2, pts[0]!.y + 14);
+  if (topLabel !== undefined) ctx.fillText(topLabel, (pts[2]!.x + pts[3]!.x) / 2, pts[2]!.y - 12);
+  ctx.textAlign = 'left';
+  ctx.fillText(heightLabel, top.x + 6, (top.y + foot.y) / 2);
+  ctx.restore();
+}
+
+/**
+ * geometry_classify_triangle: "Classify this triangle by its sides." The
+ * triangle the row's three sides or three angles describe, to scale, sitting
+ * on its longest side, with each given measure labelled (before beta.19 every
+ * row drew the same equilateral triangle). Returns false, having drawn
+ * nothing, when the measures can't make a triangle or `classifyBy` is neither
+ * 'sides' nor 'angles': the caller then shows no picture.
+ */
+export function drawClassifyTriangle(
+  ctx: CanvasRenderingContext2D, w: number, h: number, operands: readonly number[], classifyBy: string,
+): boolean {
+  ctx.clearRect(0, 0, w, h);
+  if (operands.length !== 3 || !operands.every((n) => Number.isFinite(n) && n > 0)) return false;
+  // Index of the side (or angle) that goes on the base (or at the apex).
+  const big = operands.indexOf(Math.max(...operands));
+  const [i, j] = [0, 1, 2].filter((k) => k !== big) as [number, number];
+  let lengths: [number, number, number]; // opposite A, B, C; AB is the base
+  if (classifyBy === 'sides') {
+    if (operands[i]! + operands[j]! <= operands[big]!) return false;
+    lengths = [operands[i]!, operands[j]!, operands[big]!];
+  } else if (classifyBy === 'angles') {
+    if (Math.abs(operands[0]! + operands[1]! + operands[2]! - 180) > 0.01) return false;
+    const sin = (deg: number) => Math.sin((deg * Math.PI) / 180);
+    lengths = [sin(operands[i]!), sin(operands[j]!), sin(operands[big]!)];
+  } else {
+    return false;
+  }
+  const [a, b, c] = lengths;
+  const apexX = (b * b + c * c - a * a) / (2 * c);
+  const unit = [{ x: 0, y: 0 }, { x: c, y: 0 }, { x: apexX, y: Math.sqrt(Math.max(0, b * b - apexX * apexX)) }];
+  const pts = unit.map(fitToCanvas(unit, w, h, 32, 26));
+  const [A, B, C] = pts as [Pt, Pt, Pt];
+  const centre = centroid(pts);
+  ctx.save();
+  ctx.fillStyle = '#e3f2fd'; ctx.strokeStyle = '#2196f3'; ctx.lineWidth = 3;
+  ctx.beginPath(); tracePath(ctx, pts); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#333'; ctx.font = '12px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (classifyBy === 'sides') {
+    labelAway(ctx, String(operands[big]), midpoint(A, B), centre, 14);
+    labelAway(ctx, String(operands[i]), midpoint(B, C), centre, 14);
+    labelAway(ctx, String(operands[j]), midpoint(C, A), centre, 14);
+  } else {
+    labelAway(ctx, `${operands[i]}°`, A, centre, 16);
+    labelAway(ctx, `${operands[j]}°`, B, centre, 16);
+    labelAway(ctx, `${operands[big]}°`, C, centre, 16);
+  }
+  ctx.restore();
+  return true;
+}
+
+/**
+ * geometry_area. Rectangles (and squares) to scale with length and width;
+ * triangles, parallelograms and trapezoids as those shapes, to scale, with
+ * base(s) and height (before beta.19 they were all drawn as rectangles);
+ * circles with their radius. The area is the answer and is never drawn.
+ */
 export function drawAreaShape(
   ctx: CanvasRenderingContext2D, w: number, h: number,
   content: { shape?: string; operands?: number[]; radius?: number },
 ): void {
   ctx.clearRect(0, 0, w, h);
   const shape = content.shape ?? 'rectangle';
+  const ops = content.operands ?? [];
+  if (shape === 'triangle' && ops.length >= 2) {
+    const [b, ht] = ops as [number, number];
+    const apex = { x: b * 0.35, y: ht };
+    drawAreaPolygon(ctx, w, h, [{ x: 0, y: 0 }, { x: b, y: 0 }, apex], apex, String(b), String(ht));
+    return;
+  }
+  if (shape === 'parallelogram' && ops.length >= 2) {
+    const [b, ht] = ops as [number, number];
+    const off = b * 0.3;
+    const topLeft = { x: off, y: ht };
+    drawAreaPolygon(ctx, w, h,
+      [{ x: 0, y: 0 }, { x: b, y: 0 }, { x: b + off, y: ht }, topLeft], topLeft, String(b), String(ht));
+    return;
+  }
+  if (shape === 'trapezoid' && ops.length >= 3) {
+    const [b1, b2, ht] = ops as [number, number, number];
+    const long = Math.max(b1, b2), short = Math.min(b1, b2);
+    const topLeft = { x: (long - short) / 2, y: ht };
+    drawAreaPolygon(ctx, w, h,
+      [{ x: 0, y: 0 }, { x: long, y: 0 }, { x: (long + short) / 2, y: ht }, topLeft], topLeft,
+      String(long), String(ht), String(short));
+    return;
+  }
   if (shape === 'circle' && content.radius !== undefined) {
     const r = Math.min(w, h) * 0.35;
     ctx.fillStyle = '#e8f5e9'; ctx.strokeStyle = '#4caf50'; ctx.lineWidth = 2;
@@ -948,34 +1088,83 @@ export function drawBase10Blocks(
   b10ScaledSet(ctx, blocks, 0, 0, w, h, fills, stroke);
 }
 
+/**
+ * geometry_volume / geometry_surface_area: the solid, with each measure the
+ * question gives labelled on the part it measures. The volume or surface area
+ * is the answer and is never drawn. What the operands mean depends on the
+ * shape and the question (from the bank's rows):
+ * - box: length, width, height;  cylinder, cone: radius, height;  sphere: radius
+ * - triangular prism, volume: base area, height (the distance between the ends)
+ * - triangular prism, surface area: triangle base, triangle height, length
+ * - pyramid, surface area: base side, slant height
+ * Anything else (a pyramid's volume has no rows yet) gets no labels rather
+ * than a guess. Before beta.19 prisms and pyramids were labelled l, w, h.
+ */
 export function drawLabeled3D(
   ctx: CanvasRenderingContext2D, w: number, h: number,
-  shapeName: string, operands: number[],
+  shapeName: string, operands: number[], kind: 'volume' | 'surface_area',
 ): void {
   drawShape3D(ctx, w, h, shapeName);
-  const cx = w / 2, cy = h / 2, s = Math.min(w, h) * 0.3;
+  const { cx, cy, s } = frame3D(w, h);
+  ctx.save();
   ctx.fillStyle = '#333';
   ctx.font = 'bold 11px Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  // Keep every label on the canvas: the box is drawn larger than the canvas.
+  const say = (text: string, at: Pt) =>
+    ctx.fillText(text, Math.min(Math.max(at.x, 24), w - 24), Math.min(Math.max(at.y, 8), h - 8));
+  const away = (p: Pt, from: Pt, gap: number): Pt => {
+    const dx = p.x - from.x, dy = p.y - from.y, len = Math.hypot(dx, dy) || 1;
+    return { x: p.x + (dx / len) * gap, y: p.y + (dy / len) * gap };
+  };
+  const dashed = (from: Pt, to: Pt) => {
+    ctx.save();
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  };
+  const [o0, o1, o2] = operands;
   const name = shapeName.toLowerCase();
   if (name === 'cylinder' || name === 'cone') {
-    if (operands[0] !== undefined) ctx.fillText('r=' + operands[0], cx + s * 0.9, cy + s * 0.3);
-    if (operands[1] !== undefined) ctx.fillText('h=' + operands[1], cx - s * 1.0, cy);
+    if (o0 !== undefined) say('r=' + o0, { x: cx + s * 0.9, y: cy + s * 0.3 });
+    if (o1 !== undefined) say('h=' + o1, { x: cx - s * 1.0, y: cy });
   } else if (name === 'sphere') {
-    if (operands[0] !== undefined) ctx.fillText('r=' + operands[0], cx + s * 0.6, cy - s * 0.2);
-  } else {
-    const labels = ['l', 'w', 'h'];
-    const positions = [
-      { x: cx, y: cy + s * 1.1 },
-      { x: cx + s * 1.2, y: cy + s * 0.4 },
-      { x: cx - s * 1.2, y: cy - s * 0.2 },
-    ];
-    for (let i = 0; i < Math.min(operands.length, 3); i++) {
-      const p = positions[i]!;
-      ctx.fillText(labels[i] + '=' + operands[i], p.x, p.y);
+    if (o0 !== undefined) say('r=' + o0, { x: cx + s * 0.6, y: cy - s * 0.2 });
+  } else if (name === 'cube' || name === 'rectangular prism') {
+    const v = boxCorners(isoProjection(cx, cy, s), name === 'cube' ? CUBE_DIMS : RECT_PRISM_DIMS);
+    const centre = { x: cx, y: cy };
+    // Length runs along x (3 → 2), width along z (2 → 1), height along y (3 → 7).
+    if (o0 !== undefined) say('l=' + o0, away(midpoint(v[3]!, v[2]!), centre, 14));
+    if (o1 !== undefined) say('w=' + o1, away(midpoint(v[2]!, v[1]!), centre, 14));
+    if (o2 !== undefined) say('h=' + o2, away(midpoint(v[3]!, v[7]!), centre, 14));
+  } else if (name === 'triangular prism') {
+    const { front, back } = triPrismPoints(cx, cy, s);
+    const centre = centroid([...front, ...back]);
+    const baseMid = midpoint(front[0]!, front[1]!);
+    const depth = away(midpoint(front[1]!, back[1]!), centre, 14);
+    if (kind === 'volume') {
+      if (o0 !== undefined) say('base area=' + o0, { x: baseMid.x, y: baseMid.y + 14 });
+      if (o1 !== undefined) say('h=' + o1, depth);
+    } else {
+      if (o0 !== undefined) say('b=' + o0, { x: baseMid.x, y: baseMid.y + 14 });
+      if (o1 !== undefined) {
+        dashed(front[2]!, baseMid);
+        say('h=' + o1, midpoint(front[2]!, baseMid));
+      }
+      if (o2 !== undefined) say('l=' + o2, depth);
+    }
+  } else if (name === 'pyramid' && kind === 'surface_area') {
+    const { apex, base } = pyramidPoints(cx, cy, s);
+    const frontMid = midpoint(base[3]!, base[2]!);
+    if (o0 !== undefined) say('side=' + o0, { x: frontMid.x, y: frontMid.y + 14 });
+    if (o1 !== undefined) {
+      dashed(apex, frontMid);
+      say('slant=' + o1, midpoint(apex, frontMid));
     }
   }
+  ctx.restore();
 }
 
 type FaceOutline = { corners: Pt[] } | { ellipse: { x: number; y: number; rx: number; ry: number } };
@@ -998,7 +1187,7 @@ function faceOutline(shape: string, faceShape: string, w: number, h: number): Fa
     case 'pyramid': {
       const { apex, base } = pyramidPoints(cx, cy, s);
       if (faceShape === 'square') return { corners: base };
-      if (faceShape === 'triangle') return { corners: [apex, base[1]!, base[2]!] }; // the right-hand side
+      if (faceShape === 'triangle') return { corners: [apex, base[3]!, base[2]!] }; // the front face
       return null;
     }
     case 'triangular prism': {

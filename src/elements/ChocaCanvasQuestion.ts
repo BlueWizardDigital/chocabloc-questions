@@ -6,7 +6,7 @@ import {
   drawAreaShape, drawCircumference, drawCircleGiven, drawFractionVisual, drawAngle,
   drawCircleParts, drawCompoundShape, drawArray,
   drawAnalogClock, drawCoordinatePlane, drawBase10Blocks,
-  drawLabeled3D, drawFaceHighlight,
+  drawLabeled3D, drawFaceHighlight, drawClassifyTriangle,
   type Base10Colors,
 } from './canvas-draws';
 import './ChocaChoicePad';
@@ -223,13 +223,15 @@ export class ChocaCanvasQuestion extends HTMLElement {
         drawShape2D(ctx, w, h, q.content.shape.toLowerCase() === 'trapezoid' ? 'right trapezoid' : q.content.shape);
         break;
       case 'geometry_classify_triangle':
-        drawShape2D(ctx, w, h, 'triangle');
+        // The triangle its sides or angles describe. Measures that make no
+        // triangle get no picture: a wrong one would point at a wrong answer.
+        this._canvas.hidden = !drawClassifyTriangle(ctx, w, h, q.content.operands, q.content.classify_by);
         break;
       case 'geometry_volume':
-        drawLabeled3D(ctx, w, h, q.content.shape, q.content.operands);
+        drawLabeled3D(ctx, w, h, q.content.shape, q.content.operands, 'volume');
         break;
       case 'geometry_surface_area':
-        drawLabeled3D(ctx, w, h, q.content.shape, q.content.operands);
+        drawLabeled3D(ctx, w, h, q.content.shape, q.content.operands, 'surface_area');
         break;
       case 'geometry_circle_convert':
         drawCircleGiven(ctx, w, h, q.content.given_type, q.content.value);
