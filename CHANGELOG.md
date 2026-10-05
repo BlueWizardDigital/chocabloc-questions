@@ -5,6 +5,43 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.6.0-beta.19] — 2026-10-05
+
+**Patch**: five pictures no longer show the child the answer. No export, attribute, part or CSS
+var added, renamed or removed. Recipes named below are from server-new's `recipes.json`.
+
+### Fixed
+
+- **`geometry_symmetry` no longer draws the lines of symmetry.** "How many lines of symmetry does
+  a hexagon have?" drew `lines_of_symmetry` dashed lines through the shape, so the child could
+  count the answer. It now draws the shape only, the same picture as "What shape is this?".
+  **Visible change for games serving GEOM-SYMMETRY-BASIC** (`bloc-hero-geo`,
+  `geometry-blocs-default`).
+- **`geometry_face_identify` highlights the face it asks about, and never names it.** The stem is
+  "What shape is the highlighted face of this pyramid?". Only the cube and the rectangular prism
+  had a highlighted face; the other six rows (pyramid ×2, triangular prism ×2, cylinder, cone)
+  printed `face: <answer>` under the shape instead. Every row now fills and outlines its face,
+  and nothing is written. A pyramid and a triangular prism have two kinds of face, so
+  `face_shape` picks which one: the pyramid's square base or a triangular side, the prism's
+  triangular end or a rectangular side. Without the highlight those rows can't be answered,
+  because each offers the shape's other real face as a wrong choice. A face the shape doesn't
+  have gets no highlight. **Visible change for games serving GEOM-3D-FACES-IDENTIFY**
+  (`bloc-hero-geo`, `geometry-blocs-default`).
+- **`geometry_circle_convert` labels the measure the question gives.** It always drew a radius
+  labelled `r=`, halving the value when the row gave a diameter, so "A circle has a diameter of
+  48. What is the radius?" showed `r=24`. Half of GEOM-CIRCLE-RADIUS-DIAMETER's rows give a
+  diameter. A given diameter now draws the diameter, labelled `d=48`; a given radius still draws
+  `r=`. An unknown `given_type` draws the circle with no label. **Visible change for games
+  serving GEOM-CIRCLE-RADIUS-DIAMETER** (`geometry-blocs-default`).
+- **`geometry_angle_classify` draws every angle in one colour.** Acute was green, right blue,
+  obtuse orange and straight purple, so after a few rounds the colour was the answer. Every angle
+  is now green. The degree label stays: the stem gives it, and 89° and 90° look the same.
+  **Visible change for games serving GEOM-ANGLE-CLASSIFY** (`geometry-blocs-default`).
+- **A number-line multiplication no longer prints the product.** Every tick was labelled, and
+  the last jump lands on the product, so "(-6) × 4 = ?" ended at `-24`. That tick now reads `?`;
+  the others keep their values. A product of 0 lands on the start tick, which keeps its `0`.
+  **Visible change for INT-MULT-NUMBER-LINE rows**; no recipe serves that skill today.
+
 ## [0.6.0-beta.18] — 2026-10-05
 
 **Patch**: two shape-picture fixes. No export, attribute, part or CSS var added, renamed or
