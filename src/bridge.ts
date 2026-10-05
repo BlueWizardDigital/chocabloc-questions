@@ -138,6 +138,10 @@ export interface ConceptSessionPayload {
   xpEarned?: number;
   correctCombos?: number;
   clientSessionId?: string;
+  /** Optional sub-topic concept (category-bound games). Without it the host reports
+   *  against the concept it resolved; the server accepts only a concept bound to this
+   *  game. */
+  conceptId?: string;
   gameId?: string;
 }
 
