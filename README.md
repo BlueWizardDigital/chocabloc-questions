@@ -219,6 +219,31 @@ avoid real network calls. (The game template still routes bridge use through one
 module via an ESLint `no-restricted-imports` fence — now a convention, not a
 crash guard.)
 
+### The concept saver (`chocabloc-questions/concept-run`)
+
+Use this instead of calling `reportConceptSession` yourself. It counts **active play only**:
+- a gap between taps or keys counts at most 2 minutes;
+- a hidden tab or a paused game counts nothing.
+
+```js
+import { bridge } from 'chocabloc-questions/bridge';
+import { createConceptRun } from 'chocabloc-questions/concept-run';
+
+const saver = createConceptRun({
+  report: bridge.reportConceptSession,
+  concept: bridge.requestConcept(),   // nothing is sent until this settles to a concept
+});
+// run starts: saver.start()           Restart/Home/quit mid-run: saver.abandon()
+// pause menu: saver.pause(true|false) run ends: saver.finish({ levels, xp })
+// right answer: saver.correct()       levels/XP mid-run: saver.add({ levels, xp })
+```
+
+A game that files practice per sub-topic creates it with `perConcept: true` and calls
+`saver.setConcept(id | null)` per item. A stretch with no concept is dropped, never sent
+without one.
+
+Full rules: `docs/host-protocol.md` § Concept saver.
+
 ### The host kit (`chocabloc-questions/host`)
 
 A framework-free convenience layer over the bridge — the glue most iframe games

@@ -379,11 +379,14 @@ const progress = await bridge.reportConceptSession({
 ```
 
 Posts `chocabloc:concept-session:report`; the host replies `chocabloc:concept-session:deliver` with
-the rolled-up progress. **Requires a prior `requestConcept`** so the host has a resolved conceptId to
-attribute the session to — the host **pins the conceptId + gameId**; an iframe cannot report against
-another game's concept. **No fetch fallback** (the write needs the host's session + CSRF), so this
-returns `null` when standalone. Every field is optional and **server-clamped** (`timePlayedMs`
-0–24h, `levelsCompleted` 0–10000, `xpEarned` 0–1M, `correctCombos` 0–100000).
+the rolled-up progress. **Requires a prior `requestConcept`** so the host has a resolved concept. The host **pins the
+gameId**. `conceptId` is optional: without it the host reports against the concept it resolved;
+with it, the server accepts only a concept bound to this game (`400 CONCEPT_NOT_IN_GAME`
+otherwise). **No fetch fallback** (the write needs the host's session + CSRF), so this returns
+`null` when standalone. Every field is optional and the server **rejects** (400) anything that
+isn't a whole number in range (`timePlayedMs` 0–24h, `levelsCompleted` 0–10000, `xpEarned`
+0–1M, `correctCombos` 0–100000) or a `clientSessionId` that isn't a string of at most 255 chars.
+A run reported in pieces under one `clientSessionId` counts as one session.
 
 ```ts
 interface ConceptProgress {
@@ -394,6 +397,33 @@ interface ConceptProgress {
   lastPlayedAt: string | null;
 }
 ```
+
+### Concept saver (`chocabloc-questions/concept-run`, beta.17+)
+
+Use this instead of calling `reportConceptSession` yourself. It counts **active play only**:
+- a gap between taps or keys counts at most 2 minutes;
+- a hidden tab or a paused game counts nothing.
+
+It reports in pieces: every minute of play, when the tab hides with at least 15 s unsent, on
+`abandon()` and on `finish()`. All pieces of a run share one `clientSessionId`, every value is
+a valid whole number, each piece is sent at most once, and nothing throws into the game.
+
+```js
+import { bridge } from 'chocabloc-questions/bridge';
+import { createConceptRun } from 'chocabloc-questions/concept-run';
+
+const saver = createConceptRun({
+  report: bridge.reportConceptSession,
+  concept: bridge.requestConcept(),   // nothing is sent until this settles to a concept
+});
+// run starts: saver.start()           Restart/Home/quit mid-run: saver.abandon()
+// pause menu: saver.pause(true|false) run ends: saver.finish({ levels, xp })
+// right answer: saver.correct()       levels/XP mid-run: saver.add({ levels, xp })
+```
+
+A game that files practice per sub-topic creates it with `perConcept: true` and calls
+`saver.setConcept(id | null)` per item. A stretch with no concept is dropped, never sent
+without one.
 
 > **XP note.** As with `bridge.score` (see [Scoring & XP](#scoring--xp)), `xpEarned` here is
 > game-supplied and server-authoritative XP is still a pending redesign — don't build a

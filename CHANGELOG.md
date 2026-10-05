@@ -5,7 +5,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-_No unreleased changes._
+## [0.6.0-beta.17] — 2026-10-05
+
+**Minor**: new exports and an optional field; nothing renamed or removed.
+
+### Added
+
+- **`chocabloc-questions/concept-run`: a shared concept saver.** `createConceptRun({ report,
+  concept, perConcept? })` counts active play only (2-minute input-gap cap; nothing while
+  hidden or paused). It reports in pieces (1-minute checkpoints, tab hide, abandon, finish)
+  under one `clientSessionId` per run, with whole numbers only, at most once per piece, and
+  never throws into the game. It replaces each game's own report code.
+- `ConceptSessionPayload.conceptId` (optional), for per-sub-topic filing. The host already
+  forwarded it.
+- `<chocabloc-question>` re-exports its inner renderer's `container`, `prompt`, `canvas` and
+  `choices` parts (`exportparts`), so a page's `::part` theme reaches them. Upstreamed from
+  Greater Gator's local patch. **Visible change:** an existing
+  `chocabloc-question::part(prompt|container|canvas|choices)` rule now also styles canvas and
+  coin-pile questions, not just text-only ones. Check consumers that theme those parts;
+  Adventure 101 does (`overlay.css`).
+
+### Fixed
+
+- Docs said the server **clamps** session values; it **rejects** them (400). Corrected in the
+  `ConceptSessionPayload` comment and `docs/host-protocol.md`. That page also no longer
+  says the host pins the conceptId; it pins the gameId.
 
 ## [0.6.0-beta.16] — 2026-09-30
 

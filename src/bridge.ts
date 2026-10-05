@@ -127,10 +127,13 @@ export interface ResolvedConcept {
 
 /**
  * Concept play-session report. Mirrors POST /api/v1/concepts/:conceptId/sessions
- * body. All fields optional; the server clamps every value (timePlayedMs 0..24h,
- * levelsCompleted 0..10000, xpEarned 0..1M, correctCombos 0..100000). The host
- * pins the conceptId (from the concept it resolved) and the gameId — an iframe
- * cannot report against another game's concept.
+ * body. All fields optional. The server REJECTS (400) any value that is not a whole
+ * number in range — timePlayedMs 0..24h, levelsCompleted 0..10000, xpEarned 0..1M,
+ * correctCombos 0..100000 — and a clientSessionId that is not a string of at most
+ * 255 chars. `chocabloc-questions/concept-run` sends only valid values. The host pins
+ * the gameId. conceptId is optional: without it the host reports against the concept
+ * it resolved; with it, the server accepts only a concept bound to this game
+ * (400 CONCEPT_NOT_IN_GAME otherwise).
  */
 export interface ConceptSessionPayload {
   timePlayedMs?: number;
