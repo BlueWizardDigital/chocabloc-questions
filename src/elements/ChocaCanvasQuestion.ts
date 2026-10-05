@@ -29,6 +29,24 @@ function base10Of(q: NormalizedQuestion): Base10BlocksContent | null {
   return { ...c, operation: c.operation ?? (format === 'base10_blocks' ? 'base10_count' : format) };
 }
 
+type Piece = { width: number; height: number };
+
+/**
+ * A compound area's rectangles, or null when it has none. A bank row keeps
+ * `components` but the server's allow-list drops each one's `width`, so the
+ * pieces are rebuilt from `operands` (width, height, width, height …, the
+ * order in every bank row).
+ */
+function compoundPieces(c: { components?: unknown; operands?: unknown }): Piece[] | null {
+  const num = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
+  const listed = Array.isArray(c.components) ? (c.components as Partial<Piece>[]) : [];
+  if (listed.length < 2) return null;
+  if (listed.every((p) => num(p?.width) && num(p?.height))) return listed as Piece[];
+  const ops = Array.isArray(c.operands) ? (c.operands as unknown[]) : [];
+  if (ops.length !== listed.length * 2 || !ops.every(num)) return null;
+  return listed.map((_, i) => ({ width: ops[2 * i] as number, height: ops[2 * i + 1] as number }));
+}
+
 /** True when base-10 content carries blocks to draw. */
 function hasBlocks(c: Base10BlocksContent): boolean {
   const some = (b?: Base10Blocks) =>
@@ -219,22 +237,31 @@ export class ChocaCanvasQuestion extends HTMLElement {
         else drawShape3D(ctx, w, h, q.content.shape);
         break;
       case 'pythagorean':
-        drawRightTriangle(ctx, w, h, q.content.legs);
+        drawRightTriangle(ctx, w, h, q.content.legs, q.content.hypotenuse, q.content.operands);
         break;
-      case 'geometry_area':
-        if (q.content.components && q.content.components.length >= 2)
-          drawCompoundShape(ctx, w, h, q.content.components);
+      case 'geometry_area': {
+        const pieces = compoundPieces(q.content);
+        if (pieces) drawCompoundShape(ctx, w, h, pieces);
         else drawAreaShape(ctx, w, h, q.content);
         break;
+      }
       case 'geometry_angles':
         drawTriangleAngles(ctx, w, h, q.content.known_angles);
         break;
       case 'geometry_perimeter':
         drawPerimeterShape(ctx, w, h, q.content.operands);
         break;
-      case 'geometry_circumference':
-        drawCircumference(ctx, w, h, q.content.radius);
+      case 'geometry_circumference': {
+        // A bank row skips the normalizer, so a diameter row arrives with
+        // `diameter` and no `radius`: label the diameter it gives.
+        const diameter = (q.content as { diameter?: unknown }).diameter;
+        if (typeof q.content.radius !== 'number' && typeof diameter === 'number') {
+          drawCircleGiven(ctx, w, h, 'diameter', diameter);
+        } else {
+          drawCircumference(ctx, w, h, q.content.radius);
+        }
         break;
+      }
       case 'geometry_angle_classify':
         drawAngle(ctx, w, h, q.content.angle);
         break;

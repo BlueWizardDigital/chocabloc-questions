@@ -388,8 +388,17 @@ export function drawPictograph(
   });
 }
 
+/**
+ * pythagorean. "Find the hypotenuse" rows label both legs and put "?" on the
+ * hypotenuse. "Find the missing leg" rows (GEOM-PYTHAGOREAN-LEG) give one leg
+ * and the hypotenuse, so `operands` holds the hypotenuse; `legs` still holds
+ * both legs, one of them the answer. Those label the known leg and the
+ * hypotenuse, and put "?" on the other leg (before beta.19 they labelled the
+ * answer and put "?" on the given hypotenuse).
+ */
 export function drawRightTriangle(
   ctx: CanvasRenderingContext2D, w: number, h: number, legs: [number, number],
+  hypotenuse?: number, operands?: readonly number[],
 ): void {
   ctx.clearRect(0, 0, w, h);
   const margin = 20;
@@ -400,10 +409,13 @@ export function drawRightTriangle(
   ctx.fillStyle = '#e3f2fd'; ctx.strokeStyle = '#2196f3'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y0); ctx.lineTo(x0, y1);
   ctx.closePath(); ctx.fill(); ctx.stroke();
+  const findLeg = hypotenuse !== undefined && Array.isArray(operands) && operands.includes(hypotenuse);
+  const known = findLeg ? operands!.find((o) => o !== hypotenuse) : undefined;
+  const leg = (n: number) => (!findLeg || n === known ? String(n) : '?');
   ctx.fillStyle = '#333'; ctx.font = '11px Arial'; ctx.textAlign = 'center';
-  ctx.fillText(String(legs[0]), (x0 + x1) / 2, y0 + 12);
-  ctx.fillText(String(legs[1]), x0 - 12, (y0 + y1) / 2);
-  ctx.fillText('?', (x0 + x1) / 2 + 15, (y0 + y1) / 2 - 5);
+  ctx.fillText(leg(legs[0]), (x0 + x1) / 2, y0 + 12);
+  ctx.fillText(leg(legs[1]), x0 - 12, (y0 + y1) / 2);
+  ctx.fillText(findLeg ? String(hypotenuse) : '?', (x0 + x1) / 2 + 15, (y0 + y1) / 2 - 5);
 }
 
 export function drawTriangleAngles(
@@ -543,10 +555,12 @@ function drawAreaPolygon(
  * 'sides' nor 'angles': the caller then shows no picture.
  */
 export function drawClassifyTriangle(
-  ctx: CanvasRenderingContext2D, w: number, h: number, operands: readonly number[], classifyBy: string,
+  ctx: CanvasRenderingContext2D, w: number, h: number, operands: readonly number[] | undefined, classifyBy: string,
 ): boolean {
   ctx.clearRect(0, 0, w, h);
-  if (operands.length !== 3 || !operands.every((n) => Number.isFinite(n) && n > 0)) return false;
+  // A bank row skips the normalizer, so operands may be missing or not a list.
+  if (!Array.isArray(operands) || operands.length !== 3
+    || !operands.every((n) => typeof n === 'number' && Number.isFinite(n) && n > 0)) return false;
   // Index of the side (or angle) that goes on the base (or at the apex).
   const big = operands.indexOf(Math.max(...operands));
   const [i, j] = [0, 1, 2].filter((k) => k !== big) as [number, number];

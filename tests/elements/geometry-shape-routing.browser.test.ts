@@ -1274,3 +1274,74 @@ describe('base-10 rows under their bank format names', () => {
     expect(canvasOf(el).hidden).to.equal(true);
   });
 });
+
+/* ---------- geometry_classify_triangle without usable operands ---------- */
+
+describe('geometry_classify_triangle with no usable operands', () => {
+  for (const [label, content] of [
+    ['no operands', { classify_by: 'sides', operation: 'geometry_classify_triangle' }],
+    ['operands that are not a list', { operands: '3, 4, 5', classify_by: 'sides' }],
+  ] as const) {
+    it(`${label}: no picture, no throw, the choices render`, () => {
+      let out: ReturnType<typeof render> | undefined;
+      expect(() => {
+        out = render(wire({
+          id: 'GEOM-CLASSIFY-TRIANGLES-no-operands', skillIds: ['GEOM-CLASSIFY-TRIANGLES'],
+          format: 'geometry_classify_triangle', content,
+          questionText: 'Classify this triangle by its sides.',
+          choices: ['scalene', 'isosceles', 'equilateral'].map((value) => ({ value })),
+        }));
+      }).to.not.throw();
+
+      expect(out!.calls, 'nothing painted').to.have.lengthOf(0);
+      expect(canvasOf(out!.el).hidden).to.equal(true);
+      expect(choiceLabels(out!.el)).to.have.members(['scalene', 'isosceles', 'equilateral']);
+    });
+  }
+});
+
+/* ---------- labels the answer-label sweep fixed (pins) ---------- */
+
+describe('labels found by the answer-label sweep', () => {
+  it('GEOM-PYTHAGOREAN-LEG: the known leg and the hypotenuse labelled, "?" on the missing leg', () => {
+    const { calls } = render(wire({
+      id: 'GEOM-PYTHAGOREAN-LEG-4-5', skillIds: ['GEOM-PYTHAGOREAN-LEG'], format: 'pythagorean',
+      imageType: 'right_triangle', content: { operands: [4, 5], hypotenuse: 5, legs: [3, 4], operation: 'pythagorean' },
+      questionText: 'A right triangle has a leg of 4 and a hypotenuse of 5. Find the other leg.',
+      choices: ['3', '4', '5', '9'].map((value) => ({ value })),
+    }));
+
+    expect(labels(calls)).to.deep.equal(['?', '4', '5']);
+  });
+
+  it('GEOM-PYTHAGOREAN-BASIC is unchanged: both legs labelled, "?" on the hypotenuse', () => {
+    const { calls } = render(wire({
+      id: 'GEOM-PYTHAGOREAN-BASIC-3-4', skillIds: ['GEOM-PYTHAGOREAN-BASIC'], format: 'pythagorean',
+      imageType: 'right_triangle', content: { operands: [3, 4], hypotenuse: 5, legs: [3, 4], operation: 'pythagorean' },
+      questionText: 'Find the hypotenuse.', choices: ['5', '7'].map((value) => ({ value })),
+    }));
+
+    expect(labels(calls)).to.deep.equal(['3', '4', '?']);
+  });
+
+  it('GEOM-AREA-COMPOUND as the bank sends it (no widths): pieces rebuilt from operands', () => {
+    const { calls } = render(wire({
+      id: 'GEOM-AREA-COMPOUND-4-10-13-13', skillIds: ['GEOM-AREA-COMPOUND'], format: 'geometry_area',
+      imageType: 'compound_shape',
+      content: { operands: [4, 10, 13, 13], shape: 'compound', components: [{ height: 10 }, { height: 13 }] },
+      questionText: 'Find the total area of the figure.', choices: ['209', '210'].map((value) => ({ value })),
+    }));
+
+    expect([...labels(calls)].sort()).to.deep.equal(['10', '13', '13', '4']);
+  });
+
+  it('GEOM-CIRCUMFERENCE-DIAMETER as the bank sends it: the diameter labelled', () => {
+    const { calls } = render(wire({
+      id: 'GEOM-CIRCUMFERENCE-DIAMETER-d10', skillIds: ['GEOM-CIRCUMFERENCE-DIAMETER'], format: 'geometry_circumference',
+      content: { diameter: 10, pi_value: 3.14, method: 'diameter', operation: 'geometry_circumference' },
+      questionText: 'Find the circumference of a circle with diameter 10.', choices: ['31.4', '62.8'].map((value) => ({ value })),
+    }));
+
+    expect(labels(calls)).to.deep.equal(['d=10']);
+  });
+});

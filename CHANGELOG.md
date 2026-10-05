@@ -88,6 +88,19 @@ renamed or removed. Recipes named below are from server-new's `recipes.json`.
   base-10 drawing, so a row that carries its blocks draws them; the picture is the question for all
   three, and none prints a number. A row with no blocks hides the canvas and logs a
   `console.warn`. No recipe serves a BASE10 skill today.
+- **"Find the missing leg" no longer labels the answer.** GEOM-PYTHAGOREAN-LEG rows give one leg and
+  the hypotenuse, but the triangle labelled both legs (one is the answer) and put `?` on the given
+  hypotenuse, on all 24 rows. These rows now label the known leg and the hypotenuse, with `?` on
+  the missing leg; "find the hypotenuse" rows are unchanged. **Visible change for games serving
+  GEOM-PYTHAGOREAN-LEG** (`geometry-blocs-default`).
+- **Two bank-row labels read `undefined`.** A bank row skips the normalizer. GEOM-AREA-COMPOUND's
+  pieces lose their `width` to the server's content allow-list, so they drew `undefined` labels;
+  they are now rebuilt from `operands` (width, height, … in every bank row).
+  GEOM-CIRCUMFERENCE-DIAMETER rows arrive with `diameter` and no `radius` and drew `r=undefined`;
+  they now draw and label the diameter (`d=10`). **Visible change for games serving these skills**
+  (`geometry-blocs-default`).
+- `geometry_classify_triangle` with missing or non-list `operands` draws no picture instead of
+  throwing before the choices render.
 
 ## [0.6.0-beta.18] — 2026-10-05
 

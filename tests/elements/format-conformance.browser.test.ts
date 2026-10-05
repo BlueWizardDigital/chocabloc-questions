@@ -308,8 +308,9 @@ const REPRESENTATIVE_ROWS: Record<string, Row | Row[]> = {
     row('data_graph', {
       imageType: 'bar_graph', content: { data: { apples: 3, pears: 5 } }, answer: 5,
     }),
+    // A pictograph draws category names, not counts: "Which has the most?".
     row('data_graph', {
-      imageType: 'pictograph', content: { data: { apples: 3, pears: 5 } }, answer: 5,
+      imageType: 'pictograph', content: { data: { apples: 3, pears: 5 } }, answer: 'pears',
     }),
   ],
   // number_line routes to a different element entirely (ChocaNumberLineQuestion).
@@ -563,15 +564,26 @@ describe('format conformance — every dispatched format renders something', () 
         ).to.be.greaterThan(0);
       });
 
-      it(`${label} does not print its answer on the picture`, async () => {
-        if (PRINTS_ANSWER_BY_DESIGN[format]) return;
+      const exempt = PRINTS_ANSWER_BY_DESIGN[format] !== undefined;
+      it(`${label} ${exempt ? 'prints its answer, as its exemption says' : 'does not print its answer on the picture'}`, async () => {
         let q: NormalizedQuestion | null = null;
         try { q = normalizeQuestion(raw); } catch { /* the test above reports a row that won't normalize */ }
         const answer = q?.answer;
-        if (!q || answer === undefined || typeof answer === 'object') return;
+        if (!q || answer === undefined || typeof answer === 'object') {
+          expect(exempt, `${label}: an exempt format needs a row with an answer to check`).to.equal(false);
+          return;
+        }
 
         const out = await render(q);
         const printed = out.pictureText.filter((t) => tokens(t).includes(String(answer)));
+        if (exempt) {
+          expect(
+            printed,
+            `${label}: PRINTS_ANSWER_BY_DESIGN says this picture shows its answer (${String(answer)}), ` +
+            'but it no longer does. Remove the stale exemption',
+          ).to.not.have.lengthOf(0);
+          return;
+        }
         expect(
           printed,
           `${label}: the picture shows the answer (${String(answer)}). Remove it, or add the ` +
