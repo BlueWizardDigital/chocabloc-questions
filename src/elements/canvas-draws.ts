@@ -133,6 +133,23 @@ function boxCorners(iso: IsoFn, [sx, sy, sz]: readonly [number, number, number])
   ];
 }
 
+// Space kept clear around a box, so it and its labels stay on the canvas.
+const BOX_MARGIN = 18;
+
+/**
+ * A cube's or a rectangular prism's corners, as large as fits inside the
+ * canvas with BOX_MARGIN to spare (before beta.19 the cube ran 20px off the top
+ * and bottom). Its projection reaches (sy + (sx + sz) / 2) · s above and below
+ * the centre, and (sx + sz) · 0.866 · s to either side.
+ */
+function boxFor(shape: 'cube' | 'rectangular prism', w: number, h: number): Pt[] {
+  const dims = shape === 'cube' ? CUBE_DIMS : RECT_PRISM_DIMS;
+  const [sx, sy, sz] = dims;
+  const { cx, cy, s } = frame3D(w, h);
+  const fit = Math.min(s, (h / 2 - BOX_MARGIN) / (sy + (sx + sz) / 2), (w / 2 - BOX_MARGIN) / ((sx + sz) * 0.866));
+  return boxCorners(isoProjection(cx, cy, fit), dims);
+}
+
 function tracePath(ctx: CanvasRenderingContext2D, pts: readonly Pt[]): void {
   ctx.moveTo(pts[0]!.x, pts[0]!.y);
   for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y);
@@ -236,15 +253,21 @@ function drawPyramid(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: n
   ]);
 }
 
-/** The two triangular ends, corners in the same order: bottom-left, bottom-right, top. */
+/**
+ * The two triangular ends, corners in the same order: bottom-left,
+ * bottom-right, top. The shape is 1.5 × 1.4 units; it is drawn 1.65 units to
+ * the s and centred, about 70% of the canvas height like the pyramid (before
+ * beta.19 it was 84px tall and sat off-centre).
+ */
 function triPrismPoints(cx: number, cy: number, s: number): { front: Pt[]; back: Pt[] } {
-  const front = [
-    { x: cx - s * 0.5, y: cy + s * 0.6 },
-    { x: cx + s * 0.5, y: cy + s * 0.6 },
-    { x: cx, y: cy - s * 0.4 },
-  ];
-  const offset = { x: s * 0.5, y: -s * 0.4 };
-  return { front, back: front.map((p) => ({ x: p.x + offset.x, y: p.y + offset.y })) };
+  const k = s * 1.65;
+  // Unit corners; the whole shape spans x −0.5…1.0 and y −0.8…0.6, centre (0.25, −0.1).
+  const at = (ux: number, uy: number): Pt => ({ x: cx + (ux - 0.25) * k, y: cy + (uy + 0.1) * k });
+  const unitFront: [number, number][] = [[-0.5, 0.6], [0.5, 0.6], [0, -0.4]];
+  return {
+    front: unitFront.map(([x, y]) => at(x, y)),
+    back: unitFront.map(([x, y]) => at(x + 0.5, y - 0.4)),
+  };
 }
 
 function drawTriangularPrism(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number): void {
@@ -266,10 +289,9 @@ export function drawShape3D(
   ctx.strokeStyle = '#7c4dff';
   ctx.lineWidth = 2;
   const { cx, cy, s } = frame3D(w, h);
-  const iso = isoProjection(cx, cy, s);
   switch (shapeName.toLowerCase()) {
-    case 'cube': drawBox(ctx, boxCorners(iso, CUBE_DIMS)); break;
-    case 'rectangular prism': drawBox(ctx, boxCorners(iso, RECT_PRISM_DIMS)); break;
+    case 'cube': drawBox(ctx, boxFor('cube', w, h)); break;
+    case 'rectangular prism': drawBox(ctx, boxFor('rectangular prism', w, h)); break;
     case 'sphere': drawSphere(ctx, cx, cy, s); break;
     case 'cylinder': drawCylinder(ctx, cx, cy, s); break;
     case 'cone': drawCone(ctx, cx, cy, s); break;
@@ -1133,7 +1155,7 @@ export function drawLabeled3D(
   } else if (name === 'sphere') {
     if (o0 !== undefined) say('r=' + o0, { x: cx + s * 0.6, y: cy - s * 0.2 });
   } else if (name === 'cube' || name === 'rectangular prism') {
-    const v = boxCorners(isoProjection(cx, cy, s), name === 'cube' ? CUBE_DIMS : RECT_PRISM_DIMS);
+    const v = boxFor(name, w, h);
     const centre = { x: cx, y: cy };
     // Length runs along x (3 → 2), width along z (2 → 1), height along y (3 → 7).
     if (o0 !== undefined) say('l=' + o0, away(midpoint(v[3]!, v[2]!), centre, 14));
@@ -1181,7 +1203,7 @@ function faceOutline(shape: string, faceShape: string, w: number, h: number): Fa
   switch (shape) {
     case 'cube':
     case 'rectangular prism': {
-      const v = boxCorners(isoProjection(cx, cy, s), shape === 'cube' ? CUBE_DIMS : RECT_PRISM_DIMS);
+      const v = boxFor(shape, w, h);
       return { corners: [v[6]!, v[7]!, v[4]!, v[5]!] }; // the top face
     }
     case 'pyramid': {

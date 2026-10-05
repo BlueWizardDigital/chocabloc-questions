@@ -1,4 +1,4 @@
-import type { Choice, NormalizedQuestion } from '../types';
+import type { Base10Blocks, Base10BlocksContent, Choice, NormalizedQuestion } from '../types';
 import { syncChoicePad, handlePick } from './shared-pad';
 import {
   drawShape2D, drawShape3D, drawBarGraph, drawPictograph,
@@ -13,6 +13,30 @@ import './ChocaChoicePad';
 
 const CANVAS_W = 300;
 const CANVAS_H = 200;
+
+// A generator row normalizes to base10_blocks. A choices-only bank row keeps
+// its own format name and arrives with only the content keys the server's
+// allow-list passes (today just `operation`: the blocks are stripped).
+const BASE10_FORMATS = new Set([
+  'base10_blocks', 'base10_count', 'base10_regroup', 'base10_compare', 'base10_block_count',
+]);
+
+/** The base-10 content of a question under any of those names, with its operation; else null. */
+function base10Of(q: NormalizedQuestion): Base10BlocksContent | null {
+  const format: string = q.format;
+  if (!BASE10_FORMATS.has(format)) return null;
+  const c = q.content as unknown as Partial<Base10BlocksContent>;
+  return { ...c, operation: c.operation ?? (format === 'base10_blocks' ? 'base10_count' : format) };
+}
+
+/** True when base-10 content carries blocks to draw. */
+function hasBlocks(c: Base10BlocksContent): boolean {
+  const some = (b?: Base10Blocks) =>
+    !!b && ((b.thousands ?? 0) + (b.hundreds ?? 0) + (b.tens ?? 0) + (b.ones ?? 0)) > 0;
+  if (c.operation === 'base10_compare') return some(c.set_a?.blocks) && some(c.set_b?.blocks);
+  if (c.operation === 'base10_regroup') return (c.tens_shown ?? 0) + (c.ones_shown ?? 0) > 0;
+  return some(c.blocks);
+}
 
 function buildShell(): {
   fragment: DocumentFragment;
@@ -137,13 +161,14 @@ export class ChocaCanvasQuestion extends HTMLElement {
       else if (q.format === 'time') text = 'What time is shown?';
       else if (q.format === 'coordinate_distance') text = 'What is the distance between the points?';
       else if (q.format === 'multiplication') text = `What is ${q.content.operands[0]} × ${q.content.operands[1]}?`;
-      else if (q.format === 'base10_blocks') {
-        const op = q.content.operation;
+      else if (base10Of(q)) {
+        const b10 = base10Of(q)!;
+        const op = b10.operation;
         if (op === 'base10_compare') text = 'Which set shows a greater number?';
-        else if (op === 'base10_block_count' && q.content.place) {
+        else if (op === 'base10_block_count' && b10.place) {
           // No picture for this one, so the stem must name the number.
-          const n = q.content.number;
-          text = n === undefined ? `How many ${q.content.place} blocks?` : `How many ${q.content.place} blocks are in ${n}?`;
+          const n = b10.number;
+          text = n === undefined ? `How many ${b10.place} blocks?` : `How many ${b10.place} blocks are in ${n}?`;
         }
         else if (op === 'base10_regroup') text = 'How can you regroup these blocks?';
         else text = 'What number do these blocks show?';
@@ -161,18 +186,26 @@ export class ChocaCanvasQuestion extends HTMLElement {
     // - "Which shape has …?" asks for a shape, so a picture of one is the answer
     //   (and bank rows carry no `answer` to draw).
     // - "How many tens blocks are in 6378?" names the number; drawing it in
-    //   blocks counts out the answer (beta.19). A choices-only bank row keeps
-    //   its own format name, base10_block_count, instead of base10_blocks.
-    const format: string = q.format;
-    const noPicture = format === 'geometry_attributes' || format === 'base10_block_count'
-      || (q.format === 'base10_blocks' && q.content.operation === 'base10_block_count');
-    this._canvas.hidden = noPicture;
+    //   blocks counts out the answer (beta.19).
+    // A base-10 row with no blocks to draw (the bank strips them today) is
+    // hidden too, with a warning, rather than shown as an empty box.
+    const b10 = base10Of(q);
+    const noPicture = q.format === 'geometry_attributes' || b10?.operation === 'base10_block_count';
+    const nothingToDraw = !noPicture && b10 !== null && !hasBlocks(b10);
+    if (nothingToDraw) {
+      console.warn(`[chocabloc-questions] base-10 question ${q.id} has no blocks to draw; showing no picture`);
+    }
+    this._canvas.hidden = noPicture || nothingToDraw;
     const ctx = this._canvas.getContext('2d');
     if (!ctx) return;
     const w = this._canvas.width;
     const h = this._canvas.height;
-    if (noPicture) {
+    if (noPicture || nothingToDraw) {
       ctx.clearRect(0, 0, w, h);
+      return;
+    }
+    if (b10) {
+      drawBase10Blocks(ctx, w, h, b10, this._base10Colors());
       return;
     }
 
@@ -254,21 +287,22 @@ export class ChocaCanvasQuestion extends HTMLElement {
       case 'coordinate_distance':
         drawCoordinatePlane(ctx, w, h, q.content.point1, q.content.point2);
         break;
-      case 'base10_blocks': {
-        const cs = getComputedStyle(this);
-        const rv = (name: string) => cs.getPropertyValue(name).trim();
-        const b10Colors: Base10Colors = {};
-        const ones = rv('--cq-b10-ones');     if (ones) b10Colors.fillOnes = ones;
-        const tens = rv('--cq-b10-tens');      if (tens) b10Colors.fillTens = tens;
-        const huns = rv('--cq-b10-hundreds');  if (huns) b10Colors.fillHundreds = huns;
-        const thou = rv('--cq-b10-thousands'); if (thou) b10Colors.fillThousands = thou;
-        const strk = rv('--cq-b10-stroke');    if (strk) b10Colors.stroke = strk;
-        drawBase10Blocks(ctx, w, h, q.content, b10Colors);
-        break;
-      }
       default:
         break;
     }
+  }
+
+  /** The page's --cq-b10-* colours, where set. */
+  private _base10Colors(): Base10Colors {
+    const cs = getComputedStyle(this);
+    const rv = (name: string) => cs.getPropertyValue(name).trim();
+    const b10Colors: Base10Colors = {};
+    const ones = rv('--cq-b10-ones');     if (ones) b10Colors.fillOnes = ones;
+    const tens = rv('--cq-b10-tens');      if (tens) b10Colors.fillTens = tens;
+    const huns = rv('--cq-b10-hundreds');  if (huns) b10Colors.fillHundreds = huns;
+    const thou = rv('--cq-b10-thousands'); if (thou) b10Colors.fillThousands = thou;
+    const strk = rv('--cq-b10-stroke');    if (strk) b10Colors.stroke = strk;
+    return b10Colors;
   }
 
   private _renderChoices(): void {

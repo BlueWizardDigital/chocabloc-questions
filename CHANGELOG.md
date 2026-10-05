@@ -7,10 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [0.6.0-beta.19] — 2026-10-05
 
-**Patch**: six pictures no longer show the child the answer, and four pictures that pointed at a
-wrong answer, mislabelled their measures or were too small to read are redrawn. No export,
-attribute, part or CSS var added, renamed or removed. Recipes named below are from server-new's
-`recipes.json`.
+**Patch**: six pictures no longer show the child the answer; pictures that pointed at a wrong
+answer, mislabelled their measures, ran off the canvas or were too small to read are redrawn;
+base-10 bank rows no longer show an empty box. No export, attribute, part or CSS var added,
+renamed or removed. Recipes named below are from server-new's `recipes.json`.
 
 ### Fixed
 
@@ -76,6 +76,18 @@ attribute, part or CSS var added, renamed or removed. Recipes named below are fr
   18px strip. It now fills about 70% of the height, with a parallelogram base about 40px deep, so
   the face-identify base highlight reads as a face. **Visible change wherever a pyramid is drawn**
   (name, properties, face identify, surface area: `bloc-hero-geo`, `geometry-blocs-default`).
+- **Every 3D shape fits the canvas, and the triangular prism is readable.** The cube ran 20px off
+  the top and bottom and the rectangular prism 2px; both are now scaled to fit with an 18px
+  margin, and their face highlight and labels move with them. The triangular prism was 84px tall
+  and off-centre; it is now centred and about 70% of the height, like the pyramid. **Visible
+  change wherever these shapes are drawn** (`bloc-hero-geo`, `geometry-blocs-default`).
+- **Base-10 bank rows no longer show an empty picture box.** The bank sends `base10_count`,
+  `base10_regroup` and `base10_compare` rows under those names, and its content allow-list keeps
+  only `operation`, so the blocks never arrive. The canvas renderer only knew `base10_blocks`
+  (what a generator row normalizes to) and left an empty box. These names now go to the same
+  base-10 drawing, so a row that carries its blocks draws them; the picture is the question for all
+  three, and none prints a number. A row with no blocks hides the canvas and logs a
+  `console.warn`. No recipe serves a BASE10 skill today.
 
 ## [0.6.0-beta.18] — 2026-10-05
 

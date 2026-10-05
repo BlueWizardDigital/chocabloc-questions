@@ -1159,3 +1159,118 @@ describe('the pyramid is drawn at a readable size', () => {
     expect(span(base), 'at least 90px wide').to.be.at.least(90);
   });
 });
+
+/* ================================================================
+   beta.19, part 4 — 3D shapes fit the canvas; base-10 bank rows.
+   ================================================================ */
+
+/** Every point a draw touched: path corners, plus the extremes of arcs and ellipses. */
+function drawnExtent(calls: CtxCall[]): Pt[] {
+  const out: Pt[] = [];
+  for (const c of calls) {
+    const a = c.args as number[];
+    if (c.fn === 'moveTo' || c.fn === 'lineTo') out.push(pt(c));
+    else if (c.fn === 'arc') out.push({ x: a[0]! - a[2]!, y: a[1]! - a[2]! }, { x: a[0]! + a[2]!, y: a[1]! + a[2]! });
+    else if (c.fn === 'ellipse') out.push({ x: a[0]! - a[2]!, y: a[1]! - a[3]! }, { x: a[0]! + a[2]!, y: a[1]! + a[3]! });
+  }
+  return out;
+}
+
+const MARGIN = 10;
+
+describe('3D shapes fit the canvas', () => {
+  for (const shape of ['cube', 'rectangular prism', 'triangular prism', 'pyramid', 'cylinder', 'cone', 'sphere']) {
+    it(`${shape}: every point at least ${MARGIN}px inside the canvas`, () => {
+      const pts = drawnExtent(render(identify(shape, 'shape_3d')).calls);
+
+      expect(pts.length).to.be.greaterThan(0);
+      for (const p of pts) {
+        expect(p.x, `${shape} x`).to.be.within(MARGIN, W - MARGIN);
+        expect(p.y, `${shape} y`).to.be.within(MARGIN, H - MARGIN);
+      }
+    });
+  }
+
+  it('the triangular prism is drawn at a readable size, like the pyramid', () => {
+    const pts = drawnExtent(render(identify('triangular prism', 'shape_3d')).calls);
+
+    expect(tall(pts), 'at least two thirds of the 200px canvas').to.be.at.least(H * 2 / 3);
+  });
+
+  it('the cube and rectangular prism still fill most of the canvas height', () => {
+    for (const shape of ['cube', 'rectangular prism']) {
+      expect(tall(drawnExtent(render(identify(shape, 'shape_3d')).calls)), shape).to.be.at.least(H * 0.75);
+    }
+  });
+});
+
+/* ---------- base-10 rows as the bank sends them ----------
+   The bank keeps each row's own format name (base10_count, base10_regroup,
+   base10_compare), and its content allow-list keeps only `operation`: the
+   blocks are stripped. */
+
+const base10Bank = (format: string, content: Record<string, unknown>, questionText: string) => wire({
+  id: `BANK-${format}`,
+  skillIds: ['BASE10-REPRESENT-WITHIN-100'],
+  format,
+  imageType: 'base10_blocks',
+  content: { operation: format, ...content },
+  questionText,
+  choices: ['21', '12', '31', '20'].map((value) => ({ value })),
+});
+
+// The generator's rows, which normalize to base10_blocks and draw today.
+const base10Legacy = (format: string, content: Record<string, unknown>, answer: number) => normalizeQuestion({
+  id: `LEGACY-${format}`, skill_ids: ['BASE10-REPRESENT-WITHIN-100'], format,
+  content: { operation: format, ...content }, answer,
+  distractors: [{ value: answer + 1, error_type: 'off-by-1' }],
+});
+
+// Block data with no `number`: for a count or a regroup the number is the answer.
+const BASE10_BANK: { format: string; blocks: Record<string, unknown>; text: string; answer: number }[] = [
+  { format: 'base10_count', blocks: { blocks: { tens: 2, ones: 1 } }, text: 'What number do these blocks show?', answer: 21 },
+  { format: 'base10_regroup', blocks: { tens_shown: 4, ones_shown: 12, blocks: { tens: 4, ones: 12 } },
+    text: '4 tens rods and 12 ones cubes. What number after regrouping?', answer: 52 },
+  { format: 'base10_compare', blocks: {
+    set_a: { number: 71, blocks: { tens: 7, ones: 1 } }, set_b: { number: 54, blocks: { tens: 5, ones: 4 } },
+  }, text: 'Which set of blocks shows a bigger number? Set A: 7 tens and 1 one. Set B: 5 tens and 4 ones.', answer: 71 },
+];
+
+describe('base-10 rows under their bank format names', () => {
+  for (const b of BASE10_BANK) {
+    describe(b.format, () => {
+      it('as the bank sends it today (no blocks): no picture box, prompt and choices render', () => {
+        const { calls, el } = render(base10Bank(b.format, {}, b.text));
+
+        expect(calls, 'nothing to draw').to.have.lengthOf(0);
+        expect(canvasOf(el).hidden, 'an empty box is hidden').to.equal(true);
+        expect(el.shadowRoot!.querySelector('[part="prompt"]')!.textContent).to.equal(b.text);
+        expect(choiceLabels(el)).to.have.lengthOf(4);
+      });
+
+      it('with its blocks: the same picture as the generator row', () => {
+        const { calls, el } = render(base10Bank(b.format, b.blocks, b.text));
+        const legacy = render(base10Legacy(b.format, b.blocks, b.answer)).calls;
+
+        expect(calls.length, 'the blocks are drawn').to.be.greaterThan(0);
+        expect(calls).to.deep.equal(legacy);
+        expect(canvasOf(el).hidden).to.equal(false);
+      });
+
+      it('never prints the answer', () => {
+        const { calls } = render(base10Bank(b.format, b.blocks, b.text));
+
+        expect(labels(calls).filter((t) => t !== 'Set A' && t !== 'Set B')).to.deep.equal([]);
+        expect(labels(calls).join(' ')).to.not.include(String(b.answer));
+      });
+    });
+  }
+
+  it('base10_block_count under its bank name stays hidden even with blocks', () => {
+    const { calls, el } = render(base10Bank('base10_block_count', { number: 347, place: 'tens' },
+      'How many tens blocks are in 347?'));
+
+    expect(calls).to.have.lengthOf(0);
+    expect(canvasOf(el).hidden).to.equal(true);
+  });
+});
