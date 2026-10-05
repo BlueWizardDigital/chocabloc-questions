@@ -5,6 +5,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.6.0-beta.18] — 2026-10-05
+
+**Patch**: two shape-picture fixes. No export, attribute, part or CSS var added, renamed or
+removed.
+
+### Fixed
+
+- **`geometry_attributes` no longer draws the answer.** "Which shape has …?" drew `answer` as
+  its picture. Bank rows are choices-only and carry no `answer`, so the draw threw before the
+  choices rendered, and the child saw the question with no buttons. Rows that do carry `answer`
+  (assignment snapshots) drew the correct shape under the question. This format now has no
+  picture: the canvas is cleared and gets the `hidden` attribute, so there is no empty box
+  between the prompt and the choices. **Visible change:** no picture on these questions. A page
+  that sets `display` on `::part(canvas)` overrides `hidden` and will show an empty box.
+- **`geometry_perimeter` draws the shape its sides describe.** It always drew a rectangle from
+  the first two operands, so "Side lengths: 2, 6, 17, 3" showed a 2 × 6 rectangle. Two operands
+  (GEOM-PERIMETER-RECTANGLE and -DECIMAL: length and width) still draw a rectangle to scale.
+  Three to six (GEOM-PERIMETER-POLYGON: triangle to hexagon) now draw an outline with that many
+  sides, each labelled with its length, in order. The outline is not to scale, because bank side
+  lists often can't close a real shape (a triangle with sides 20, 2, 9). The perimeter is never
+  drawn. **Visible change for games serving GEOM-PERIMETER-POLYGON** (`geometry-blocs-default`).
+
 ## [0.6.0-beta.17] — 2026-10-05
 
 **Minor**: new exports and an optional field; nothing renamed or removed.
