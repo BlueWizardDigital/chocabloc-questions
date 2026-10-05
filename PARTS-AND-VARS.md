@@ -132,6 +132,8 @@ The parent `<chocabloc-question>` element accepts:
 
 `<chocabloc-question>` forwards both attributes through `_passAttrs` to the active visual wrapper (`<choca-canvas-question>`, `<choca-coin-pile>`, `<choca-pattern-question>`, `<choca-table-question>`, `<choca-number-line-question>`), which re-emits them onto the nested `<choca-choice-pad>` via internal `mode` attribute. Public API is `answer-mode` on the parent; consumers should not read child `mode` directly.
 
+`container`, `prompt`, `canvas`, `choices` are re-exported from the inner format renderer (`exportparts`), so `chocabloc-question::part(…)` styles them (beta.17+).
+
 ## Slots
 
 | Element | Slot name (M1 subset) | Default content |

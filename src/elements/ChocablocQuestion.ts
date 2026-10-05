@@ -185,6 +185,11 @@ export class ChocablocQuestion extends HTMLElement {
       (inner as HTMLElement & { question: NormalizedQuestion }).question = this._question;
     }
 
+    // Expose the format renderer's parts through this element's shadow root, so a
+    // page's `chocabloc-question::part(prompt)` theme reaches them (upstreamed from
+    // Greater Gator's local patch, 2026-09-30).
+    inner.setAttribute('exportparts', 'container,prompt,canvas,choices');
+
     // v0.3.0+: track the inner element so the validateAnswer setter can
     // propagate later assignments, and forward the current value if any.
     this._innerFormatEl = inner;

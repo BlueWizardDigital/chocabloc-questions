@@ -30,6 +30,12 @@ module.exports = [
     gzip: true,
   },
   {
+    name: 'concept saver',
+    path: 'dist/concept-run.mjs',
+    limit: '2 KB',
+    gzip: true,
+  },
+  {
     name: 'word-problems engine (no data)',
     path: 'dist/word-problems/index.mjs',
     limit: '8 KB',

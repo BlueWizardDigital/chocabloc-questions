@@ -183,6 +183,49 @@ describe('<chocabloc-question> dispatcher routing', () => {
     const inner = el.shadowRoot!.querySelector('choca-number-line-question');
     expect(inner).to.not.be.null;
   });
+
+  const canvasQuestion = {
+    id: 'GEOM-2D-ATTRIBUTES-1',
+    skillIds: ['GEOM-2D-ATTRIBUTES'],
+    format: 'geometry_attributes',
+    imageType: 'shape_2d',
+    content: { attribute: 'no sides and no corners' },
+    answer: 'circle',
+    distractors: [{ value: 'triangle', errorType: 'wrong-classification' }],
+  };
+
+  it('re-exports its renderer parts so a page ::part theme reaches them', async () => {
+    const style = document.createElement('style');
+    style.textContent = 'chocabloc-question::part(prompt) { color: rgb(1, 2, 3); }';
+    document.head.appendChild(style);
+    try {
+      const el = mount(`<chocabloc-question seed="7"></chocabloc-question>`);
+      (el as HTMLElement & { question: unknown }).question = canvasQuestion;
+      await new Promise((r) => requestAnimationFrame(r));
+      const inner = el.shadowRoot!.querySelector('choca-canvas-question') as HTMLElement;
+      expect(inner.getAttribute('exportparts')).to.equal('container,prompt,canvas,choices');
+      const prompt = inner.shadowRoot!.querySelector('[part="prompt"]') as HTMLElement;
+      expect(getComputedStyle(prompt).color).to.equal('rgb(1, 2, 3)');
+    } finally {
+      style.remove();
+    }
+  });
+
+  it('re-exports parts on the money renderer too', async () => {
+    const el = mount(`<chocabloc-question seed="42"></chocabloc-question>`);
+    (el as HTMLElement & { question: unknown }).question = {
+      id: 'X',
+      skillIds: ['MONEY-COIN-VALUE-USD'],
+      format: 'money',
+      imageType: 'coins',
+      content: { coins: { quarter: 1 }, currency: 'USD' },
+      answer: 25,
+      distractors: [],
+    };
+    await new Promise((r) => requestAnimationFrame(r));
+    const inner = el.shadowRoot!.querySelector('choca-coin-pile') as HTMLElement;
+    expect(inner.getAttribute('exportparts')).to.equal('container,prompt,canvas,choices');
+  });
 });
 
 describe('<chocabloc-question> text question with a coin scene', () => {

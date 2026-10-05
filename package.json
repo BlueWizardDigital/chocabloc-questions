@@ -42,6 +42,11 @@
       "import": "./dist/host.mjs",
       "require": "./dist/host.cjs"
     },
+    "./concept-run": {
+      "types": "./dist/conceptRun.d.ts",
+      "import": "./dist/concept-run.mjs",
+      "require": "./dist/concept-run.cjs"
+    },
     "./word-problems": {
       "types": "./dist/word-problems/index.d.ts",
       "import": "./dist/word-problems/index.mjs"
