@@ -73,6 +73,15 @@ describe('normalizeQuestion: content fields the server withholds', () => {
     expect(q.content.stem).toContain('loonie');
   });
 
+  it('money_coin_name choices-only row that still carries target_value never prints it', () => {
+    const q = normalizeQuestion({
+      ...coinRow, content: { ...coinRow.content, target_value: 'dime', attribute_hint: 'silver' },
+      choices: [{ value: 'loonie' }, { value: 'dime' }],
+    })!;
+    if (q.format !== 'text') throw new Error('format');
+    expect(q.content.stem).toBe('Which coin is this?');
+  });
+
   it('money_coin_name choices-only row with an empty stem shows no answer', () => {
     const q = normalizeQuestion({ ...coinRow, choices: [{ value: 'loonie' }, { value: 'dime' }] })!;
     if (q.format !== 'text') throw new Error('format');

@@ -13,7 +13,9 @@ const ANIMAL_MAP: Record<string, string> = {
   bird: '🐦', fish: '🐟', rabbit: '🐰', bear: '🐻', pig: '🐷', horse: '🐴',
 };
 
-function elementDisplay(value: string): { type: 'color'; css: string } | { type: 'emoji'; text: string } | { type: 'text'; text: string } {
+// A bank row's sequence may hold numbers (PATTERN-EXPONENTIAL-GROWTH: [1, 2, 4, 8]).
+function elementDisplay(raw: string | number): { type: 'color'; css: string } | { type: 'emoji'; text: string } | { type: 'text'; text: string } {
+  const value = String(raw);
   const lower = value.toLowerCase();
   if (COLOR_MAP[lower]) return { type: 'color', css: COLOR_MAP[lower]! };
   if (ANIMAL_MAP[lower]) return { type: 'emoji', text: ANIMAL_MAP[lower]! };

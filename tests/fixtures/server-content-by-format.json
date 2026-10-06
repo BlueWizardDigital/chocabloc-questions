@@ -1,0 +1,584 @@
+{
+  "_source": "server-new ab5ee39 services/renderContent.js",
+  "CONTENT_BY_FORMAT": {
+    "addition": [
+      "operands",
+      "operation"
+    ],
+    "addition_three": [
+      "operands",
+      "operation"
+    ],
+    "subtraction": [
+      "operands",
+      "operation"
+    ],
+    "multiplication": [
+      "operands",
+      "operation"
+    ],
+    "division": [
+      "operands",
+      "operation"
+    ],
+    "integer_addition": [
+      "operands",
+      "operation"
+    ],
+    "integer_subtraction": [
+      "operands",
+      "operation"
+    ],
+    "integer_comparison": [
+      "operands",
+      "operation"
+    ],
+    "comparison": [
+      "operands",
+      "operation"
+    ],
+    "decimal_addition": [
+      "operands",
+      "operation"
+    ],
+    "decimal_multiplication": [
+      "operands",
+      "operation"
+    ],
+    "decimal_division": [
+      "operands",
+      "operation"
+    ],
+    "fraction_addition": [
+      "operands",
+      "operation"
+    ],
+    "fraction_subtraction": [
+      "operands",
+      "operation"
+    ],
+    "fraction_multiplication": [
+      "operands",
+      "operation"
+    ],
+    "fraction_division": [
+      "operands",
+      "operation"
+    ],
+    "fraction_of_quantity": [
+      "operands",
+      "operation"
+    ],
+    "gcf": [
+      "operands",
+      "operation"
+    ],
+    "lcm": [
+      "operands",
+      "operation"
+    ],
+    "ratio": [
+      "operands",
+      "operation"
+    ],
+    "pythagorean_converse": [
+      "operands",
+      "operation"
+    ],
+    "missing_addend": [
+      "operands",
+      "operation",
+      "result"
+    ],
+    "missing_subtrahend": [
+      "operands",
+      "operation",
+      "result"
+    ],
+    "absolute_value": [
+      "number",
+      "operation"
+    ],
+    "square_root": [
+      "number",
+      "operation"
+    ],
+    "prime_composite": [
+      "number",
+      "operation"
+    ],
+    "odd_even": [
+      "number",
+      "operation"
+    ],
+    "place_value": [
+      "number",
+      "place",
+      "operation"
+    ],
+    "rounding": [
+      "number",
+      "round_to",
+      "operation"
+    ],
+    "exponent": [
+      "base",
+      "exp",
+      "operation"
+    ],
+    "order_of_operations": [
+      "expression",
+      "operation"
+    ],
+    "algebra_eval": [
+      "expression",
+      "var",
+      "var_value",
+      "operation"
+    ],
+    "algebra_solve": [
+      "equation",
+      "operation"
+    ],
+    "algebra_write": [
+      "words",
+      "operation"
+    ],
+    "conversion": [
+      "value",
+      "from_unit",
+      "to_unit",
+      "operation"
+    ],
+    "decimal_to_fraction": [
+      "value",
+      "operation"
+    ],
+    "decimal_to_percent": [
+      "value",
+      "operation"
+    ],
+    "percent_to_decimal": [
+      "value",
+      "operation"
+    ],
+    "fraction_to_decimal": [
+      "value",
+      "operands",
+      "operation"
+    ],
+    "percent_of": [
+      "percent",
+      "whole",
+      "operation"
+    ],
+    "proportion": [
+      "ratio",
+      "item",
+      "unit",
+      "known",
+      "operation"
+    ],
+    "unit_rate": [
+      "total",
+      "units",
+      "rate_name",
+      "operation"
+    ],
+    "statistics_mean": [
+      "data_set",
+      "stat_type",
+      "operation"
+    ],
+    "statistics_median": [
+      "data_set",
+      "stat_type",
+      "operation"
+    ],
+    "statistics_mode": [
+      "data_set",
+      "stat_type",
+      "operation"
+    ],
+    "skip_count": [
+      "sequence",
+      "operation"
+    ],
+    "coordinate": [
+      "operation"
+    ],
+    "number_line": [
+      "operation"
+    ],
+    "geometry_angle_pairs": [
+      "operands",
+      "relationship",
+      "total",
+      "operation"
+    ],
+    "geometry_classify_quad": [
+      "properties",
+      "operation"
+    ],
+    "geometry_formula_identify": [
+      "concept",
+      "operation"
+    ],
+    "geometry_interior_angles": [
+      "shape",
+      "sides",
+      "operation"
+    ],
+    "money_best_buy": [
+      "a_count",
+      "b_count",
+      "item_plural",
+      "a_total_display",
+      "b_total_display",
+      "operation"
+    ],
+    "money_compare_buys": [
+      "a_count",
+      "b_count",
+      "item_plural",
+      "a_total_display",
+      "b_list_display",
+      "b_discount",
+      "operation"
+    ],
+    "money_compare_savings": [
+      "principal_display",
+      "a_rate",
+      "a_time",
+      "b_rate",
+      "b_time",
+      "operation"
+    ],
+    "money_decimal_calc": [
+      "a_display",
+      "b_display",
+      "operator",
+      "operation"
+    ],
+    "money_round": [
+      "value_display",
+      "round_to_display",
+      "operation"
+    ],
+    "money_unit_price": [
+      "count",
+      "item",
+      "item_plural",
+      "total_display",
+      "operation"
+    ],
+    "money_simple_interest_amount": [
+      "principal_display",
+      "rate",
+      "time_years",
+      "operation"
+    ],
+    "money_simple_interest_final_balance": [
+      "principal_display",
+      "rate",
+      "time_years",
+      "operation"
+    ],
+    "money_count_single": [
+      "coin",
+      "count",
+      "operation"
+    ],
+    "money_make_change": [
+      "payment_display",
+      "item_price_display",
+      "operation"
+    ],
+    "money_purchase_find_difference": [
+      "price_display",
+      "direction",
+      "coins",
+      "currency",
+      "operation"
+    ],
+    "money_budget_balance": [
+      "direction",
+      "income_cents",
+      {
+        "rows": [
+          "category",
+          "amount_cents"
+        ]
+      },
+      "currency",
+      "operation"
+    ],
+    "money_budget_plan": [
+      "solve_for",
+      "income_cents",
+      {
+        "rows": [
+          "category",
+          "amount_cents"
+        ]
+      },
+      "currency",
+      "operation"
+    ],
+    "money_financial_records": [
+      "starting_balance_cents",
+      {
+        "transactions": [
+          "date",
+          "type",
+          "amount_cents"
+        ]
+      },
+      "currency",
+      "operation"
+    ],
+    "money_price_list": [
+      {
+        "rows": [
+          "item",
+          "qty",
+          "unit_price_cents"
+        ]
+      },
+      "currency",
+      "operation"
+    ],
+    "money_count_mixed": [
+      {
+        "coins": [
+          "penny",
+          "nickel",
+          "dime",
+          "quarter",
+          "loonie",
+          "toonie"
+        ]
+      },
+      "operation"
+    ],
+    "money_coin_colour": [
+      "coins",
+      "currency",
+      "attribute",
+      "target_value",
+      "operation"
+    ],
+    "money_coin_denomination": [
+      "coins",
+      "currency",
+      "attribute",
+      "target_value",
+      "operation"
+    ],
+    "money_coin_size": [
+      "coins",
+      "currency",
+      "attribute",
+      "target_value",
+      "operation"
+    ],
+    "money_coin_name": [
+      "coins",
+      "currency",
+      "operation"
+    ],
+    "money_budget_adjust": [
+      "solve_for",
+      "original_income_cents",
+      "currency",
+      {
+        "original_rows": [
+          "category",
+          "amount_cents"
+        ]
+      },
+      {
+        "change_event": [
+          "type",
+          "new_income_cents"
+        ]
+      },
+      "operation"
+    ],
+    "pattern": [
+      "sequence",
+      "operation"
+    ],
+    "geometry_area": [
+      "shape",
+      "operands",
+      "dimensions",
+      "radius",
+      "slant",
+      {
+        "components": [
+          "shape",
+          "width",
+          "height"
+        ]
+      },
+      "operation"
+    ],
+    "geometry_perimeter": [
+      "operands",
+      "shape",
+      "sides",
+      "dimensions",
+      "operation"
+    ],
+    "geometry_symmetry": [
+      "shape",
+      "operation"
+    ],
+    "geometry_angles": [
+      "known_angles",
+      "operands",
+      "operation"
+    ],
+    "pythagorean": [
+      "operands",
+      "known_leg",
+      "operation"
+    ],
+    "geometry_angle_classify": [
+      "angle",
+      "operation"
+    ],
+    "geometry_circle_parts": [
+      "part",
+      "operation"
+    ],
+    "geometry_circumference": [
+      "radius",
+      "diameter",
+      "method",
+      "pi_value",
+      "operation"
+    ],
+    "geometry_circle_convert": [
+      "value",
+      "given_type",
+      "find_type",
+      "operation"
+    ],
+    "geometry_classify": [
+      "shape",
+      "dimension",
+      "operation"
+    ],
+    "geometry_classify_triangle": [
+      "operands",
+      "classify_by",
+      "known_angles",
+      "operation"
+    ],
+    "geometry_face_identify": [
+      "shape",
+      "face_shape",
+      "operation"
+    ],
+    "geometry_identify": [
+      "shape",
+      "operation"
+    ],
+    "geometry_properties": [
+      "shape",
+      "property",
+      "operation"
+    ],
+    "geometry_attributes": [
+      "attribute",
+      "operation"
+    ],
+    "geometry_volume": [
+      "shape",
+      "operands",
+      "dimensions",
+      "radius",
+      "height",
+      "operation"
+    ],
+    "geometry_surface_area": [
+      "shape",
+      "operands",
+      "radius",
+      "height",
+      "operation"
+    ],
+    "data_graph": [
+      "question",
+      {
+        "data": "*"
+      },
+      "operation"
+    ],
+    "fraction_concept": [
+      "fraction",
+      "operands",
+      "operation"
+    ],
+    "time": [
+      "hour",
+      "minute",
+      "operation"
+    ],
+    "coordinate_distance": [
+      "point1",
+      "point2",
+      "operation"
+    ],
+    "base10_count": [
+      "operation",
+      {
+        "blocks": [
+          "thousands",
+          "hundreds",
+          "tens",
+          "ones"
+        ]
+      }
+    ],
+    "base10_regroup": [
+      "operation",
+      "tens_shown",
+      "ones_shown"
+    ],
+    "base10_compare": [
+      "operation",
+      {
+        "set_a": [
+          {
+            "blocks": [
+              "thousands",
+              "hundreds",
+              "tens",
+              "ones"
+            ]
+          }
+        ]
+      },
+      {
+        "set_b": [
+          {
+            "blocks": [
+              "thousands",
+              "hundreds",
+              "tens",
+              "ones"
+            ]
+          }
+        ]
+      }
+    ],
+    "base10_block_count": [
+      "operation",
+      "place",
+      "number"
+    ]
+  }
+}

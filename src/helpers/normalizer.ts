@@ -860,7 +860,10 @@ function buildStem(format: string, c: Record<string, unknown>, answer?: AnswerVa
       // The server withholds target_value on money_coin_name (it is the answer)
       // and attribute with it. Never print "undefined".
       const attr = c['attribute'] ?? (format === 'money_coin_name' ? 'name' : undefined);
-      const target = c['target_value'] ?? (typeof answer === 'string' || typeof answer === 'number' ? answer : undefined);
+      // On money_coin_name target_value IS the answer ("What coin is this?"): a
+      // whole generator row still carries it, so never read it there.
+      const given = format === 'money_coin_name' ? undefined : c['target_value'];
+      const target = given ?? (typeof answer === 'string' || typeof answer === 'number' ? answer : undefined);
       return attr !== undefined && target !== undefined
         ? `Which coin matches: ${attr} = ${target}?`
         : 'Which coin is this?';
