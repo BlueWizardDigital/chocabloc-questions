@@ -5,6 +5,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.6.0-beta.20] — 2026-10-05
+
+**Minor**: a widened public type and an optional field; nothing renamed or removed. The main
+site takes this release; the games stay on the versions they have.
+
+### Fixed
+
+- **Pythagorean pictures label from `operands` + `known_leg`.** The picture no longer needs
+  `legs` or `hypotenuse`, which the server withholds on bank rows. The normalizer infers
+  `known_leg` from a hypotenuse among the operands, so older rows keep working. A missing-leg
+  row with no question text gets the stem "Find the missing leg.".
+- **`GeometryPerimeterContent.operands` is `readonly number[]`** (a polygon has 3 to 6 sides),
+  with a compile-time check in `src/type-assertions.ts`.
+- **Normalizers never require a field the server withholds.** `geometry_angles`
+  (`missing_angle`), `time` and `money_budget_adjust` render from what the bank row carries.
+  The `money_coin_*` stems never print "undefined", and `money_coin_name` never prints
+  `target_value` on a bank row.
+- **`ChocaPatternQuestion` no longer crashes on a numeric `sequence`** from a choices-only bank
+  row.
+
+### Added
+
+- `known_leg?` on `PythagoreanContent`; `legs` and `hypotenuse` become optional there.
+- The server-content contract test: it renders every real row whole and trimmed through
+  server-new's per-format content map, and checks the two render the same.
+
 ## [0.6.0-beta.19] — 2026-10-05
 
 **Patch**: six pictures no longer show the child the answer; pictures that pointed at a wrong
