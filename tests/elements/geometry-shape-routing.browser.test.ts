@@ -1303,15 +1303,28 @@ describe('geometry_classify_triangle with no usable operands', () => {
 /* ---------- labels the answer-label sweep fixed (pins) ---------- */
 
 describe('labels found by the answer-label sweep', () => {
-  it('GEOM-PYTHAGOREAN-LEG: the known leg and the hypotenuse labelled, "?" on the missing leg', () => {
+  it('GEOM-PYTHAGOREAN-LEG, older row (hypotenuse among operands, no known_leg): known leg inferred, "?" on the missing leg', () => {
     const { calls } = render(wire({
       id: 'GEOM-PYTHAGOREAN-LEG-4-5', skillIds: ['GEOM-PYTHAGOREAN-LEG'], format: 'pythagorean',
       imageType: 'right_triangle', content: { operands: [4, 5], hypotenuse: 5, legs: [3, 4], operation: 'pythagorean' },
       questionText: 'A right triangle has a leg of 4 and a hypotenuse of 5. Find the other leg.',
-      choices: ['3', '4', '5', '9'].map((value) => ({ value })),
+      answer: 3, distractors: [{ value: '4', errorType: 'x' }],
     }));
 
-    expect(labels(calls)).to.deep.equal(['4', '5', '?']);
+    expect(labels(calls)).to.have.members(['4', '5', '?']);
+    expect(labels(calls)).to.not.include('3');
+    // "?" sits on the missing leg (drawn second), not on the hypotenuse.
+    expect(labels(calls)).to.deep.equal(['4', '?', '5']);
+  });
+
+  it('a row with neither known_leg nor a hypotenuse among its operands takes the find-hypotenuse picture', () => {
+    const { calls } = render(wire({
+      id: 'GEOM-PYTHAGOREAN-BASIC-3-4-nohyp', skillIds: ['GEOM-PYTHAGOREAN-BASIC'], format: 'pythagorean',
+      imageType: 'right_triangle', content: { operands: [3, 4], hypotenuse: 5, operation: 'pythagorean' },
+      questionText: 'Find the hypotenuse.', answer: 5, distractors: [{ value: '7', errorType: 'x' }],
+    }));
+
+    expect(labels(calls)).to.deep.equal(['3', '4', '?']);
   });
 
   it('GEOM-PYTHAGOREAN-BASIC is unchanged: both legs labelled, "?" on the hypotenuse', () => {

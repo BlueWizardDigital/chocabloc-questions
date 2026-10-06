@@ -305,6 +305,11 @@ function normalizePythagoreanRow(r: Record<string, unknown>): PythagoreanQuestio
     throw new NormalizeError('pythagorean missing operands', r);
   const content: PythagoreanContent = { operands: operands as [number, number] };
   if (knownLeg !== undefined) content.known_leg = knownLeg;
+  else if (hyp !== undefined && operands.includes(hyp) && operands[0] !== operands[1]) {
+    // Older snapshots carry `hypotenuse` among the operands without `known_leg`:
+    // that is a "find the missing leg" row, and the other operand is the known leg.
+    content.known_leg = (operands[0] === hyp ? operands[1] : operands[0])!;
+  }
   if (legs && legs.length === 2) content.legs = legs as [number, number];
   if (hyp !== undefined) content.hypotenuse = hyp;
   return {

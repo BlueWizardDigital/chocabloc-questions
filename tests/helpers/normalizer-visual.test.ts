@@ -43,6 +43,17 @@ describe('normalizeQuestion — visual formats', () => {
     }
   });
 
+  it('pythagorean: known_leg is inferred when hypotenuse is among the operands', () => {
+    const base = { id: 'P', skill_ids: ['GEOM-PYTHAGOREAN-LEG'], format: 'pythagorean', image_type: 'right_triangle', answer: 3, distractors: [] };
+    const q = normalizeQuestion({ ...base, content: { operands: [4, 5], hypotenuse: 5, legs: [3, 4] } })!;
+    const explicit = normalizeQuestion({ ...base, content: { operands: [4, 5], known_leg: 4 } })!;
+    const basic = normalizeQuestion({ ...base, content: { operands: [3, 4], hypotenuse: 5 } })!;
+    if (q.format !== 'pythagorean' || explicit.format !== 'pythagorean' || basic.format !== 'pythagorean') throw new Error('format');
+    expect(q.content.known_leg).toBe(4);
+    expect(explicit.content.known_leg).toBe(4);
+    expect(basic.content.known_leg).toBeUndefined();
+  });
+
   it('pythagorean: content has legs and hypotenuse', () => {
     const q = normalizeQuestion(fixtures.pythagorean)!;
     if (q.format === 'pythagorean') {
