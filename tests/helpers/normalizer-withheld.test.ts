@@ -60,4 +60,24 @@ describe('normalizeQuestion: content fields the server withholds', () => {
     if (q.format !== 'money_budget_adjust') throw new Error('format');
     expect(q.content.currency).toBe('USD');
   });
+
+  const coinRow = {
+    id: 'C', skill_ids: ['MONEY-COIN-ID-CAD'], format: 'money_coin_name', questionText: '',
+    content: { coins: ['loonie', 'dime'], currency: 'CAD', operation: 'money_coin_name' },
+  };
+
+  it('money_coin_name review row with an empty stem and no target_value: no "undefined"', () => {
+    const q = normalizeQuestion({ ...coinRow, answer: 'loonie', distractors: [{ value: 'dime', error_type: 'x' }] })!;
+    if (q.format !== 'text') throw new Error('format');
+    expect(q.content.stem).not.toContain('undefined');
+    expect(q.content.stem).toContain('loonie');
+  });
+
+  it('money_coin_name choices-only row with an empty stem shows no answer', () => {
+    const q = normalizeQuestion({ ...coinRow, choices: [{ value: 'loonie' }, { value: 'dime' }] })!;
+    if (q.format !== 'text') throw new Error('format');
+    expect(q.content.stem).not.toContain('undefined');
+    expect(q.content.stem).not.toContain('loonie');
+    expect(q.content.stem).not.toContain('dime');
+  });
 });

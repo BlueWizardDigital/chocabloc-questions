@@ -733,7 +733,9 @@ const BINARY_OPS: Record<string, { sym: string; fmt?: (v: unknown) => string }> 
   fraction_division: { sym: '÷', fmt: fmtFrac },
 };
 
-function buildStem(format: string, c: Record<string, unknown>): string {
+// `answer` is passed only for rows that carry one (review and assignment
+// snapshots). A choices-only bank row never gets it, so no stem prints an answer there.
+function buildStem(format: string, c: Record<string, unknown>, answer?: AnswerValue): string {
   const ops = c['operands'] as number[] | unknown[] | undefined;
 
   const binOp = BINARY_OPS[format];
@@ -854,8 +856,15 @@ function buildStem(format: string, c: Record<string, unknown>): string {
     case 'money_coin_colour':
     case 'money_coin_denomination':
     case 'money_coin_name':
-    case 'money_coin_size':
-      return `Which coin matches: ${c['attribute']} = ${c['target_value']}?`;
+    case 'money_coin_size': {
+      // The server withholds target_value on money_coin_name (it is the answer)
+      // and attribute with it. Never print "undefined".
+      const attr = c['attribute'] ?? (format === 'money_coin_name' ? 'name' : undefined);
+      const target = c['target_value'] ?? (typeof answer === 'string' || typeof answer === 'number' ? answer : undefined);
+      return attr !== undefined && target !== undefined
+        ? `Which coin matches: ${attr} = ${target}?`
+        : 'Which coin is this?';
+    }
     case 'money_budget_balance': {
       const dir = c['direction'] ?? 'surplus';
       return `What is the ${dir} in this budget?`;
@@ -931,12 +940,13 @@ function stemContent(
   r: Record<string, unknown>,
   base: ReturnType<typeof extractBase>,
   c: Record<string, unknown>,
+  answer?: AnswerValue,
 ): TextOnlyQuestion['content'] {
   const format = r['format'] as string;
   // v0.2.0: prefer canonical questionText if present; fall back to format-derived
   // stem for legacy bank rows that don't ship one. Once server-side recipe
   // resolver always populates questionText, this OR becomes a noop.
-  const stem = base.questionText || buildStem(format, c);
+  const stem = base.questionText || buildStem(format, c, answer);
   const coinScene = buildCoinScene(format, c, base.skillIds);
   if (!coinScene) return { stem };
   // Colour answers are sets of coins; the other money_coin_* answers name one
@@ -947,10 +957,11 @@ function stemContent(
 function normalizeWithStem(r: Record<string, unknown>): TextOnlyQuestion {
   const base = extractBase(r);
   const c = requireContent(r);
+  const answer = extractAnswer(r);
   return {
     ...base, format: 'text', imageType: undefined,
-    content: stemContent(r, base, c),
-    answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+    content: stemContent(r, base, c, answer),
+    answer, distractors: normalizeDistractors(r['distractors']),
   };
 }
 
