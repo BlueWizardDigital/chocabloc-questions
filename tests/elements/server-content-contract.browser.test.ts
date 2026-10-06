@@ -162,7 +162,7 @@ function bankShaped(r: ContractRow, content: Obj): Record<string, unknown> {
   return {
     id: r.label, skillIds: [r.skill], format: r.format, imageType: r.imageType, content,
     questionText: r.questionText, answerToken: 'test-token-not-real',
-    choices: [{ value: a }, { value: `${a}1` }, { value: `${a}2` }, { value: `${a}3` }],
+    choices: [{ value: a }, { value: 'x1' }, { value: 'x2' }, { value: 'x3' }],
   };
 }
 
@@ -236,8 +236,7 @@ describe('server content map contract: whole and trimmed rows render identically
     const diffs = new Map<string, { n: number; example: string }>();
     const unrendered: string[] = [];
     const perFormat: Record<string, number> = {};
-    let drawn = 0;
-    let withText = 0;
+    const recorded = new Set<string>();
     try {
       for (const r of rows) {
         if (!has(map, r.format)) continue; // NOT_ON_THE_BANK, checked above
@@ -254,8 +253,7 @@ describe('server content map contract: whole and trimmed rows render identically
         if (NO_PICTURE_BY_DESIGN[r.format]) continue;
         const a = record(qa, spy);
         const b = record(qb, spy);
-        if (a.includes('"canvas":["')) drawn += 1;
-        if (!a.includes('"text":[]')) withText += 1;
+        if (a.includes('"canvas":["') || !a.includes('"text":[]')) recorded.add(r.format);
         if (a !== b) {
           const key = `${r.format}`;
           const prev = diffs.get(key);
@@ -271,8 +269,9 @@ describe('server content map contract: whole and trimmed rows render identically
       [...diffs].map(([f, d]) => `${f}: ${d.n} rows differ, e.g. ${d.example}`),
       'formats whose picture changes when the server trims the content',
     ).to.deep.equal([]);
-    expect(drawn, 'rows whose canvas drew something (an empty recording proves nothing)').to.be.greaterThan(1000);
-    expect(withText).to.be.greaterThan(3000);
+    const empty = Object.keys(perFormat).filter((f) => !NO_PICTURE_BY_DESIGN[f] && !recorded.has(f)).sort();
+    expect(empty, 'formats with no canvas call and no DOM text for any row (an empty recording proves nothing)')
+      .to.deep.equal([]);
     // eslint-disable-next-line no-console
     console.log(`contract: ${JSON.stringify(counts)}; formats rendered ${Object.keys(perFormat).length}`);
   });
