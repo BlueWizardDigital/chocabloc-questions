@@ -1311,7 +1311,7 @@ describe('labels found by the answer-label sweep', () => {
       choices: ['3', '4', '5', '9'].map((value) => ({ value })),
     }));
 
-    expect(labels(calls)).to.deep.equal(['?', '4', '5']);
+    expect(labels(calls)).to.deep.equal(['4', '5', '?']);
   });
 
   it('GEOM-PYTHAGOREAN-BASIC is unchanged: both legs labelled, "?" on the hypotenuse', () => {
@@ -1322,6 +1322,75 @@ describe('labels found by the answer-label sweep', () => {
     }));
 
     expect(labels(calls)).to.deep.equal(['3', '4', '?']);
+  });
+
+  describe('pythagorean from operands + known_leg (no legs/hypotenuse/answer on the wire)', () => {
+    const bankRow = (content: Record<string, unknown>, extra: Record<string, unknown> = {}): unknown => wire({
+      id: 'GEOM-PYTHAGOREAN-bank', skillIds: ['GEOM-PYTHAGOREAN-LEG'], format: 'pythagorean',
+      imageType: 'right_triangle', content, questionText: 'Find it.',
+      choices: ['3', '4', '5', '9'].map((value) => ({ value })), answerToken: 'tok', ...extra,
+    });
+
+    it('missing-leg bank row: 4, 5 and "?" drawn, and never the answer 3', () => {
+      const { calls } = render(bankRow({ operands: [4, 5], known_leg: 4 }));
+      expect(labels(calls)).to.have.members(['4', '5', '?']);
+      expect(labels(calls)).to.not.include('3');
+    });
+
+    it('find-hypotenuse bank row: 3, 4 and "?" drawn, and never the answer 5', () => {
+      const { calls } = render(bankRow({ operands: [3, 4] }));
+      expect(labels(calls)).to.have.members(['3', '4', '?']);
+      expect(labels(calls)).to.not.include('5');
+    });
+
+    it('assignment-style row with answer: same labels as the bank missing-leg row', () => {
+      const { calls } = render(wire({
+        id: 'GEOM-PYTHAGOREAN-assign', skillIds: ['GEOM-PYTHAGOREAN-LEG'], format: 'pythagorean',
+        imageType: 'right_triangle', questionText: 'Find the other leg.',
+        content: { legs: [3, 4], hypotenuse: 5, operands: [4, 5], known_leg: 4 }, answer: 3,
+        distractors: [{ value: '4', errorType: 'x' }],
+      }));
+      expect(labels(calls)).to.have.members(['4', '5', '?']);
+      expect(labels(calls)).to.not.include('3');
+    });
+
+    it('the "?" leg is drawn at its real length, not the hypotenuse length', () => {
+      const { calls } = render(bankRow({ operands: [4, 5], known_leg: 4 }));
+      const lines = named('lineTo', calls).map((c) => c.args as number[]);
+      const moves = named('moveTo', calls).map((c) => c.args as number[]);
+      const [x0, y0] = moves[0]!;
+      const [x1] = lines[0]!;
+      const [, y1] = lines[1]!;
+      const base = x1! - x0!;
+      const vertical = y0! - y1!;
+      const hyp = Math.hypot(base, vertical);
+      expect(vertical).to.not.be.closeTo(hyp, 0.5);
+      expect(vertical / base).to.be.closeTo(3 / 4, 0.01);
+    });
+
+    for (const [label, content] of [
+      ['hyp <= known', { operands: [5, 4], known_leg: 5 }],
+      ['one operand', { operands: [4], known_leg: 4 }],
+      ['non-finite operand', { operands: [4, Infinity] }],
+    ] as const) {
+      it(`${label}: draws nothing and does not throw`, () => {
+        let out: ReturnType<typeof render> | undefined;
+        expect(() => { out = render(bankRow(content)); }).to.not.throw();
+        expect(labels(out!.calls)).to.deep.equal([]);
+      });
+    }
+
+    it('default stem: missing leg with known_leg, hypotenuse without', () => {
+      const stemOf = (content: Record<string, unknown>): string => {
+        const { el } = render(wire({
+          id: 'GEOM-PYTHAGOREAN-stem', skillIds: ['GEOM-PYTHAGOREAN-LEG'], format: 'pythagorean',
+          imageType: 'right_triangle', content, choices: ['3', '4'].map((value) => ({ value })), answerToken: 't',
+        }));
+        return el.shadowRoot!.querySelector('[part="prompt"]')?.textContent?.trim() ?? '';
+      };
+      expect(stemOf({ operands: [4, 5], known_leg: 4 })).to.equal('Find the missing leg.');
+      expect(stemOf({ operands: [3, 4] })).to.equal('Find the hypotenuse.');
+    });
   });
 
   it('GEOM-AREA-COMPOUND as the bank sends it (no widths): pieces rebuilt from operands', () => {

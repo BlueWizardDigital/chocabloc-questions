@@ -30,7 +30,7 @@ type FixtureRow = [skill: string, format: string, imageType: string | null,
 const BANK_CONTENT_KEYS = new Set([
   'angle', 'attribute', 'classify_by', 'coins', 'components', 'concept', 'penny', 'nickel', 'dime',
   'quarter', 'loonie', 'toonie', 'diameter', 'dimension', 'dimensions', 'face_shape', 'find_type',
-  'given_type', 'height', 'hypotenuse', 'known_angles', 'legs', 'lines_of_symmetry', 'method',
+  'given_type', 'height', 'hypotenuse', 'known_angles', 'known_leg', 'legs', 'lines_of_symmetry', 'method',
   'missing_angle', 'operands', 'operation', 'part', 'pi_value', 'properties', 'property', 'prompt',
   'radius', 'relationship', 'shape', 'sides', 'slant', 'total', 'value',
 ]);

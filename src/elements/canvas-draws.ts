@@ -389,18 +389,32 @@ export function drawPictograph(
 }
 
 /**
- * pythagorean. "Find the hypotenuse" rows label both legs and put "?" on the
- * hypotenuse. "Find the missing leg" rows (GEOM-PYTHAGOREAN-LEG) give one leg
- * and the hypotenuse, so `operands` holds the hypotenuse; `legs` still holds
- * both legs, one of them the answer. Those label the known leg and the
- * hypotenuse, and put "?" on the other leg (before beta.19 they labelled the
- * answer and put "?" on the given hypotenuse).
+ * pythagorean, drawn from `operands` (+ `known_leg`) alone: the wire carries no
+ * `legs`, `hypotenuse` or `missing_leg`, because any of them can be the answer.
+ * "Find the hypotenuse" rows (no `known_leg`) have both legs in `operands`;
+ * they label both legs and put "?" on the hypotenuse. "Find the missing leg"
+ * rows give one leg (`knownLeg`) and the hypotenuse (the other operand); they
+ * label those two and put "?" on the other leg, drawn at its real length.
+ * Unusable input (not two finite operands, hypotenuse not longer than the known
+ * leg) draws nothing.
  */
 export function drawRightTriangle(
-  ctx: CanvasRenderingContext2D, w: number, h: number, legs: [number, number],
-  hypotenuse?: number, operands?: readonly number[],
+  ctx: CanvasRenderingContext2D, w: number, h: number,
+  operands: readonly number[], knownLeg?: number,
 ): void {
   ctx.clearRect(0, 0, w, h);
+  const ops = Array.isArray(operands) ? operands.filter((n) => Number.isFinite(n)) : [];
+  if (ops.length !== 2) return;
+  const findLeg = typeof knownLeg === 'number' && ops.includes(knownLeg);
+  const hyp = findLeg ? ops.find((o) => o !== knownLeg) : undefined;
+  let legs: [number, number];
+  if (findLeg) {
+    if (hyp === undefined || hyp <= knownLeg) return;
+    legs = [knownLeg, Math.sqrt(hyp ** 2 - knownLeg ** 2)];
+  } else {
+    legs = [ops[0]!, ops[1]!];
+  }
+  if (!legs.every((n) => Number.isFinite(n) && n > 0)) return;
   const margin = 20;
   const scale = Math.min((w - 2 * margin) / legs[0], (h - 2 * margin) / legs[1]) * 0.8;
   const x0 = margin, y0 = h - margin;
@@ -409,13 +423,10 @@ export function drawRightTriangle(
   ctx.fillStyle = '#e3f2fd'; ctx.strokeStyle = '#2196f3'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y0); ctx.lineTo(x0, y1);
   ctx.closePath(); ctx.fill(); ctx.stroke();
-  const findLeg = hypotenuse !== undefined && Array.isArray(operands) && operands.includes(hypotenuse);
-  const known = findLeg ? operands!.find((o) => o !== hypotenuse) : undefined;
-  const leg = (n: number) => (!findLeg || n === known ? String(n) : '?');
   ctx.fillStyle = '#333'; ctx.font = '11px Arial'; ctx.textAlign = 'center';
-  ctx.fillText(leg(legs[0]), (x0 + x1) / 2, y0 + 12);
-  ctx.fillText(leg(legs[1]), x0 - 12, (y0 + y1) / 2);
-  ctx.fillText(findLeg ? String(hypotenuse) : '?', (x0 + x1) / 2 + 15, (y0 + y1) / 2 - 5);
+  ctx.fillText(String(legs[0]), (x0 + x1) / 2, y0 + 12);
+  ctx.fillText(findLeg ? '?' : String(legs[1]), x0 - 12, (y0 + y1) / 2);
+  ctx.fillText(findLeg ? String(hyp) : '?', (x0 + x1) / 2 + 15, (y0 + y1) / 2 - 5);
 }
 
 export function drawTriangleAngles(

@@ -165,7 +165,7 @@ export class ChocaCanvasQuestion extends HTMLElement {
       else if (q.format === 'geometry_attributes') text = `Which shape has ${q.content.attribute}?`;
       else if (q.format === 'geometry_classify') text = 'Is this shape 2D or 3D?';
       else if (q.format === 'geometry_properties') text = `How many ${q.content.property} does a ${q.content.shape} have?`;
-      else if (q.format === 'pythagorean') text = 'Find the hypotenuse.';
+      else if (q.format === 'pythagorean') text = q.content.known_leg != null ? 'Find the missing leg.' : 'Find the hypotenuse.';
       else if (q.format === 'geometry_angle_classify') text = 'What type of angle is this?';
       else if (q.format === 'geometry_circle_parts') text = 'What part of the circle is highlighted?';
       else if (q.format === 'geometry_face_identify') text = `What is the shape of each face of a ${q.content.shape}?`;
@@ -237,7 +237,7 @@ export class ChocaCanvasQuestion extends HTMLElement {
         else drawShape3D(ctx, w, h, q.content.shape);
         break;
       case 'pythagorean':
-        drawRightTriangle(ctx, w, h, q.content.legs, q.content.hypotenuse, q.content.operands);
+        drawRightTriangle(ctx, w, h, q.content.operands, q.content.known_leg);
         break;
       case 'geometry_area': {
         const pieces = compoundPieces(q.content);

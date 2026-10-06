@@ -11,6 +11,7 @@ import type {
   GeometryAttributesQuestion,
   GeometryClassifyQuestion,
   GeometryPropertiesQuestion,
+  PythagoreanContent,
   PythagoreanQuestion,
   GeometryAreaQuestion,
   GeometryAnglesQuestion,
@@ -298,12 +299,16 @@ function normalizePythagoreanRow(r: Record<string, unknown>): PythagoreanQuestio
   const c = requireContent(r);
   const legs = getNumberArray(c, 'legs');
   const hyp = getNumber(c, 'hypotenuse');
-  const operands = getNumberArray(c, 'operands');
-  if (!legs || legs.length !== 2 || hyp === undefined)
-    throw new NormalizeError('pythagorean missing legs/hypotenuse', r);
+  const operands = getNumberArray(c, 'operands') ?? legs;
+  const knownLeg = getNumber(c, 'known_leg');
+  if (!operands || operands.length !== 2 || !operands.every(Number.isFinite))
+    throw new NormalizeError('pythagorean missing operands', r);
+  const content: PythagoreanContent = { operands: operands as [number, number] };
+  if (knownLeg !== undefined) content.known_leg = knownLeg;
+  if (legs && legs.length === 2) content.legs = legs as [number, number];
+  if (hyp !== undefined) content.hypotenuse = hyp;
   return {
-    ...base, format: 'pythagorean', imageType: 'right_triangle',
-    content: { legs: legs as [number, number], hypotenuse: hyp, operands: (operands ?? legs) as [number, number] },
+    ...base, format: 'pythagorean', imageType: 'right_triangle', content,
     answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
   };
 }

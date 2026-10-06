@@ -300,9 +300,10 @@ const REPRESENTATIVE_ROWS: Record<string, Row | Row[]> = {
   geometry_surface_area: row('geometry_surface_area', {
     content: { shape: 'cube', operands: [2, 2, 2] }, answer: 24,
   }),
-  pythagorean: row('pythagorean', {
-    content: { legs: [3, 4], hypotenuse: 5, operands: [3, 4] }, answer: 5,
-  }),
+  pythagorean: [
+    row('pythagorean', { content: { operands: [3, 4] }, answer: 5 }),
+    row('pythagorean', { content: { operands: [4, 5], known_leg: 4 }, answer: 3 }),
+  ],
 
   data_graph: [
     row('data_graph', {

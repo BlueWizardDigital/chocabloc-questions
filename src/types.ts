@@ -138,9 +138,10 @@ export type GeometryPropertiesQuestion = VisualQuestion<
 >;
 
 export type PythagoreanContent = {
-  legs: [number, number];
-  hypotenuse: number;
   operands: [number, number];
+  known_leg?: number;
+  legs?: [number, number];
+  hypotenuse?: number;
 };
 export type PythagoreanQuestion = VisualQuestion<
   'pythagorean',
