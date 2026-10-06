@@ -173,7 +173,7 @@ export type GeometryAnglesQuestion = VisualQuestion<
 
 export type GeometryPerimeterContent = {
   shape: string;
-  operands: [number, number];
+  operands: readonly number[];
 };
 export type GeometryPerimeterQuestion = VisualQuestion<
   'geometry_perimeter',

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeQuestion } from '../../src/helpers/normalizer';
+import type { GeometryPerimeterContent } from '../../src/types';
 import fixtures from '../fixtures/visual-format-samples.json';
 
 describe('normalizeQuestion — visual formats', () => {
@@ -250,6 +251,26 @@ describe('normalizeQuestion — visual formats', () => {
       expect(q.content.find_type).toBe('diameter');
       expect(q.imageType).toBe('shape_2d');
     }
+  });
+
+  it('geometry_perimeter: normalizes pentagon with 5 operands', () => {
+    const q = normalizeQuestion({
+      id: 'GEOM-PERIMETER-PENTAGON',
+      skill_ids: ['GEOM-PERIMETER'],
+      format: 'geometry_perimeter',
+      content: { shape: 'pentagon', operands: [1, 2, 3, 4, 5] },
+      answer: 15,
+      distractors: [{ value: 14, error_type: 'missing-one' }],
+    })!;
+    expect(q.format).toBe('geometry_perimeter');
+    if (q.format === 'geometry_perimeter') {
+      expect(q.content.shape).toBe('pentagon');
+      expect(q.content.operands).toHaveLength(5);
+      expect(q.content.operands).toEqual([1, 2, 3, 4, 5]);
+    }
+    // Type-level assertion: operands must accept a 5-tuple
+    const c: GeometryPerimeterContent = { shape: 'pentagon', operands: [1, 2, 3, 4, 5] };
+    expect(c.operands).toHaveLength(5);
   });
 
   it('rejects unknown format', () => {

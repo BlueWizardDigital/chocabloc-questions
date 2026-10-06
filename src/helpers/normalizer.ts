@@ -365,7 +365,7 @@ function normalizeGeometryPerimeterRow(r: Record<string, unknown>): GeometryPeri
   const shape = getString(c, 'shape') ?? 'rectangle';
   return {
     ...base, format: 'geometry_perimeter', imageType: undefined,
-    content: { shape, operands: operands as [number, number] },
+    content: { shape, operands },
     answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
   };
 }
