@@ -346,13 +346,18 @@ function normalizeGeometryAnglesRow(r: Record<string, unknown>): GeometryAnglesQ
   const base = extractBase(r);
   const c = requireContent(r);
   const knownAngles = getNumberArray(c, 'known_angles');
-  const missingAngle = getNumber(c, 'missing_angle');
-  if (!knownAngles || missingAngle === undefined)
-    throw new NormalizeError('geometry_angles missing known_angles/missing_angle', r);
+  if (!knownAngles) throw new NormalizeError('geometry_angles missing known_angles', r);
+  // The server withholds missing_angle (it is the answer). A row that reaches
+  // this normalizer carries `answer`, so the review screen may use it; no
+  // renderer reads this field, and a bank (choices-only) row never gets here.
+  const answer = extractAnswer(r);
+  const answerNum = typeof answer === 'number' ? answer : Number(answer);
+  const missingAngle = getNumber(c, 'missing_angle')
+    ?? (Number.isFinite(answerNum) ? answerNum : 180 - knownAngles.reduce((a, b) => a + b, 0));
   return {
     ...base, format: 'geometry_angles', imageType: undefined,
     content: { known_angles: knownAngles, missing_angle: missingAngle },
-    answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+    answer, distractors: normalizeDistractors(r['distractors']),
   };
 }
 
@@ -558,9 +563,11 @@ function normalizeTimeRow(r: Record<string, unknown>): TimeQuestion {
   const c = requireContent(r);
   const hour = getNumber(c, 'hour');
   const minute = getNumber(c, 'minute');
-  const time = getString(c, 'time');
-  if (hour === undefined || minute === undefined || !time)
-    throw new NormalizeError('time missing hour/minute/time', r);
+  if (hour === undefined || minute === undefined)
+    throw new NormalizeError('time missing hour/minute', r);
+  // The server withholds the `time` string (it is the answer). Nothing renders
+  // it; rebuild it from the hands so the content keeps its type.
+  const time = getString(c, 'time') ?? `${hour}:${String(minute).padStart(2, '0')}`;
   return {
     ...base, format: 'time', imageType: 'analog_clock',
     content: { hour, minute, time }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
@@ -602,15 +609,24 @@ function normalizeCoordinateDistanceRow(r: Record<string, unknown>): CoordinateD
 function normalizeMoneyBudgetAdjustRow(r: Record<string, unknown>): MoneyBudgetAdjustQuestion {
   const base = extractBase(r);
   const c = requireContent(r);
-  const currency = getString(c, 'currency') as Currency | undefined;
-  if (currency !== 'USD' && currency !== 'CAD')
-    throw new NormalizeError('money_budget_adjust missing valid currency', r);
+  // The server sends no currency for this format and the table draws none, so
+  // read it when present, else from a -USD/-CAD skill id, else CAD.
+  const rawCurrency = getString(c, 'currency');
+  let currency: Currency;
+  if (rawCurrency === 'USD' || rawCurrency === 'CAD') currency = rawCurrency;
+  else if (rawCurrency !== undefined) throw new NormalizeError('money_budget_adjust invalid currency', r);
+  else {
+    try { currency = inferCurrency(base.skillIds); } catch { currency = 'CAD'; }
+  }
   const solveFor = getString(c, 'solve_for');
   if (!solveFor) throw new NormalizeError('money_budget_adjust missing solve_for', r);
-  const answerCents = getNumber(c, 'answer_cents');
   const originalIncomeCents = getNumber(c, 'original_income_cents');
-  if (answerCents === undefined || originalIncomeCents === undefined)
-    throw new NormalizeError('money_budget_adjust missing cents fields', r);
+  if (originalIncomeCents === undefined)
+    throw new NormalizeError('money_budget_adjust missing original_income_cents', r);
+  // answer_cents is withheld (it is the answer); the row's own `answer` is cents.
+  const answer = extractAnswer(r);
+  const answerFromRow = typeof answer === 'number' ? answer : Number(answer);
+  const answerCents = getNumber(c, 'answer_cents') ?? (Number.isFinite(answerFromRow) ? answerFromRow : 0);
   const originalRows = c['original_rows'];
   if (!Array.isArray(originalRows))
     throw new NormalizeError('money_budget_adjust missing original_rows', r);
@@ -626,7 +642,7 @@ function normalizeMoneyBudgetAdjustRow(r: Record<string, unknown>): MoneyBudgetA
       original_rows: originalRows as { category: string; amount_cents: number }[],
       change_event: { type: getString(ce, 'type') ?? 'unknown', new_income_cents: getNumber(ce, 'new_income_cents') ?? 0 },
     },
-    answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+    answer, distractors: normalizeDistractors(r['distractors']),
   };
 }
 
