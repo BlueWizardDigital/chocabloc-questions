@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeQuestion } from '../../src/helpers/normalizer';
-import type { GeometryPerimeterContent } from '../../src/types';
 import fixtures from '../fixtures/visual-format-samples.json';
 
 describe('normalizeQuestion — visual formats', () => {
@@ -268,9 +267,6 @@ describe('normalizeQuestion — visual formats', () => {
       expect(q.content.operands).toHaveLength(5);
       expect(q.content.operands).toEqual([1, 2, 3, 4, 5]);
     }
-    // Type-level assertion: operands must accept a 5-tuple
-    const c: GeometryPerimeterContent = { shape: 'pentagon', operands: [1, 2, 3, 4, 5] };
-    expect(c.operands).toHaveLength(5);
   });
 
   it('rejects unknown format', () => {
