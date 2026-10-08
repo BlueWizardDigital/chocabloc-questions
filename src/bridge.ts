@@ -36,6 +36,16 @@ const SKILL_ID_RE = /^[A-Z][A-Z0-9-]{0,99}$/;
 const RECIPE_SLUG_RE = /^[a-z0-9][a-z0-9-]{0,99}$/;
 
 /**
+ * Which buttons the host page shows itself (Trello 383). When a field is true,
+ * the game hides its own button of that kind, so a child sees one Mute and one
+ * Full screen. Both false standalone and under a host older than this.
+ */
+export interface HostControls {
+  mute: boolean;
+  fullscreen: boolean;
+}
+
+/**
  * Bridge context delivered by the host on boot, or synthesized for standalone.
  * Consumers should treat `standalone === true` as "no host" and degrade
  * gracefully — every bridge method below is already a no-op in that mode.
@@ -47,6 +57,10 @@ export interface BridgeContext {
   gradeBand: string | null;
   grade: number | string | null;
   player: unknown;
+  /** The host's own buttons (Trello 383). Hide yours of that kind when true. */
+  controls: HostControls;
+  /** The host's mute state when the context arrived. Follow changes with bridge.onSound. */
+  muted: boolean;
 }
 
 export type ReadyCallback = (ctx: BridgeContext) => void;
@@ -367,6 +381,13 @@ interface PendingConceptSessions {
 }
 const pendingConceptSessions = new Map<string, PendingConceptSessions>();
 
+// Anything but a literal true is false: a malformed or missing field must not
+// make a game hide a button the host doesn't show.
+function readControls(raw: unknown): HostControls {
+  const c = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  return { mute: c.mute === true, fullscreen: c.fullscreen === true };
+}
+
 function deliverReady(payload: BridgeContext): void {
   if (ctx) return;
   ctx = payload;
@@ -390,6 +411,8 @@ function enterStandalone(): void {
     gradeBand: null,
     grade: null,
     player: null,
+    controls: { mute: false, fullscreen: false },
+    muted: false,
   });
 }
 
@@ -428,7 +451,7 @@ function handleHostMessage(e: MessageEvent): void {
         initTimer = null;
       }
       if (e.origin && e.origin !== 'null') parentOrigin = e.origin;
-      const p = (msg.payload ?? {}) as Partial<BridgeContext>;
+      const p = (msg.payload ?? {}) as Partial<BridgeContext> & { controls?: unknown; muted?: unknown };
       deliverReady({
         standalone: false,
         isMobile: !!p.isMobile,
@@ -436,6 +459,8 @@ function handleHostMessage(e: MessageEvent): void {
         gradeBand: p.gradeBand ?? null,
         grade: p.grade ?? null,
         player: p.player ?? null,
+        controls: readControls(p.controls),
+        muted: p.muted === true,
       });
       return;
     }

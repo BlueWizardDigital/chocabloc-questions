@@ -26,6 +26,13 @@ afterEach(() => {
 });
 
 describe('whenHostReady', () => {
+  it('reports no host controls before the host has spoken (Trello 383)', async () => {
+    const { hostContext } = await import('../src/host');
+    const ctx = hostContext();
+    expect(ctx.controls).toEqual({ mute: false, fullscreen: false });
+    expect(ctx.muted).toBe(false);
+  });
+
   it('resolves to standalone after the timeout and stays resolved (no re-wait)', async () => {
     const { whenHostReady } = await import('../src/host');
 

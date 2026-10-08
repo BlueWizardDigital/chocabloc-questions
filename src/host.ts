@@ -21,7 +21,7 @@ import {
 import { normalizeBatch, normalizeQuestion } from './helpers/normalizer';
 import type { NormalizedQuestion } from './types';
 
-export type { BridgeContext, AttemptPayload, ScorePayload } from './bridge';
+export type { BridgeContext, HostControls, AttemptPayload, ScorePayload } from './bridge';
 export type {
   RequestConceptOptions,
   ResolvedConcept,
@@ -48,6 +48,9 @@ function snapshot(): BridgeContext {
     gradeBand: null,
     grade: null,
     player: null,
+    // Inline, not imported: tests mock ./bridge wholesale (tests/host-context.test.ts).
+    controls: { mute: false, fullscreen: false },
+    muted: false,
   };
 }
 
