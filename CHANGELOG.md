@@ -5,6 +5,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.6.0-beta.21] — 2026-10-08
+
+**Minor**: new bridge API for the ChocaBLOC game page's own Mute button (Trello 383); nothing
+renamed or removed. Only the game template moves to this release now; each game moves later,
+from the Trello 383 handoff document.
+
+### Added
+
+- **`bridge.onSound(cb)`** follows the host page's Mute. It fires only when the host shows its
+  own Mute (`ctx.controls.mute`): once with the current state, then on every change. The first
+  registration sends `chocabloc:sound:listening` once, and the host shows its Mute only for a
+  game that sends it. Returns an unsubscribe.
+- **`BridgeContext.controls`** (`{ mute, fullscreen }`, new exported type `HostControls`) and
+  **`BridgeContext.muted`**, read from `chocabloc:init`. Both are `false` standalone, under an
+  older host, and in the host facade's pre-init snapshot. When a field is `true`, hide the
+  game's own button of that kind.
+- The **`chocabloc:sound`** host message (`{ muted }`; a non-boolean is dropped).
+- **`chocabloc:ready`** now carries `payload: { features: ['sound'] }`.
+
+### Note for consumers
+
+- A test that builds a `BridgeContext` literal adds `controls: { mute: false, fullscreen: false }`
+  and `muted: false`.
+
 ## [0.6.0-beta.20] — 2026-10-05
 
 **Minor**: a widened public type and an optional field; nothing renamed or removed. The main
