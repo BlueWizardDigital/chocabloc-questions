@@ -307,9 +307,16 @@ export interface AttachValidatorQuestion {
   answerToken?: string;
 }
 
+/** Called with the host's mute state (Trello 383). See bridge.onSound. */
+export type SoundCallback = (muted: boolean) => void;
+
+/** What this library can do, sent with chocabloc:ready so the host can tell. */
+const BRIDGE_FEATURES = ['sound'];
+
 export interface Bridge {
   readonly ctx: BridgeContext | null;
   onReady(cb: ReadyCallback): void;
+  onSound(cb: SoundCallback): () => void;
   started(): void;
   attempt(payload: AttemptPayload): void;
   score(payload: ScorePayload): void;
@@ -343,6 +350,32 @@ let initTimer: ReturnType<typeof setTimeout> | null = null;
 // that exact origin instead of wildcard '*'. Falls back to '*' if unknown
 // (pre-init / parent gone).
 let parentOrigin: string | null = null;
+
+// The host's Mute (Trello 383). Recorded from chocabloc:init and every
+// chocabloc:sound, whether or not a handler is registered yet, so a late
+// handler still gets the current value. hostOwnsMute is set only by an init
+// the bridge actually applied: after the standalone fallback the game shows
+// its own buttons, so it must not also follow the host.
+let hostOwnsMute = false;
+let hostMuted = false;
+let listeningSent = false;
+let soundCbs: SoundCallback[] = [];
+
+function sendListeningOnce(): void {
+  if (listeningSent || !hostOwnsMute) return;
+  listeningSent = true;
+  send('chocabloc:sound:listening');
+}
+
+function emitSound(): void {
+  for (const cb of soundCbs) {
+    try {
+      cb(hostMuted);
+    } catch {
+      /* a game's handler must not break the bridge or the other handlers */
+    }
+  }
+}
 
 // In-flight chocabloc:validate:request promises keyed by requestId. Entries
 // are removed on resolve / reject / timeout. Map (not object) so iteration
@@ -451,7 +484,9 @@ function handleHostMessage(e: MessageEvent): void {
         initTimer = null;
       }
       if (e.origin && e.origin !== 'null') parentOrigin = e.origin;
+      const applies = ctx === null; // deliverReady ignores a second context
       const p = (msg.payload ?? {}) as Partial<BridgeContext> & { controls?: unknown; muted?: unknown };
+      const controls = readControls(p.controls);
       deliverReady({
         standalone: false,
         isMobile: !!p.isMobile,
@@ -459,9 +494,24 @@ function handleHostMessage(e: MessageEvent): void {
         gradeBand: p.gradeBand ?? null,
         grade: p.grade ?? null,
         player: p.player ?? null,
-        controls: readControls(p.controls),
+        controls,
         muted: p.muted === true,
       });
+      if (applies) {
+        hostOwnsMute = controls.mute;
+        hostMuted = p.muted === true;
+        if (soundCbs.length > 0) {
+          sendListeningOnce();
+          emitSound();
+        }
+      }
+      return;
+    }
+    case 'chocabloc:sound': {
+      const muted = (msg.payload as { muted?: unknown } | undefined)?.muted;
+      if (typeof muted !== 'boolean') return;
+      hostMuted = muted;
+      if (hostOwnsMute) emitSound();
       return;
     }
     case 'chocabloc:validate:deliver': {
@@ -955,6 +1005,20 @@ export const bridge: Bridge = {
     }
     readyCbs.push(cb);
   },
+  onSound(cb: SoundCallback) {
+    soundCbs.push(cb);
+    if (ctx && !ctx.standalone && hostOwnsMute) {
+      sendListeningOnce();
+      try {
+        cb(hostMuted);
+      } catch {
+        /* see emitSound */
+      }
+    }
+    return () => {
+      soundCbs = soundCbs.filter((c) => c !== cb);
+    };
+  },
   started() {
     send('chocabloc:started');
   },
@@ -998,7 +1062,7 @@ if (typeof window !== 'undefined') {
   window.addEventListener('message', handleHostMessage);
   if (inIframe) {
     try {
-      window.parent.postMessage({ type: 'chocabloc:ready' }, '*');
+      window.parent.postMessage({ type: 'chocabloc:ready', payload: { features: BRIDGE_FEATURES } }, '*');
     } catch {
       enterStandalone();
     }

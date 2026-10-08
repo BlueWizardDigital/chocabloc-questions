@@ -200,6 +200,7 @@ manifest, so the game never sends one** (and can't request another game's bank).
 Host-less but same-origin, it falls back to a relative fetch using a
 caller-supplied, validated `gameId`:
 
+- `bridge.onSound(cb)` — follow the host page's Mute (Trello 383); returns an unsubscribe. `ctx.controls` says which buttons the host shows.
 - `bridge.requestQuestions({ count })` → `Promise<unknown[]>` — bulk batch (e.g. a
   board). Returns `[]` on standalone / timeout / error reply / empty; never throws.
 - `bridge.requestNextQuestion({ skillId?, recipeSlug? })` → `Promise<unknown | null>`

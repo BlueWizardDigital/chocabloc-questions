@@ -225,7 +225,7 @@ describe('bridge — boot handshake', () => {
 
   it('posts chocabloc:ready to parent on module load when in iframe context', async () => {
     await import('../src/bridge');
-    expect(postSpy).toHaveBeenCalledWith({ type: 'chocabloc:ready' }, '*');
+    expect(postSpy).toHaveBeenCalledWith({ type: 'chocabloc:ready', payload: { features: ['sound'] } }, '*');
   });
 });
 

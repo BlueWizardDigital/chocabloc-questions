@@ -73,6 +73,8 @@ game boots
   bridge.exit()          chocabloc:exit                       (optional, on explicit quit)
 ```
 
+`chocabloc:ready` carries `payload: { features: ['sound'] }` from the Trello 383 release on; the host reads it to tell an updated game from an older one.
+
 If `chocabloc:init` doesn't arrive within **2 seconds**, the bridge synthesizes a
 standalone context (`standalone: true`) so the game never hangs.
 
@@ -113,6 +115,8 @@ and readable any time as `bridge.ctx`.
   viewport: { w: number, h: number },
   gradeBand: string | null,   // ONLY "k2" | "3plus" — see note below
   grade:     number | string | null,   // fine grade, e.g. user.gradeLevel
+  controls:  { mute: boolean, fullscreen: boolean },  // Trello 383: which buttons the host shows
+  muted:     boolean,         // the host's mute state when the context arrived
 }
 ```
 
@@ -126,6 +130,8 @@ interface BridgeContext {
   gradeBand: string | null;
   grade: number | string | null;
   player: unknown;                // see "Player identity" — null for iframe games today
+  controls: { mute: boolean; fullscreen: boolean }; // false/false standalone and under an older host
+  muted: boolean;
 }
 ```
 
@@ -188,6 +194,19 @@ rules), or a `NO_CONCEPT` signal. See [Concepts](#concepts-grade-tiered-game-loo
 Reply to your `chocabloc:concept-session:report`. Carries the player's accumulated
 progress for the concept. See [Concepts](#concepts-grade-tiered-game-loop-rules).
 
+### `chocabloc:sound` — the host's Mute (Trello 383)
+
+`{ muted: boolean }`, sent on every toggle of the host page's Mute button. Don't
+listen for it yourself: call `bridge.onSound((muted) => …)` once at start-up,
+before loading art or sound, and point it at your game's own mute. It fires
+only when `ctx.controls.mute` is true: once with the current state, then on
+every change. "Muted" means no sound at all. While the host owns Mute, hide
+your own quick mute button(s). A sound setting inside your own Settings screen
+may stay: then play sound only when the host is unmuted **and** that setting
+is on. The first registration sends `chocabloc:sound:listening`. The host
+hides its Mute for a game that hasn't sent it within 2 seconds, so register
+early.
+
 ---
 
 ## Outbound: what the game reports to the host
@@ -199,6 +218,7 @@ progress for the concept. See [Concepts](#concepts-grade-tiered-game-loop-rules)
 | `bridge.score(p)` | `chocabloc:score` | `{ score, stars?, xp? }` | Level/round complete. Host treats this as "level complete" and **awards XP**. |
 | `bridge.saveNotify()` | `chocabloc:save-notify` | — | After a `localStorage.setItem` you want mirrored to the `game_saves` table. |
 | `bridge.exit()` | `chocabloc:exit` | — | Optional, on explicit "quit". Host also handles its own back button. |
+| `bridge.onSound(cb)` | `chocabloc:sound:listening` | — | Sent for you, once, by the first `bridge.onSound` registration while the host shows Mute. |
 
 Field notes the host enforces:
 - `studentAnswer` on an attempt is forwarded as a string: a string as-is, a **number or
