@@ -52,7 +52,8 @@ function obj(v: unknown, allowed: string[], required: string[]): Obj {
 }
 
 function str(v: unknown, max: number): string {
-  if (typeof v !== 'string' || v.length === 0 || v.length > max) fail();
+  // Caps count code points, like the mathSkills checks (Python len()), not UTF-16 units.
+  if (typeof v !== 'string' || v.length === 0 || Array.from(v).length > max) fail();
   return v;
 }
 

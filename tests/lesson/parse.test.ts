@@ -42,6 +42,20 @@ describe('parseLesson', () => {
     expect(parseLesson(none)).toEqual({ ok: false, reason: 'unsupported-version' });
   });
 
+  it('counts caps in code points, not UTF-16 units', () => {
+    const l = clone();
+    l.title = '😀'.repeat(40);
+    expect(parseLesson(l).ok).toBe(true);
+    l.title = '😀'.repeat(41);
+    expect(parseLesson(l)).toEqual({ ok: false, reason: 'invalid' });
+  });
+
+  it('refuses an empty heading', () => {
+    const l = clone();
+    l.idea.heading = '';
+    expect(parseLesson(l)).toEqual({ ok: false, reason: 'invalid' });
+  });
+
   it('refuses non-objects', () => {
     for (const v of [null, 'x', 3, [], undefined]) {
       expect(parseLesson(v)).toEqual({ ok: false, reason: 'invalid' });
