@@ -885,7 +885,9 @@ function parseAdaptive(raw: unknown): AdaptiveInfo | null {
     a.version !== 1 ||
     !Number.isInteger(a.start) ||
     !Number.isInteger(a.up) ||
-    !Number.isInteger(a.down)
+    !Number.isInteger(a.down) ||
+    (a.up as number) < 1 ||
+    (a.down as number) < 1
   ) {
     return null;
   }
