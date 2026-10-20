@@ -143,4 +143,24 @@ describe('<chocabloc-lesson> Check', () => {
     await until(() => heading(el) === 'All done!', 'All done!');
     expect(answers).to.have.length(1);
   });
+
+  it('drops a row that fails to normalize, with a warning, and reports of honestly', async () => {
+    const warn = console.warn;
+    const warned: unknown[][] = [];
+    console.warn = (...args: unknown[]) => warned.push(args);
+    try {
+      const host = fakeHost();
+      const done = listen('lesson-done');
+      const el = check(host, [cmp('a1', [3, 8]), { id: 'bad' } as unknown as NormalizedQuestion]);
+      await shown(el, 'a1');
+      expect(warned).to.have.length(1);
+      expect(String(warned[0]![0])).to.match(/^\[chocabloc-lesson\] skipped a question/);
+      button(el, "I'm not sure yet").click();
+      await until(() => heading(el) === 'All done!', 'All done!');
+      button(el, 'Play').click();
+      expect(done[0]).to.deep.include({ of: 1, unsure: 1 });
+    } finally {
+      console.warn = warn;
+    }
+  });
 });

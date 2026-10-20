@@ -301,6 +301,60 @@ describe('<chocabloc-lesson> Intro', () => {
     });
   });
 
+  describe('server-shaped rows', () => {
+    it('renders a raw comparison row as text with choices; the why card draws base10 from the raw operands', async () => {
+      const raw = cmp('s1', [34, 99]);
+      const host = fakeHost([[raw, ...five().slice(1)]]);
+      const answers = listen('lesson-answer');
+      const el = intro(host);
+      button(el, 'Next').click();
+      await shown(el, 's1');
+
+      // <chocabloc-question> holds the normalized copy, not the host's row.
+      const qel = questionEl(el)!;
+      const held = qel.question as NormalizedQuestion & { answerToken?: string };
+      expect(held === raw).to.equal(false);
+      expect((raw as { format: string }).format).to.equal('comparison');
+      expect(held.format).to.equal('text');
+      expect(held.answerToken).to.equal('token-s1');
+      expect(qel.shadowRoot!.querySelector('choca-canvas-question') === null, 'no canvas renderer').to.equal(true);
+      const pad = qel.shadowRoot!.querySelector('choca-choice-pad')!;
+      const choices = Array.from(pad.shadowRoot!.querySelectorAll('button')).map((b) => b.textContent);
+      expect(choices.sort()).to.deep.equal(['<', '=', '>']);
+
+      choose(el, '>');
+      // The host validator gets that same normalized object, token included.
+      expect(host.last.question === held).to.equal(true);
+      host.last.reply.resolve({ correct: false, expected: '<' });
+      await until(() => part(el, 'why') !== null, 'the why card');
+      expect(part(el, 'why')!.querySelectorAll('canvas')).to.have.length(2);
+      expect(parts(el, 'caption').map((c) => c.textContent)).to.deep.equal(['3 tens and 4 ones', '9 tens and 9 ones']);
+      // lesson-answer reports the host's own row.
+      expect(answers).to.have.length(1);
+      expect(answers[0]!.question === raw).to.equal(true);
+    });
+
+    it('a row that fails to normalize is dropped with a warning and counts as not arrived', async () => {
+      const warn = console.warn;
+      const warned: unknown[][] = [];
+      console.warn = (...args: unknown[]) => warned.push(args);
+      try {
+        const broken = [{ id: 'bad1' }, { id: 'bad2', format: 'no-such-format' }, { id: 'bad3', format: 'comparison' }];
+        const host = fakeHost([[...five().slice(0, 2), ...(broken as unknown as NormalizedQuestion[])]]);
+        const done = listen('lesson-done');
+        const el = intro(host);
+        await until(() => warned.length === 3, 'three warnings');
+        button(el, 'Next').click();
+        await walk(el, fixture.example.steps);
+        await finish(el, "Let's play!");
+        expect(done[0]).to.deep.include({ outcome: 'incomplete', incompleteStep: 'yourTurn', startSkillId: null });
+        expect(warned.every((w) => String(w[0]).startsWith('[chocabloc-lesson] skipped a question'))).to.equal(true);
+      } finally {
+        console.warn = warn;
+      }
+    });
+  });
+
   describe('one answer per question', () => {
     async function onFirst(): Promise<{ el: ChocaLesson; host: Host; answers: Record<string, unknown>[] }> {
       const host = fakeHost([five()]);
