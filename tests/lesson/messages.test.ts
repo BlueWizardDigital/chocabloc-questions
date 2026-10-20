@@ -7,6 +7,7 @@ import {
   interpolate,
   selectMessage,
   createMessages,
+  safeLang,
 } from '../../src/lesson/messages';
 import en from '../../src/lesson/messages/en.json';
 
@@ -121,6 +122,11 @@ describe('createMessages', () => {
     const msg = createMessages({ lang: 'pl', translator: () => forms as unknown as string });
     expect(msg('base10.tens', { count: 3 })).toBe('few');
   });
+  test('a malformed language tag from the host falls back to English instead of throwing', () => {
+    const msg = createMessages({ lang: 'not a tag!!' });
+    expect(msg('base10.tens', { count: 1 })).toBe('1 ten');
+    expect(msg('base10.tens', { count: 3 })).toBe('3 tens');
+  });
   test('a key missing everywhere returns the key and warns once', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const msg = createMessages({ lang: 'en' });
@@ -128,6 +134,20 @@ describe('createMessages', () => {
     expect(msg('nope.nothing')).toBe('nope.nothing');
     expect(warn).toHaveBeenCalledTimes(1);
     warn.mockRestore();
+  });
+});
+
+describe('safeLang', () => {
+  test('a tag Intl accepts is kept', () => {
+    expect(safeLang('fr')).toBe('fr');
+    expect(safeLang('fr-ca')).toBe('fr-ca');
+  });
+  test('a malformed tag becomes "en"', () => {
+    expect(safeLang('not a tag!!')).toBe('en');
+    expect(safeLang('en-')).toBe('en');
+  });
+  test('anything other than a bad tag still throws', () => {
+    expect(() => safeLang(null as unknown as string)).toThrow(TypeError);
   });
 });
 

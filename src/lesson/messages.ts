@@ -54,8 +54,19 @@ export function selectMessage(
   return typeof form === 'string' ? form : value.other;
 }
 
+/** The tag when Intl accepts it, else 'en'. The tag comes from the host page, so a bad one must not throw. */
+export function safeLang(lang: string): string {
+  try {
+    new Intl.PluralRules(lang);
+    return lang;
+  } catch (e) {
+    if (e instanceof RangeError) return 'en';
+    throw e;
+  }
+}
+
 export function createMessages(opts: { translator?: Translator; lang: string }): Msg {
-  const rules = new Intl.PluralRules(opts.lang);
+  const rules = new Intl.PluralRules(safeLang(opts.lang));
   const warned = new Set<string>();
   return (key, vars) => {
     // A translator may answer with plural forms, as the app's tOptional does.

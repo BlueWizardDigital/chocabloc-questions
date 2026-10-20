@@ -52,7 +52,12 @@ try {
   if (!code.includes("'unsupported-version'") && !code.includes('"unsupported-version"')) {
     fail('lesson consumer bundle does not contain the parser');
   }
-  if (process.exitCode !== 1) console.log('PASS: lesson entry built and bundles the parser.');
+  // The element registers itself as a side effect; a consumer that imports only
+  // the parser must still get it (package.json sideEffects lists dist/lesson.mjs).
+  if (!code.includes('customElements.define("chocabloc-lesson"')) {
+    fail('lesson consumer bundle does not register <chocabloc-lesson>');
+  }
+  if (process.exitCode !== 1) console.log('PASS: lesson entry built, bundles the parser and registers <chocabloc-lesson>.');
 } catch (e) {
   console.error('FAIL: lesson dist test threw', e);
   process.exitCode = 1;
