@@ -1,6 +1,7 @@
 {
   "_comment": "Cross-repo contract fixture. Captured shape that chocabloc server's recipeResolver.serializeQuestionForGame emits when F6_DROP_ANSWER=true and a userId is in scope. If this fixture stops normalizing cleanly, the wire contract has drifted between server and lib — flag before flipping the env in prod.",
   "_source": "chocabloc/server-new commit b721ec5 — services/recipeResolver.js choices-only branch",
+  "adaptive": { "version": 1, "start": 9, "up": 2, "down": 2 },
   "questions": [
     {
       "id": "MM-CAD-Q-001",
@@ -16,6 +17,7 @@
         { "value": 45 }
       ],
       "difficulty": "easy",
+      "kidLevel": 9,
       "answerToken": "eyJxaWQiOiJNTS1DQUQtUS0wMDEiLCJ1aWQiOjQyLCJleHAiOjE3MTkzMjQ4MDB9.fakehexsig0123456789abcdef0123456789abcdef0123456789abcdef0123"
     },
     {
@@ -31,6 +33,7 @@
         { "value": "5" }
       ],
       "difficulty": "easy",
+      "kidLevel": 10,
       "answerToken": "eyJxaWQiOiJHRU8tSURFTlQtVFJJQU5HTEUtMDA3IiwidWlkIjo0MiwiZXhwIjoxNzE5MzI0ODAwfQ.fakehexsig0123456789abcdef0123456789abcdef0123456789abcdef0123"
     },
     {
@@ -47,6 +50,7 @@
         { "value": 15 }
       ],
       "difficulty": "medium",
+      "kidLevel": 11,
       "answerToken": "eyJxaWQiOiJNVUxULTNYLVEtMDQyIiwidWlkIjo0MiwiZXhwIjoxNzE5MzI0ODAwfQ.fakehexsig0123456789abcdef0123456789abcdef0123456789abcdef0123"
     }
   ]

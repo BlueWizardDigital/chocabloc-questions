@@ -313,6 +313,14 @@ export type SoundCallback = (muted: boolean) => void;
 /** What this library can do, sent with chocabloc:ready so the host can tell. */
 const BRIDGE_FEATURES = ['sound'];
 
+/** The server's adaptive block for a switched-on game's batch (spec §8.2). */
+export interface AdaptiveInfo {
+  version: number;
+  start: number;
+  up: number;
+  down: number;
+}
+
 export interface Bridge {
   readonly ctx: BridgeContext | null;
   onReady(cb: ReadyCallback): void;
@@ -324,6 +332,9 @@ export interface Bridge {
   exit(): void;
   requestNextQuestion(opts?: RequestNextQuestionOptions): Promise<unknown | null>;
   requestQuestions(opts?: RequestQuestionsOptions): Promise<unknown[]>;
+  requestQuestionBatch(
+    opts?: RequestQuestionsOptions
+  ): Promise<{ questions: unknown[]; adaptive: AdaptiveInfo | null }>;
   requestConcept(opts?: RequestConceptOptions): Promise<ResolvedConcept | null>;
   reportConceptSession(
     payload: ConceptSessionPayload
@@ -860,40 +871,81 @@ async function requestNextQuestion(
   return body?.question ?? null;
 }
 
+const EMPTY_BATCH = (): { questions: unknown[]; adaptive: AdaptiveInfo | null } => ({
+  questions: [],
+  adaptive: null,
+});
+
+// The adaptive block is trusted only when it is exactly the v1 shape: an object
+// whose four fields are integers and version === 1. Anything else is null.
+function parseAdaptive(raw: unknown): AdaptiveInfo | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const a = raw as Record<string, unknown>;
+  if (
+    a.version !== 1 ||
+    !Number.isInteger(a.start) ||
+    !Number.isInteger(a.up) ||
+    !Number.isInteger(a.down)
+  ) {
+    return null;
+  }
+  return {
+    version: 1,
+    start: a.start as number,
+    up: a.up as number,
+    down: a.down as number,
+  };
+}
+
+function toBatch(body: Record<string, unknown> | null | undefined): {
+  questions: unknown[];
+  adaptive: AdaptiveInfo | null;
+} {
+  const questions = body?.questions;
+  return {
+    questions: Array.isArray(questions) ? questions : [],
+    adaptive: parseAdaptive(body?.adaptive),
+  };
+}
+
 // Request a bulk batch of questions (e.g. a full board). Embedded: host channel
 // (bulk = no `mode`), host pins gameId. No host: same-origin relative fetch with
-// a validated caller-supplied gameId. Returns the canonical questions array
-// verbatim, or [] on standalone-without-gameId / invalid gameId / timeout /
-// error reply / fetch failure. Never throws. Call after bridge.onReady.
-async function requestQuestions(
+// a validated caller-supplied gameId. Returns the canonical questions verbatim
+// plus the server's adaptive block (null unless well-formed), or an empty batch
+// on standalone-without-gameId / invalid gameId / timeout / error reply / fetch
+// failure. Never throws. requestQuestions and requestQuestionBatch share this.
+// Call after bridge.onReady.
+async function fetchQuestionBatch(
   opts: RequestQuestionsOptions = {}
-): Promise<unknown[]> {
+): Promise<{ questions: unknown[]; adaptive: AdaptiveInfo | null }> {
   // Host present (ctx-based gate; see requestNextQuestion).
   if (ctx && !ctx.standalone) {
     const payload: Record<string, unknown> = {};
     if (Number.isFinite(opts.count)) payload.count = opts.count;
     if (opts.recipe) payload.recipe = opts.recipe;
     if (opts.grade !== undefined && opts.grade !== null) payload.grade = opts.grade;
-    const deliver = await postQuestionsRequest(payload);
-    const questions = deliver?.questions;
-    return Array.isArray(questions) ? questions : [];
+    return toBatch(await postQuestionsRequest(payload));
   }
 
-  if (!opts.gameId || !GAME_ID_RE.test(opts.gameId)) return [];
+  if (!opts.gameId || !GAME_ID_RE.test(opts.gameId)) return EMPTY_BATCH();
   const params = new URLSearchParams();
   if (Number.isFinite(opts.count)) params.set('count', String(opts.count));
   if (opts.grade !== undefined && opts.grade !== null) {
     params.set('grade', String(opts.grade));
   }
   if (opts.recipe) {
-    if (!RECIPE_SLUG_RE.test(opts.recipe)) return [];
+    if (!RECIPE_SLUG_RE.test(opts.recipe)) return EMPTY_BATCH();
     params.set('recipe', opts.recipe);
   }
   const qs = params.toString();
   const url = `/api/v1/games/${encodeURIComponent(opts.gameId)}/questions${qs ? `?${qs}` : ''}`;
-  const body = await fetchJson(url);
-  const questions = body?.questions;
-  return Array.isArray(questions) ? questions : [];
+  return toBatch(await fetchJson(url));
+}
+
+async function requestQuestions(
+  opts: RequestQuestionsOptions = {}
+): Promise<unknown[]> {
+  return (await fetchQuestionBatch(opts)).questions;
 }
 
 // Post a concept-resolution request to the host and await its
@@ -1039,6 +1091,9 @@ export const bridge: Bridge = {
   },
   requestQuestions(opts?: RequestQuestionsOptions) {
     return requestQuestions(opts);
+  },
+  requestQuestionBatch(opts?: RequestQuestionsOptions) {
+    return fetchQuestionBatch(opts);
   },
   requestConcept(opts?: RequestConceptOptions) {
     return requestConcept(opts);

@@ -363,3 +363,111 @@ describe('requestQuestions — bulk', () => {
     expect(url).toBe('/api/v1/games/math-bingo/questions?grade=2&recipe=mb-default');
   });
 });
+
+describe('requestQuestionBatch — questions plus the adaptive block', () => {
+  let restoreFn = () => {};
+  beforeEach(() => {
+    vi.resetModules();
+    (globalThis as { fetch?: unknown }).fetch = vi.fn();
+  });
+  afterEach(() => {
+    restoreFn();
+    restoreFn = () => {};
+    vi.useRealTimers();
+  });
+
+  const questions = [
+    { id: 'q1', kidLevel: 9, content: { operands: [3, 4], operation: 'addition' } },
+    { id: 'q2', kidLevel: 10, content: { operands: [5, 6], operation: 'addition' } },
+  ];
+  const adaptive = { version: 1, start: 9, up: 2, down: 2 };
+
+  it('host channel: returns questions untouched and the adaptive block', async () => {
+    const { mod, postSpy, restore } = await loadEmbeddedBridge();
+    restoreFn = restore;
+
+    const p = mod.bridge.requestQuestionBatch({ count: 24 });
+    const req = lastQuestionsRequest(postSpy);
+    expect(req!.payload.mode).toBeUndefined();
+    expect(req!.payload.count).toBe(24);
+    deliver(req!.payload.requestId as string, { questions, adaptive });
+    const result = await p;
+    expect(result.adaptive).toEqual(adaptive);
+    expect(result.questions).toEqual(questions);
+    expect((result.questions[0] as { kidLevel: number }).kidLevel).toBe(9);
+  });
+
+  it('fetch fallback: returns questions and the adaptive block', async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ questions, adaptive }),
+    });
+    const mod = await import('../src/bridge');
+    const result = await mod.bridge.requestQuestionBatch({ gameId: 'math-bingo', count: 12 });
+    expect(result).toEqual({ questions, adaptive });
+    const [url] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe('/api/v1/games/math-bingo/questions?count=12');
+  });
+
+  it('adaptive is null when the reply carries none (a game not switched on)', async () => {
+    const { mod, postSpy, restore } = await loadEmbeddedBridge();
+    restoreFn = restore;
+    const p = mod.bridge.requestQuestionBatch();
+    deliver(lastQuestionsRequest(postSpy)!.payload.requestId as string, { questions });
+    await expect(p).resolves.toEqual({ questions, adaptive: null });
+  });
+
+  it.each([
+    ['version 2', { version: 2, start: 9, up: 2, down: 2 }],
+    ['a string start', { version: 1, start: '9', up: 2, down: 2 }],
+    ['a fractional up', { version: 1, start: 9, up: 1.5, down: 2 }],
+    ['a missing down', { version: 1, start: 9, up: 2 }],
+    ['an array', [1, 1, 1, 1]],
+    ['a string', 'adaptive'],
+  ])('adaptive is null for %s, questions still returned', async (_n, bad) => {
+    const { mod, postSpy, restore } = await loadEmbeddedBridge();
+    restoreFn = restore;
+    const p = mod.bridge.requestQuestionBatch();
+    deliver(lastQuestionsRequest(postSpy)!.payload.requestId as string, {
+      questions,
+      adaptive: bad,
+    });
+    await expect(p).resolves.toEqual({ questions, adaptive: null });
+  });
+
+  it('standalone with no gameId: empty batch, no fetch', async () => {
+    const mod = await import('../src/bridge');
+    await expect(mod.bridge.requestQuestionBatch({ count: 5 })).resolves.toEqual({
+      questions: [],
+      adaptive: null,
+    });
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('fetch failure: empty batch, never throws', async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('net'));
+    const mod = await import('../src/bridge');
+    await expect(
+      mod.bridge.requestQuestionBatch({ gameId: 'math-bingo' })
+    ).resolves.toEqual({ questions: [], adaptive: null });
+  });
+
+  it('host error envelope: empty batch', async () => {
+    const { mod, postSpy, restore } = await loadEmbeddedBridge();
+    restoreFn = restore;
+    const p = mod.bridge.requestQuestionBatch();
+    deliver(lastQuestionsRequest(postSpy)!.payload.requestId as string, {
+      error: { code: 'FETCH_ERROR', message: 'x' },
+    });
+    await expect(p).resolves.toEqual({ questions: [], adaptive: null });
+  });
+
+  it('requestQuestions still returns the bare array when adaptive is present', async () => {
+    const { mod, postSpy, restore } = await loadEmbeddedBridge();
+    restoreFn = restore;
+    const p = mod.bridge.requestQuestions();
+    deliver(lastQuestionsRequest(postSpy)!.payload.requestId as string, { questions, adaptive });
+    await expect(p).resolves.toEqual(questions);
+  });
+});

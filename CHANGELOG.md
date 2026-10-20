@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+**Minor**: two additive entry points for adaptive questions; nothing renamed or removed.
+
+### Added
+
+- **`bridge.requestQuestionBatch(opts)`** returns `{ questions, adaptive }`: the batch raw (as
+  `requestQuestions` returns it, `kidLevel` per row included) plus the server's
+  `adaptive: { version, start, up, down }` block. `adaptive` is `null` unless the reply carries
+  an object with `version === 1` and three integer fields. Never throws. `requestQuestions`
+  is unchanged and shares the same internal fetch. New exported type `AdaptiveInfo`.
+- **`chocabloc-questions/level-picker`**, a kid-level picker entry point.
+
 ## [0.6.0-beta.21] — 2026-10-08
 
 **Minor**: new bridge API for the ChocaBLOC game page's own Mute button (Trello 383); nothing

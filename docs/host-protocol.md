@@ -259,6 +259,14 @@ than posting raw messages:
   - `recipe` names a different recipe. Most games honour it, but a game whose recipe is
     chosen by grade refuses it for a child (`400 RECIPE_OVERRIDE_NOT_ALLOWED`). Normally send
     nothing and let the game's binding choose.
+- `bridge.requestQuestionBatch({ count, grade?, recipe? })` — the same bulk request as
+  `requestQuestions`, returning `Promise<{ questions: unknown[]; adaptive: AdaptiveInfo | null }>`.
+  `questions` is exactly what `requestQuestions` returns (each row of a switched-on game also
+  carries `kidLevel`). `adaptive` is the server's `{ version: 1, start, up, down }` block: the
+  kid's starting level and the step rule (`up`/`down` correct/wrong first tries to move one
+  level). It is `null` for a game that isn't switched on, on standalone / timeout / error, and
+  whenever the block isn't exactly that shape (`version` must be `1`, the other three integers).
+  Never throws. There is no `chocabloc-questions/host` facade version.
 - `bridge.requestNextQuestion({ skillId?, recipeSlug? })` — **adaptive**, one at a time.
   Returns `Promise<unknown | null>`.
 
