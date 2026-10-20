@@ -32,6 +32,10 @@
       "types": "./dist/elements/whiteboard.d.ts",
       "import": "./dist/elements/whiteboard.mjs"
     },
+    "./lesson": {
+      "types": "./dist/lesson/index.d.ts",
+      "import": "./dist/lesson.mjs"
+    },
     "./bridge": {
       "types": "./dist/bridge.d.ts",
       "import": "./dist/bridge.mjs",
@@ -68,6 +72,8 @@
     "./dist/elements/canvas-question.mjs",
     "./dist/elements/whiteboard.mjs",
     "./dist/chunks/ChocaWhiteboard.*.mjs",
+    "./dist/lesson.mjs",
+    "./dist/chunks/practice.*.mjs",
     "./dist/bridge.mjs",
     "./dist/bridge.cjs",
     "./dist/host.mjs",
@@ -96,7 +102,7 @@
     "size": "size-limit",
     "typecheck": "tsc --noEmit",
     "wp:validate": "vite-node scripts/word-problems/validate.ts",
-    "ci": "npm run typecheck && npm run lint && npm run test && npm run build && npm run size"
+    "ci": "npm run typecheck && npm run lint && npm run test && npm run build && npm run size && node tests/lesson-dist-test.mjs"
   },
   "devDependencies": {
     "@esm-bundle/chai": "^4.3.4-fix.0",

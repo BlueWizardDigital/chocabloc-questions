@@ -29,6 +29,7 @@ export default defineConfig({
         'elements/coin-pile': resolve(__dirname, 'src/elements/coin-pile.ts'),
         'elements/canvas-question': resolve(__dirname, 'src/elements/canvas-question.ts'),
         'elements/whiteboard': resolve(__dirname, 'src/elements/whiteboard.ts'),
+        lesson: resolve(__dirname, 'src/lesson/index.ts'),
         'word-problems/index': resolve(__dirname, 'src/word-problems/index.ts'),
         'word-problems/sample-data': resolve(__dirname, 'src/word-problems/sample-data.ts'),
       },

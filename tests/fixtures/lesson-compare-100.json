@@ -1,0 +1,45 @@
+{
+  "formatVersion": 1,
+  "lang": "en",
+  "skillId": "COMPARE-NUMBERS-WITHIN-100",
+  "title": "Compare numbers to 100",
+  "idea": {
+    "heading": "Meet the signs",
+    "text": "These three signs tell you how two numbers compare.",
+    "cards": [
+      { "big": "<", "words": "is less than", "example": "3 < 8" },
+      { "big": ">", "words": "is greater than", "example": "8 > 3" },
+      { "big": "=", "words": "is equal to", "example": "5 = 5" }
+    ],
+    "tip": "The pointy end points at the smaller number."
+  },
+  "example": {
+    "operands": [34, 99],
+    "steps": [
+      { "heading": "Let's compare 34 and 99.", "text": "Each tall stick is a ten. Each little cube is a one.",
+        "picture": { "kind": "base10", "numbers": [34, 99] } },
+      { "heading": "Count the tens first.", "text": "34 has 3 tens. 99 has 9 tens.",
+        "picture": { "kind": "base10", "numbers": [34, 99], "focus": "tens" } },
+      { "heading": "3 tens is less than 9 tens.", "text": "When the tens are different, the tens decide.",
+        "picture": { "kind": "base10", "numbers": [34, 99], "focus": "tens" } },
+      { "heading": "So 34 is less than 99.", "text": "The pointy end points at the smaller number.", "result": "34 < 99" }
+    ]
+  },
+  "afterWrong": {
+    "tip": "Count the tens first. If the tens are the same, look at the ones.",
+    "picture": { "kind": "base10", "from": "operands" }
+  },
+  "moreHelp": {
+    "skillId": "COMPARE-NUMBERS-WITHIN-20",
+    "title": "numbers up to 20",
+    "examples": [
+      { "operands": [7, 12], "steps": [
+        { "heading": "Let's try smaller numbers: 7 and 12.", "text": "12 has 1 ten. 7 has no tens at all, just ones.",
+          "picture": { "kind": "base10", "numbers": [7, 12], "focus": "tens" } },
+        { "heading": "7 is less than 12.", "text": "No tens is less than 1 ten.", "result": "7 < 12" }
+      ] }
+    ]
+  },
+  "pass": { "questions": 3, "right": 2 },
+  "quickCheck": 2
+}
