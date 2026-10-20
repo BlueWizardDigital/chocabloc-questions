@@ -166,4 +166,133 @@ describe('answer guard', () => {
     expect(host).not.toHaveBeenCalled();
     expect(guard.unsure()).toBe(false);
   });
+
+  test('a disposed guard leaves the pad promise pending and calls nothing', async () => {
+    const { guard, replies, states } = setup();
+    const p = guard.validator(question, 'A');
+    const settled = vi.fn();
+    void p.then(settled, settled);
+    guard.dispose();
+    const before = states.length;
+    replies[0].resolve({ correct: true });
+    await flush();
+    expect(settled).not.toHaveBeenCalled();
+    expect(states).toHaveLength(before);
+  });
+
+  test('a disposed guard leaves a rejected pad promise pending too', async () => {
+    const { guard, replies, failures } = setup();
+    const p = guard.validator(question, 'A');
+    const settled = vi.fn();
+    void p.then(settled, settled);
+    guard.dispose();
+    replies[0].reject(new Error('x'));
+    await flush();
+    expect(settled).not.toHaveBeenCalled();
+    expect(failures).toEqual([]);
+  });
+
+  test('a malformed verdict is a host failure and checkAgain still works', async () => {
+    const { guard, replies, results, failures } = setup();
+    const p = guard.validator(question, 'A');
+    const rejected = vi.fn();
+    void p.catch(rejected);
+    replies[0].resolve(null as unknown as ValidationResult);
+    await flush();
+    expect(guard.state).toBe('failed');
+    expect(failures).toHaveLength(1);
+    expect(rejected).toHaveBeenCalledTimes(1);
+    guard.checkAgain();
+    replies[1].resolve({ correct: false });
+    await flush();
+    expect(results).toEqual([{ studentAnswer: 'A', outcome: 'wrong', expected: null }]);
+  });
+
+  test('a non-boolean correct is a host failure', async () => {
+    const { guard, replies, failures } = setup();
+    guard.validator(question, 'A').catch(() => {});
+    replies[0].resolve({ correct: 'yes' } as unknown as ValidationResult);
+    await flush();
+    expect(guard.state).toBe('failed');
+    expect(failures).toHaveLength(1);
+  });
+
+  test('an onResult that throws during checkAgain surfaces as an unhandled rejection', async () => {
+    const replies: ReturnType<typeof deferred<ValidationResult>>[] = [];
+    const host = vi.fn(() => {
+      const d = deferred<ValidationResult>();
+      replies.push(d);
+      return d.promise;
+    });
+    const boom = new Error('callback bug');
+    const guard = createAnswerGuard({
+      question,
+      host,
+      onState: () => {},
+      onResult: () => {
+        throw boom;
+      },
+      onFailed: () => {},
+    });
+    guard.validator(question, 'A').catch(() => {});
+    replies[0].reject(new Error('lost'));
+    await flush();
+    const saved = process.listeners('unhandledRejection');
+    process.removeAllListeners('unhandledRejection');
+    const seen: unknown[] = [];
+    const listener = (e: unknown) => seen.push(e);
+    process.on('unhandledRejection', listener);
+    try {
+      guard.checkAgain();
+      replies[1].resolve({ correct: true });
+      await new Promise((r) => setTimeout(r, 20));
+    } finally {
+      process.off('unhandledRejection', listener);
+      saved.forEach((l) => process.on('unhandledRejection', l));
+    }
+    expect(seen).toEqual([boom]);
+  });
+
+  test('a host that throws synchronously ends in failed', async () => {
+    const failures: unknown[] = [];
+    const err = new Error('sync');
+    const guard = createAnswerGuard({
+      question,
+      host: () => {
+        throw err;
+      },
+      onState: () => {},
+      onResult: () => {},
+      onFailed: (e) => failures.push(e),
+    });
+    await expect(guard.validator(question, 'A')).rejects.toBe(err);
+    expect(guard.state).toBe('failed');
+    expect(failures).toEqual([err]);
+  });
+
+  test('state reads checking inside the host call', () => {
+    let seen: GuardState | null = null;
+    const g: { current?: ReturnType<typeof createAnswerGuard> } = {};
+    g.current = createAnswerGuard({
+      question,
+      host: () => {
+        seen = g.current!.state;
+        return new Promise(() => {});
+      },
+      onState: () => {},
+      onResult: () => {},
+      onFailed: () => {},
+    });
+    void g.current.validator(question, 'A');
+    expect(seen).toBe('checking');
+  });
+
+  test('a first answer of 0 is resent as 0', async () => {
+    const { guard, host, replies } = setup();
+    guard.validator(question, 0).catch(() => {});
+    replies[0].reject(new Error('lost'));
+    await flush();
+    guard.checkAgain();
+    expect(host).toHaveBeenLastCalledWith(question, 0);
+  });
 });

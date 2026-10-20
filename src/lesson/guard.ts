@@ -39,6 +39,17 @@ export function createAnswerGuard(o: GuardOptions): AnswerGuard {
     o.onState(s);
   };
 
+  // Set just before a host failure is thrown, so checkAgain can swallow that one error
+  // and let anything thrown by onState or onResult surface.
+  let hostFailureReported = false;
+
+  const fail = (err: unknown): never => {
+    setState('failed');
+    o.onFailed(err);
+    hostFailureReported = true;
+    throw err;
+  };
+
   const send = (answer: AnswerValue): Promise<ValidationResult> => {
     let call: Promise<ValidationResult>;
     try {
@@ -48,22 +59,21 @@ export function createAnswerGuard(o: GuardOptions): AnswerGuard {
     }
     return call.then(
       (verdict) => {
-        if (!disposed) {
-          setState('done');
-          o.onResult({
-            studentAnswer: answer,
-            outcome: verdict.correct ? 'right' : 'wrong',
-            expected: verdict.expected ?? null,
-          });
+        if (disposed) return new Promise<ValidationResult>(() => {});
+        if (verdict == null || typeof verdict.correct !== 'boolean') {
+          return fail(new Error('host returned a verdict without a boolean "correct"'));
         }
+        setState('done');
+        o.onResult({
+          studentAnswer: answer,
+          outcome: verdict.correct ? 'right' : 'wrong',
+          expected: verdict.expected ?? null,
+        });
         return verdict;
       },
       (err) => {
-        if (!disposed) {
-          setState('failed');
-          o.onFailed(err);
-        }
-        throw err;
+        if (disposed) return new Promise<ValidationResult>(() => {});
+        return fail(err);
       },
     );
   };
@@ -86,8 +96,12 @@ export function createAnswerGuard(o: GuardOptions): AnswerGuard {
     },
     checkAgain() {
       if (state !== 'failed' || disposed || first == null) return;
+      hostFailureReported = false;
       setState('checking');
-      send(first).catch(() => {}); // the failure is already reported through onFailed
+      send(first).catch((err) => {
+        if (!hostFailureReported) throw err;
+        hostFailureReported = false; // already reported through onFailed
+      });
     },
     dispose() {
       disposed = true;
