@@ -26,6 +26,9 @@ const MODES: readonly LessonMode[] = ['help', 'intro', 'check'];
 const PROPS = ['lesson', 'mode', 'getQuestions', 'questions', 'validateAnswer', 'translator'] as const;
 const KIT: Kit = { h, renderPicture, spoken, walkSteps, introChips };
 
+/** How the element loads the practice chunk. Not public; a test swaps `load` to see a chunk that fails to load. */
+export const practiceChunk = { load: (): Promise<typeof import('./practice')> => import('./practice') };
+
 /** Help: the idea, then each worked-example step with Next and Back, then Back to the game. */
 function startHelp(shell: LessonShell, lesson: Lesson): ModeController {
   const { msg } = shell;
@@ -75,11 +78,12 @@ function speakerIcon(): SVGSVGElement {
  * The first screen renders synchronously once `lesson` is set on a connected
  * element (Check, which has no lesson, says it is getting its questions).
  * Setting `lesson` or `mode` starts again from the first screen, and so does
- * adding the element back after it was removed. Set `getQuestions`,
- * `questions` and `validateAnswer` before `mode` and `lesson`, or in the same
- * synchronous code: Intro and Check read them once, when their practice code
- * has loaded. It adds no listener to `window` or `document`; its one click
- * listener lives on its shadow root.
+ * adding the element back after it was removed. `getQuestions`, `questions`
+ * and `validateAnswer` are read when they are needed, so they may be set after
+ * `mode`. Closing, or finishing, ends the run: its last screen stays and
+ * reports nothing more. It adds no listener to `window` or `document`: one
+ * click listener lives on its shadow root, and each practice question stops
+ * its question element's events there until the kid moves on.
  */
 export class ChocaLesson extends HTMLElement {
   private _getQuestions: GetQuestions | undefined = undefined;
@@ -254,7 +258,7 @@ export class ChocaLesson extends HTMLElement {
     };
     if (lesson) showIdea(shell, lesson, introChips(msg, lesson, 'idea'), () => (begin ? begin() : wait()));
     else wait();
-    import('./practice').then(
+    practiceChunk.load().then(
       (p) => {
         if (!shell.active()) return;
         const c = lesson ? p.startIntro(shell, lesson, this) : p.startCheck(shell, this);
@@ -267,7 +271,13 @@ export class ChocaLesson extends HTMLElement {
         console.error('[chocabloc-lesson] could not load the practice code:', err);
         shell.emit('lesson-error', { reason: 'no-questions' });
         const sorry = msg('errors.noQuestions');
-        shell.show({ step: 'error', heading: sorry, say: sorry, actions: [] });
+        const fail = (): void => void shell.show({ step: 'error', heading: sorry, say: sorry, actions: [], feedback: '' });
+        // The idea stays while the kid reads it; Next then says so.
+        if (waiting) fail();
+        else {
+          shell.feedback(sorry);
+          begin = fail;
+        }
       },
     );
   }
@@ -314,12 +324,18 @@ export class ChocaLesson extends HTMLElement {
   }
 
   private _show(run: Run, screen: Screen): HTMLButtonElement[] {
-    if (run !== this._run) return [];
+    // An ended run keeps its last screen as it is.
+    if (run !== this._run || run.ended) return [];
     const { msg, speaker } = run;
     speaker.cancel();
     this._actions = new Map();
     this._actions.set(this._close, () => {
+      if (run.ended) return;
       speaker.cancel();
+      if (screen.close) {
+        screen.close();
+        return;
+      }
       this._emit('lesson-close', { step: screen.step });
       // Closing ends the run: a late answer or fetch reports nothing.
       run.ended = true;

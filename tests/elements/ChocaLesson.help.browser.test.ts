@@ -148,15 +148,36 @@ describe('<chocabloc-lesson> Help', () => {
     expect(done).to.deep.equal([{ mode: 'help' }]);
   });
 
-  it('Close sends lesson-close with the step it was on', () => {
+  it('Close sends lesson-close once, with the step it was on, and ends the run', () => {
     const closed = listen('lesson-close');
+    const done = listen('lesson-done');
     const el = mount();
     el.lesson = fixture;
     part(el, 'close')!.click();
+    part(el, 'close')!.click();
     expect(closed).to.deep.equal([{ step: 'idea' }]);
+    // An ended run keeps its last screen and does nothing more.
+    button(el, 'Next').click();
+    expect(heading(el)).to.equal('Meet the signs');
+    // Setting the lesson again starts a new run.
+    el.lesson = fixture;
     button(el, 'Next').click();
     part(el, 'close')!.click();
     expect(closed[1]).to.deep.equal({ step: 'watch' });
+    expect(done).to.deep.equal([]);
+  });
+
+  it('after Back to the game, Close sends nothing', () => {
+    const closed = listen('lesson-close');
+    const done = listen('lesson-done');
+    const el = mount();
+    el.lesson = fixture;
+    for (let i = 0; i < fixture.example.steps.length; i++) button(el, 'Next').click();
+    button(el, 'Back to the game').click();
+    button(el, 'Back to the game').click();
+    part(el, 'close')!.click();
+    expect(done).to.deep.equal([{ mode: 'help' }]);
+    expect(closed).to.deep.equal([]);
   });
 
   it('shows lesson words as text, never as HTML', async () => {

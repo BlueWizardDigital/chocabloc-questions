@@ -100,6 +100,24 @@ export async function until(cond: () => boolean, what: string, ms = 3000): Promi
   }
 }
 
+/** Lets promise callbacks run, but no timer: a screen waiting on one is still up after this. */
+export async function microtasks(): Promise<void> {
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+}
+
+/** Takes over console.warn and console.error for this test, so the run prints nothing; restored in cleanup(). */
+export function captureConsole(): { warn: unknown[][]; error: unknown[][] } {
+  const got = { warn: [] as unknown[][], error: [] as unknown[][] };
+  const { warn, error } = console;
+  console.warn = (...args: unknown[]) => got.warn.push(args);
+  console.error = (...args: unknown[]) => got.error.push(args);
+  cleanups.push(() => Object.assign(console, { warn, error }));
+  return got;
+}
+
+/** The first argument of each captured console call. */
+export const firstArgs = (calls: unknown[][]): string[] => calls.map((c) => String(c[0]));
+
 export interface Deferred<T> {
   promise: Promise<T>;
   resolve(v: T): void;

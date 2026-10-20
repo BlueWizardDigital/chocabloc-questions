@@ -26,12 +26,14 @@ export interface Item {
 /**
  * The questions in `batch` that can be shown, minus ids already in `seen` and
  * repeats within the batch, in order. normalizeQuestion keeps `answerToken` and
- * accepts a question that is already normalized; one it can't read is skipped.
+ * accepts a question that is already normalized; one it can't read is skipped
+ * with a warning, so it counts as not arrived. Callers treat a batch that is
+ * not a list as a failed fetch.
  */
-export function prepare(batch: unknown, seen: ReadonlySet<string>): Item[] {
+export function prepare(batch: readonly NormalizedQuestion[], seen: ReadonlySet<string>): Item[] {
   const hostsOwn = new Map<NormalizedQuestion, NormalizedQuestion>();
   const shown: NormalizedQuestion[] = [];
-  for (const q of Array.isArray(batch) ? (batch as NormalizedQuestion[]) : []) {
+  for (const q of batch) {
     let n: NormalizedQuestion | null = null;
     try {
       n = normalizeQuestion(q, { onMalformed: (r) => console.warn('[chocabloc-lesson] skipped a question:', r.reason) });
@@ -73,6 +75,14 @@ type QuestionElement = HTMLElement & { question: NormalizedQuestion; validateAns
 const promptOf = (q: NormalizedQuestion): string => (q.format === 'text' ? q.content.stem : q.questionText);
 
 /**
+ * <chocabloc-question>'s own composed events. They stop at the question, so the
+ * page sees only the player's events: `answered` carries `expected`, and a check
+ * must never hand the answer to anything listening on the page.
+ */
+const INNER_EVENTS = ['answered', 'chocabloc-validation-unavailable', 'chocabloc-misconfigured'];
+const stop = (e: Event): void => e.stopPropagation();
+
+/**
  * Shows one question and reports one answer for it. The first answer (or
  * "I'm not sure yet") is the only one: the guard keeps any later tap from the
  * host, `inert` keeps the choices still from then on, and a check that fails
@@ -95,6 +105,7 @@ export function ask(o: AskOptions): Asking {
 
   const el = document.createElement('chocabloc-question') as QuestionElement;
   el.style.alignSelf = 'stretch';
+  for (const type of INNER_EVENTS) el.addEventListener(type, stop);
   const screen: Screen = {
     step,
     chips: o.chips,
@@ -170,9 +181,11 @@ export function ask(o: AskOptions): Asking {
 
   return {
     done,
+    /** Once the kid has moved on, or the run ends: no more reports, timers or listeners. */
     dispose() {
       clearTimeout(timer);
       guard.dispose();
+      for (const type of INNER_EVENTS) el.removeEventListener(type, stop);
     },
   };
 }

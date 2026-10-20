@@ -39,6 +39,8 @@ export interface Screen {
    * this screen is still announced.
    */
   feedback?: string | undefined;
+  /** What Close does on this screen. Left out, Close sends lesson-close and ends the run. */
+  close?: (() => void) | undefined;
 }
 
 /**
@@ -59,7 +61,7 @@ export interface LessonShell {
   readonly msg: Msg;
   readonly lang: string;
   readonly kit: Kit;
-  /** Draws the screen and returns its action buttons, in order ([] for a stale run). */
+  /** Draws the screen and returns its action buttons, in order ([] for a run that was replaced or ended). */
   show(screen: Screen): HTMLButtonElement[];
   /** Writes the polite live region. */
   feedback(text: string): void;
@@ -81,7 +83,11 @@ export interface PracticeController extends ModeController {
   begin(): void;
 }
 
-/** The element's host-set properties, read by the practice code when it needs them. */
+/**
+ * The element's host-set properties. The practice code reads each one at the
+ * moment it needs it: getQuestions at each fetch, validateAnswer and questions
+ * when the questions start. So a host may set them after `mode`.
+ */
 export interface PracticeHost {
   readonly getQuestions: GetQuestions | undefined;
   readonly questions: NormalizedQuestion[];

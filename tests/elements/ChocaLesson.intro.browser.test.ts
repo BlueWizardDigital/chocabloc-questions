@@ -3,14 +3,17 @@ import { ChocaLesson } from '../../src/lesson/index';
 import type { Lesson, NormalizedQuestion } from '../../src/lesson/index';
 import type { ValidationResult } from '../../src/types';
 import { timing } from '../../src/lesson/dom/question-view';
+import { practiceChunk } from '../../src/lesson/dom/ChocaLesson';
 import {
   anyButton,
   answerRows,
   button,
+  captureConsole,
   cleanup,
   cmp,
   fakeHost,
   feedback,
+  firstArgs,
   heading,
   holder,
   labels,
@@ -209,19 +212,25 @@ describe('<chocabloc-lesson> Intro', () => {
     });
   });
 
-  it('a short first batch of 2 shows no questions and ends incomplete at yourTurn; a second Play tap sends nothing', async () => {
+  it('a short first batch of 2 plays as the quick check, then ends incomplete at yourTurn; a second Play tap sends nothing', async () => {
     const host = fakeHost([five().slice(0, 2)]);
     const answers = listen('lesson-answer');
     const done = listen('lesson-done');
     const el = intro(host);
-    await until(() => host.calls.length === 1, 'getQuestions');
     button(el, 'Next').click();
+    await shown(el, 'q1');
+    expect(heading(el)).to.equal('Quick check');
+    await right(el, host, 'q1');
+    await wrong(el, host, 'q2');
     await walk(el, fixture.example.steps);
     await until(() => heading(el) === "Let's play!", 'done screen');
     const play = button(el, 'Play');
     play.click();
     play.click();
-    expect(answers).to.deep.equal([]);
+    expect(answerRows(answers)).to.deep.equal([
+      ['quickCheck', 'q1', '<', 'right'],
+      ['quickCheck', 'q2', '<', 'wrong'],
+    ]);
     expect(done).to.deep.equal([
       {
         mode: 'intro',
@@ -229,19 +238,54 @@ describe('<chocabloc-lesson> Intro', () => {
         outcome: 'incomplete',
         incompleteStep: 'yourTurn',
         startSkillId: null,
-        quickCheck: { right: 0, of: 0, unsure: 0 },
+        quickCheck: { right: 1, of: 2, unsure: 0 },
         yourTurn: { right: 0, of: 0, unsure: 0 },
       },
     ]);
   });
 
+  it('with quickCheck 0, a short first batch shows no questions', async () => {
+    const host = fakeHost([five().slice(0, 2)]);
+    const done = listen('lesson-done');
+    const el = intro(host, { ...fixture, quickCheck: 0 });
+    await until(() => host.calls.length === 1, 'getQuestions');
+    expect(host.calls[0]).to.deep.equal(['COMPARE-NUMBERS-WITHIN-100', 3, []]);
+    button(el, 'Next').click();
+    await walk(el, fixture.example.steps);
+    await finish(el, "Let's play!");
+    expect(done[0]).to.deep.include({ outcome: 'incomplete', quickCheck: { right: 0, of: 0, unsure: 0 } });
+  });
+
+  it('a first batch of 4 gives 1 quick-check and 3 your-turn questions', async () => {
+    const host = fakeHost([five().slice(0, 4)]);
+    const answers = listen('lesson-answer');
+    const done = listen('lesson-done');
+    const el = intro(host);
+    button(el, 'Next').click();
+    await right(el, host, 'q1');
+    await walk(el, fixture.example.steps);
+    await right(el, host, 'q2');
+    await right(el, host, 'q3');
+    await wrong(el, host, 'q4');
+    await finish(el, "You're ready!");
+    expect(answerRows(answers).map(([step, id]) => `${step}:${id}`)).to.deep.equal([
+      'quickCheck:q1',
+      'yourTurn:q2',
+      'yourTurn:q3',
+      'yourTurn:q4',
+    ]);
+    expect(done[0]).to.deep.include({ outcome: 'passed', quickCheck: { right: 1, of: 1, unsure: 0 } });
+  });
+
   it('getQuestions rejecting sends lesson-error no-questions, says so, and still reaches the done screen', async () => {
+    const logged = captureConsole();
     const host = fakeHost([new Error('network down')]);
     const errors = listen('lesson-error');
     const done = listen('lesson-done');
     const el = intro(host);
     await until(() => errors.length === 1, 'lesson-error');
     expect(errors).to.deep.equal([{ reason: 'no-questions' }]);
+    expect(firstArgs(logged.warn)).to.deep.equal(['[chocabloc-lesson] getQuestions failed:']);
     button(el, 'Next').click();
     await until(() => heading(el) === fixture.example.steps[0]!.heading, 'the worked example');
     expect(feedback(el)).to.equal("We couldn't get questions right now.");
@@ -249,6 +293,169 @@ describe('<chocabloc-lesson> Intro', () => {
     await finish(el, "Let's play!");
     expect(questionEl(el) === null, 'no question element').to.equal(true);
     expect(done[0]).to.deep.include({ outcome: 'incomplete', incompleteStep: 'yourTurn', startSkillId: null });
+  });
+
+  it('getQuestions resolving to something other than a list is a failed fetch', async () => {
+    const logged = captureConsole();
+    const errors = listen('lesson-error');
+    const el = mount();
+    el.validateAnswer = fakeHost().validateAnswer;
+    el.getQuestions = () => Promise.resolve({ questions: [] } as unknown as NormalizedQuestion[]);
+    el.mode = 'intro';
+    el.lesson = fixture;
+    await until(() => errors.length === 1, 'lesson-error');
+    expect(errors).to.deep.equal([{ reason: 'no-questions' }]);
+    expect(firstArgs(logged.warn)).to.deep.equal(['[chocabloc-lesson] getQuestions failed:']);
+    expect(String(logged.warn[0]![1])).to.include('not a list');
+  });
+
+  it("Try again's getQuestions rejecting ends incomplete at tryAgain, and says so", async () => {
+    const logged = captureConsole();
+    const host = fakeHost([five(), new Error('network down')]);
+    const errors = listen('lesson-error');
+    const done = listen('lesson-done');
+    const el = intro(host);
+    button(el, 'Next').click();
+    await right(el, host, 'q1');
+    await right(el, host, 'q2');
+    await walk(el, fixture.example.steps);
+    await wrong(el, host, 'q3');
+    await wrong(el, host, 'q4');
+    await wrong(el, host, 'q5');
+    await walk(el, fixture.moreHelp.examples[0]!.steps);
+    await until(() => heading(el) === "Let's play!", 'done screen');
+    expect(errors).to.deep.equal([{ reason: 'no-questions' }]);
+    expect(firstArgs(logged.warn)).to.deep.equal(['[chocabloc-lesson] getQuestions failed:']);
+    expect(feedback(el)).to.equal("We couldn't get questions right now.");
+    button(el, 'Play').click();
+    expect(done[0]).to.deep.include({
+      outcome: 'incomplete',
+      incompleteStep: 'tryAgain',
+      startSkillId: 'COMPARE-NUMBERS-WITHIN-20',
+      tryAgain: { right: 0, of: 0, unsure: 0 },
+    });
+  });
+
+  it('Close on the done screen sends lesson-done, not lesson-close', async () => {
+    const host = fakeHost([five()]);
+    const done = listen('lesson-done');
+    const closed = listen('lesson-close');
+    const el = intro(host);
+    button(el, 'Next').click();
+    await right(el, host, 'q1');
+    await right(el, host, 'q2');
+    await walk(el, fixture.example.steps);
+    await right(el, host, 'q3');
+    await right(el, host, 'q4');
+    await right(el, host, 'q5');
+    await until(() => heading(el) === "You're ready!", 'done screen');
+    part(el, 'close')!.click();
+    part(el, 'close')!.click();
+    button(el, 'Play').click();
+    expect(closed).to.deep.equal([]);
+    expect(done).to.have.length(1);
+    expect(done[0]).to.deep.include({ outcome: 'passed', startSkillId: 'COMPARE-NUMBERS-WITHIN-100' });
+  });
+
+  it('Close ends the run: a second tap, and the screen\'s buttons, do nothing more', async () => {
+    const host = fakeHost([five()]);
+    const closed = listen('lesson-close');
+    const el = intro(host);
+    part(el, 'close')!.click();
+    part(el, 'close')!.click();
+    expect(closed).to.deep.equal([{ step: 'idea' }]);
+    button(el, 'Next').click();
+    await tick();
+    await tick();
+    expect(heading(el)).to.equal('Meet the signs');
+    expect(questionEl(el) === null, 'no question element').to.equal(true);
+  });
+
+  it('setting the mode again mid-run starts over at the idea, and the old reply fires nothing', async () => {
+    const host = fakeHost([five(), five()]);
+    const answers = listen('lesson-answer');
+    const el = intro(host);
+    button(el, 'Next').click();
+    await shown(el, 'q1');
+    choose(el, '<');
+    el.mode = 'intro';
+    expect(heading(el)).to.equal('Meet the signs');
+    host.checks[0]!.reply.resolve({ correct: true });
+    await until(() => host.calls.length === 2, 'the new run fetches');
+    expect(host.calls[1]).to.deep.equal(['COMPARE-NUMBERS-WITHIN-100', 5, []]);
+    expect(answers).to.deep.equal([]);
+    expect(heading(el)).to.equal('Meet the signs');
+    button(el, 'Next').click();
+    await right(el, host, 'q1');
+    expect(answerRows(answers)).to.deep.equal([['quickCheck', 'q1', '<', 'right']]);
+  });
+
+  it('a host may set getQuestions and validateAnswer after mode, even once the practice code has loaded', async () => {
+    const host = fakeHost([five()]);
+    const errors = listen('lesson-error');
+    const el = mount();
+    el.mode = 'intro';
+    el.lesson = fixture;
+    // Same task, after mode:
+    el.getQuestions = host.getQuestions;
+    // A later task, after the practice code has loaded:
+    await until(() => customElements.get('chocabloc-question') !== undefined, 'practice code');
+    await tick();
+    el.validateAnswer = host.validateAnswer;
+    button(el, 'Next').click();
+    await right(el, host, 'q1');
+    expect(errors).to.deep.equal([]);
+    expect(host.calls).to.deep.equal([['COMPARE-NUMBERS-WITHIN-100', 5, []]]);
+  });
+
+  it("<chocabloc-question>'s own events stop inside the player", async () => {
+    captureConsole();
+    const host = fakeHost([five()]);
+    // Listeners on the page (document), where a host would listen.
+    const seen = {
+      answered: listen('answered'),
+      unavailable: listen('chocabloc-validation-unavailable'),
+      misconfigured: listen('chocabloc-misconfigured'),
+    };
+    const el = intro(host);
+    button(el, 'Next').click();
+    await right(el, host, 'q1');
+    await shown(el, 'q2');
+    choose(el, '<');
+    host.last.reply.reject(new Error('lost'));
+    await until(() => !anyButton(el, 'Check again')!.hidden, 'Check again');
+    button(el, 'Check again').click();
+    host.last.reply.resolve({ correct: false, expected: '>' });
+    await until(() => part(el, 'why') !== null, 'the why card');
+    await tick();
+    expect(seen.answered).to.deep.equal([]);
+    expect(seen.unavailable).to.deep.equal([]);
+    expect(seen.misconfigured).to.deep.equal([]);
+  });
+
+  describe('when the practice code fails to load', () => {
+    const { load } = practiceChunk;
+    beforeEach(() => {
+      practiceChunk.load = () => Promise.reject(new Error('chunk 404'));
+    });
+    afterEach(() => {
+      practiceChunk.load = load;
+    });
+
+    it('keeps the idea the kid is reading and says so; Next then shows the message', async () => {
+      const logged = captureConsole();
+      const errors = listen('lesson-error');
+      const el = intro(fakeHost([five()]));
+      await until(() => errors.length === 1, 'lesson-error');
+      expect(errors).to.deep.equal([{ reason: 'no-questions' }]);
+      expect(firstArgs(logged.error)).to.deep.equal(['[chocabloc-lesson] could not load the practice code:']);
+      expect(heading(el)).to.equal('Meet the signs');
+      expect(feedback(el)).to.equal("We couldn't get questions right now.");
+      button(el, 'Next').click();
+      expect(heading(el)).to.equal("We couldn't get questions right now.");
+      expect(feedback(el)).to.equal('');
+      expect(labels(el).filter((l) => l !== 'Read to me')).to.deep.equal(['Close']);
+    });
   });
 
   describe('the why card', () => {
@@ -335,23 +542,17 @@ describe('<chocabloc-lesson> Intro', () => {
     });
 
     it('a row that fails to normalize is dropped with a warning and counts as not arrived', async () => {
-      const warn = console.warn;
-      const warned: unknown[][] = [];
-      console.warn = (...args: unknown[]) => warned.push(args);
-      try {
-        const broken = [{ id: 'bad1' }, { id: 'bad2', format: 'no-such-format' }, { id: 'bad3', format: 'comparison' }];
-        const host = fakeHost([[...five().slice(0, 2), ...(broken as unknown as NormalizedQuestion[])]]);
-        const done = listen('lesson-done');
-        const el = intro(host);
-        await until(() => warned.length === 3, 'three warnings');
-        button(el, 'Next').click();
-        await walk(el, fixture.example.steps);
-        await finish(el, "Let's play!");
-        expect(done[0]).to.deep.include({ outcome: 'incomplete', incompleteStep: 'yourTurn', startSkillId: null });
-        expect(warned.every((w) => String(w[0]).startsWith('[chocabloc-lesson] skipped a question'))).to.equal(true);
-      } finally {
-        console.warn = warn;
-      }
+      const logged = captureConsole();
+      const broken = [{ id: 'bad1' }, { id: 'bad2', format: 'no-such-format' }, { id: 'bad3', format: 'comparison' }];
+      const host = fakeHost([[...five().slice(0, 2), ...(broken as unknown as NormalizedQuestion[])]]);
+      const done = listen('lesson-done');
+      const el = intro(host, { ...fixture, quickCheck: 0 });
+      await until(() => logged.warn.length === 3, 'three warnings');
+      expect(firstArgs(logged.warn).every((w) => w.startsWith('[chocabloc-lesson] skipped a question'))).to.equal(true);
+      button(el, 'Next').click();
+      await walk(el, fixture.example.steps);
+      await finish(el, "Let's play!");
+      expect(done[0]).to.deep.include({ outcome: 'incomplete', incompleteStep: 'yourTurn', startSkillId: null });
     });
   });
 
@@ -432,12 +633,18 @@ describe('<chocabloc-lesson> Intro', () => {
     });
 
     it('lost reply: the first answer is kept, and Check again resends it with the same token', async () => {
+      const logged = captureConsole();
       const { el, host, answers } = await onFirst();
       const errors = listen('lesson-error');
       choose(el, '<');
       host.last.reply.reject(new Error('reply lost'));
       await until(() => errors.length === 1, 'validation-unavailable');
       expect(errors).to.deep.equal([{ reason: 'validation-unavailable' }]);
+      await tick();
+      expect(firstArgs(logged.warn).sort()).to.deep.equal([
+        '[chocabloc-lesson] could not check the answer:',
+        '[chocabloc-question] host validateAnswer rejected and no local answer to fall back on:',
+      ]);
       expect(feedback(el)).to.equal("Couldn't check that one.");
       expect(questionEl(el)!.hasAttribute('inert')).to.equal(true);
       const unsure = button(el, "I'm not sure yet");
@@ -461,6 +668,7 @@ describe('<chocabloc-lesson> Intro', () => {
     });
 
     it('a second failed check reports again and keeps Check again', async () => {
+      const logged = captureConsole();
       const { el, host } = await onFirst();
       const errors = listen('lesson-error');
       choose(el, '<');
@@ -472,6 +680,8 @@ describe('<chocabloc-lesson> Intro', () => {
       await until(() => errors.length === 2, 'second failure');
       expect(button(el, 'Check again').hidden).to.equal(false);
       expect(host.checks.map((c) => c.answer)).to.deep.equal(['<', '<']);
+      // The player warns for each failure; the pad only for the first, which reached it.
+      expect(firstArgs(logged.warn).filter((w) => w.startsWith('[chocabloc-lesson]'))).to.have.length(2);
     });
   });
 
@@ -483,9 +693,13 @@ describe('<chocabloc-lesson> Intro', () => {
     el.getQuestions = host.getQuestions;
     el.mode = 'intro';
     el.lesson = fixture;
+    // Read when the questions start, which is when the kid leaves the idea.
+    await until(() => customElements.get('chocabloc-question') !== undefined, 'practice code');
+    await tick();
+    expect(errors).to.deep.equal([]);
+    button(el, 'Next').click();
     await until(() => errors.length === 1, 'lesson-error');
     expect(errors).to.deep.equal([{ reason: 'no-validator' }]);
-    button(el, 'Next').click();
     await until(() => heading(el) === fixture.example.steps[0]!.heading, 'the worked example');
     expect(feedback(el)).to.equal("Questions can't be checked here yet.");
     await walk(el, fixture.example.steps);
