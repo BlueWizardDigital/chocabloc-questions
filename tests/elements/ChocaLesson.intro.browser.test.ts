@@ -165,7 +165,7 @@ describe('<chocabloc-lesson> Intro', () => {
     // Fetched when "more examples" starts.
     expect(host.calls[1]).to.deep.equal(['COMPARE-NUMBERS-WITHIN-20', 3, ['q1', 'q2', 'q3', 'q4', 'q5']]);
     expect(part(el, 'chip')?.parentElement?.textContent).to.include('More examples');
-    await walk(el, more);
+    for (const ex of fixture.moreHelp.examples) await walk(el, ex.steps);
     await shown(el, 'e1');
     expect(heading(el)).to.equal('Try again');
     await right(el, host, 'e1');
@@ -201,7 +201,7 @@ describe('<chocabloc-lesson> Intro', () => {
     await wrong(el, host, 'q3');
     await wrong(el, host, 'q4');
     await wrong(el, host, 'q5');
-    await walk(el, fixture.moreHelp.examples[0]!.steps);
+    for (const ex of fixture.moreHelp.examples) await walk(el, ex.steps);
     await finish(el, "Let's play!");
     expect(answers).to.have.length(5);
     expect(done[0]).to.deep.include({
@@ -322,7 +322,7 @@ describe('<chocabloc-lesson> Intro', () => {
     await wrong(el, host, 'q3');
     await wrong(el, host, 'q4');
     await wrong(el, host, 'q5');
-    await walk(el, fixture.moreHelp.examples[0]!.steps);
+    for (const ex of fixture.moreHelp.examples) await walk(el, ex.steps);
     await until(() => heading(el) === "Let's play!", 'done screen');
     expect(errors).to.deep.equal([{ reason: 'no-questions' }]);
     expect(firstArgs(logged.warn)).to.deep.equal(['[chocabloc-lesson] getQuestions failed:']);

@@ -136,7 +136,7 @@ describe('<chocabloc-lesson> Help', () => {
       expect(focused(el)).to.equal('heading');
       expect(part(el, 'close')).to.not.equal(null);
     }
-    expect(part(el, 'result')?.textContent).to.equal('34 < 99');
+    expect(part(el, 'result')?.textContent).to.equal('43 < 52');
     expect(labels(el)).to.not.include('Next');
 
     button(el, 'Back').click();
@@ -313,7 +313,7 @@ describe('<chocabloc-lesson> Help', () => {
       el.lesson = fixture;
       expect(heading(el)).to.equal('Meet the signs');
       button(el, 'Next').click();
-      expect(parts(el, 'caption').map((c) => c.textContent)).to.deep.equal(['3 tens and 4 ones', '9 tens and 9 ones']);
+      expect(parts(el, 'caption').map((c) => c.textContent)).to.deep.equal(['4 tens and 3 ones', '5 tens and 2 ones']);
       button(el, 'Read to me').click();
       expect(speech.spoken[0]!.lang).to.equal('en');
     });
@@ -376,7 +376,7 @@ describe('<chocabloc-lesson> Help', () => {
       button(el, 'Next').click();
       const canvases = Array.from(part(el, 'picture')!.querySelectorAll('canvas'));
       expect(canvases).to.have.length(2);
-      expect(parts(el, 'caption').map((c) => c.textContent)).to.deep.equal(['3 tens and 4 ones', '9 tens and 9 ones']);
+      expect(parts(el, 'caption').map((c) => c.textContent)).to.deep.equal(['4 tens and 3 ones', '5 tens and 2 ones']);
       await frames();
       for (const c of canvases) {
         const box = boxOf(c);

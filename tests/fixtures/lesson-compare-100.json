@@ -5,41 +5,139 @@
   "title": "Compare numbers to 100",
   "idea": {
     "heading": "Meet the signs",
-    "text": "These three signs tell you how two numbers compare.",
+    "text": "These signs show how two numbers compare.",
     "cards": [
-      { "big": "<", "words": "is less than", "example": "3 < 8" },
-      { "big": ">", "words": "is greater than", "example": "8 > 3" },
-      { "big": "=", "words": "is equal to", "example": "5 = 5" }
+      {
+        "big": "<",
+        "words": "is less than",
+        "example": "3 < 8"
+      },
+      {
+        "big": ">",
+        "words": "is greater than",
+        "example": "8 > 3"
+      },
+      {
+        "big": "=",
+        "words": "is equal to",
+        "example": "5 = 5"
+      }
     ],
     "tip": "The pointy end points at the smaller number."
   },
   "example": {
-    "operands": [34, 99],
+    "operands": [
+      43,
+      52
+    ],
     "steps": [
-      { "heading": "Let's compare 34 and 99.", "text": "Each tall stick is a ten. Each little cube is a one.",
-        "picture": { "kind": "base10", "numbers": [34, 99] } },
-      { "heading": "Count the tens first.", "text": "34 has 3 tens. 99 has 9 tens.",
-        "picture": { "kind": "base10", "numbers": [34, 99], "focus": "tens" } },
-      { "heading": "3 tens is less than 9 tens.", "text": "When the tens are different, the tens decide.",
-        "picture": { "kind": "base10", "numbers": [34, 99], "focus": "tens" } },
-      { "heading": "So 34 is less than 99.", "text": "The pointy end points at the smaller number.", "result": "34 < 99" }
+      {
+        "heading": "Let's compare 43 and 52.",
+        "text": "Each tall stick is a ten. Each little cube is a one.",
+        "picture": {
+          "kind": "base10",
+          "numbers": [
+            43,
+            52
+          ]
+        }
+      },
+      {
+        "heading": "Count the tens first.",
+        "text": "43 has 4 tens. 52 has 5 tens.",
+        "picture": {
+          "kind": "base10",
+          "numbers": [
+            43,
+            52
+          ],
+          "focus": "tens"
+        }
+      },
+      {
+        "heading": "4 tens is less than 5 tens.",
+        "text": "When the tens are different, the tens decide.",
+        "picture": {
+          "kind": "base10",
+          "numbers": [
+            43,
+            52
+          ],
+          "focus": "tens"
+        }
+      },
+      {
+        "heading": "So 43 is less than 52.",
+        "text": "The pointy end points at the smaller number.",
+        "result": "43 < 52"
+      }
     ]
   },
   "afterWrong": {
-    "tip": "Count the tens first. If the tens are the same, look at the ones.",
-    "picture": { "kind": "base10", "from": "operands" }
+    "tip": "Count the tens first. If the tens match, look at the ones.",
+    "picture": {
+      "kind": "base10",
+      "from": "operands"
+    }
   },
   "moreHelp": {
     "skillId": "COMPARE-NUMBERS-WITHIN-20",
     "title": "numbers up to 20",
     "examples": [
-      { "operands": [7, 12], "steps": [
-        { "heading": "Let's try smaller numbers: 7 and 12.", "text": "12 has 1 ten. 7 has no tens at all, just ones.",
-          "picture": { "kind": "base10", "numbers": [7, 12], "focus": "tens" } },
-        { "heading": "7 is less than 12.", "text": "No tens is less than 1 ten.", "result": "7 < 12" }
-      ] }
+      {
+        "operands": [
+          14,
+          5
+        ],
+        "steps": [
+          {
+            "heading": "Let's try smaller numbers: 14 and 5.",
+            "text": "14 has 1 ten. 5 has 0 tens.",
+            "picture": {
+              "kind": "base10",
+              "numbers": [
+                14,
+                5
+              ],
+              "focus": "tens"
+            }
+          },
+          {
+            "heading": "14 is greater than 5.",
+            "text": "1 ten is greater than 0 tens.",
+            "result": "14 > 5"
+          }
+        ]
+      },
+      {
+        "operands": [
+          19,
+          19
+        ],
+        "steps": [
+          {
+            "heading": "Now 19 and 19.",
+            "text": "They are the same number.",
+            "picture": {
+              "kind": "base10",
+              "numbers": [
+                19,
+                19
+              ]
+            }
+          },
+          {
+            "heading": "They are equal.",
+            "text": "Same number on both sides? Use the = sign.",
+            "result": "19 = 19"
+          }
+        ]
+      }
     ]
   },
-  "pass": { "questions": 3, "right": 2 },
+  "pass": {
+    "questions": 3,
+    "right": 2
+  },
   "quickCheck": 2
 }
