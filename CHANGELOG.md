@@ -3,9 +3,11 @@
 All notable changes to chocabloc-questions are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.6.0-beta.22] — 2026-10-20
 
-**Minor**: two additive entry points for adaptive questions; nothing renamed or removed.
+**Minor**: two additive entry points for adaptive questions (Math Progression session 1);
+nothing renamed or removed. Only Math Bingo moves to this release now; each other bulk game
+moves when it is switched on.
 
 ### Added
 
