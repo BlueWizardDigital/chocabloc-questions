@@ -248,6 +248,20 @@ without one.
 
 Full rules: `docs/host-protocol.md` § Concept saver.
 
+### The level picker (`chocabloc-questions/level-picker`)
+
+Pure, no `window`, about 1 KB. A game that gets questions with a `kidLevel` (from `adaptive` batches) uses it to move a kid up a level after 2 right first tries in a row and down after 2 wrong, with no server call.
+
+```js
+import { createLevelPicker } from 'chocabloc-questions/level-picker';
+
+const picker = createLevelPicker({ start: adaptive.start }); // up, down default to 2
+const q = picker.next(unaskedQuestions); // random at the current level, else the nearest (easier on a tie)
+picker.record(wasRightFirstTry);         // 2 in a row moves one level and resets the count
+```
+
+A step is one level the picker has **seen** in the candidates (3, 4, 5, 9, 10, 11: one step up from 5 is 9), never plus or minus 1. A used-up level does not move the kid: `next` serves a neighbour and `level` stays. Questions without a `kidLevel` are served in order after the levelled ones. For a game that keeps state as plain data (a reducer), use the pure `initLevelPicker`, `pickNext(state, candidates, rng?)` and `recordAnswer(state, correct)`; `LevelPickerState` is JSON-safe.
+
 ### The host kit (`chocabloc-questions/host`)
 
 A framework-free convenience layer over the bridge — the glue most iframe games

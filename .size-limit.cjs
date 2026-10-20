@@ -36,6 +36,12 @@ module.exports = [
     gzip: true,
   },
   {
+    name: 'level picker',
+    path: 'dist/level-picker.mjs',
+    limit: '1 KB',
+    gzip: true,
+  },
+  {
     name: 'word-problems engine (no data)',
     path: 'dist/word-problems/index.mjs',
     limit: '8 KB',

@@ -25,6 +25,7 @@ export default defineConfig({
         bridge: resolve(__dirname, 'src/bridge.ts'),
         host: resolve(__dirname, 'src/host.ts'),
         'concept-run': resolve(__dirname, 'src/conceptRun.ts'),
+        'level-picker': resolve(__dirname, 'src/levelPicker.ts'),
         'elements/coin-pile': resolve(__dirname, 'src/elements/coin-pile.ts'),
         'elements/canvas-question': resolve(__dirname, 'src/elements/canvas-question.ts'),
         'elements/whiteboard': resolve(__dirname, 'src/elements/whiteboard.ts'),

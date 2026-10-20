@@ -47,6 +47,11 @@
       "import": "./dist/concept-run.mjs",
       "require": "./dist/concept-run.cjs"
     },
+    "./level-picker": {
+      "types": "./dist/levelPicker.d.ts",
+      "import": "./dist/level-picker.mjs",
+      "require": "./dist/level-picker.cjs"
+    },
     "./word-problems": {
       "types": "./dist/word-problems/index.d.ts",
       "import": "./dist/word-problems/index.mjs"

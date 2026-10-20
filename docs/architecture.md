@@ -124,6 +124,10 @@ It is *batteries and guardrails*, not security and not game logic:
 
 ---
 
+### The level picker
+
+`chocabloc-questions/level-picker` is a pure helper (`src/levelPicker.ts`, no `window`, own entry and size limit) for adaptive batches. State is plain data (`LevelPickerState`) and the functions never mutate inputs, so a game can store it in its round state. Steps follow the sorted list of levels seen in the candidates, not the level number. It is separate from the bridge: it makes no request and never touches the host.
+
 ## 6. Where each piece should live
 
 The kit isn't one thing, so it doesn't get one home. Split by coupling — ask of each piece:
