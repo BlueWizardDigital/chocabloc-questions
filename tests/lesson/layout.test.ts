@@ -76,6 +76,19 @@ describe('numberLineLayout', () => {
   });
 });
 
+describe('numberLineLayout guards', () => {
+  test('an enormous span returns quickly with a bounded number of ticks', () => {
+    const l = numberLineLayout({ kind: 'numberLine', from: 0, to: 1e300 }, 320);
+    expect(l.ticks.length).toBeLessThanOrEqual(21);
+  });
+  test('a span that cannot advance, is negative or is not finite gives no ticks', () => {
+    expect(numberLineLayout({ kind: 'numberLine', from: 1e300, to: 1e301 }, 320).ticks.length).toBeLessThanOrEqual(21);
+    expect(numberLineLayout({ kind: 'numberLine', from: 10, to: 0 }, 320).ticks).toEqual([]);
+    expect(numberLineLayout({ kind: 'numberLine', from: 0, to: Infinity }, 320).ticks).toEqual([]);
+    expect(numberLineLayout({ kind: 'numberLine', from: 5, to: 5 }, 320).ticks).toHaveLength(1);
+  });
+});
+
 describe('columnsLayout', () => {
   test('integers right-align with the op in the second number row', () => {
     const l = columnsLayout({ kind: 'columns', op: '+', numbers: [4521, 378] });

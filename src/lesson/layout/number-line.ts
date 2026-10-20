@@ -23,8 +23,12 @@ export function numberLineLayout(
   // The largest step is the fallback when nothing fits in 20 ticks.
   const step = STEPS.find((s) => Math.ceil(span / s) + 1 <= MAX_TICKS) ?? 1000;
   const values: number[] = [];
-  for (let v = from; v < to; v += step) values.push(v);
-  values.push(to);
+  if (span === 0) values.push(to);
+  else if (Number.isFinite(span) && span > 0 && from + step > from) {
+    // Bounded by index, not by value, so no span can make this loop run long.
+    for (let i = 0; i < MAX_TICKS && from + i * step < to; i++) values.push(from + i * step);
+    values.push(to);
+  }
 
   const everyLabel = values.length <= FULL_LABEL_TICKS;
   const last = values.length - 1;

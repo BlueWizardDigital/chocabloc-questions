@@ -119,6 +119,17 @@ describe('pictureFromQuestion: number', () => {
       marks: [1234],
     });
   });
+  test('a number too big for the line gives null', () => {
+    for (const n of [123456, 1e17, 1e300, 12345]) {
+      expect(pictureFromQuestion({ kind: 'numberLine', from: 'number' }, num(n))).toBeNull();
+    }
+    expect(pictureFromQuestion({ kind: 'numberLine', from: 'number' }, num(999))).toEqual({
+      kind: 'numberLine',
+      from: 900,
+      to: 1000,
+      marks: [999],
+    });
+  });
   test('other kinds and bad numbers give null', () => {
     expect(pictureFromQuestion({ kind: 'array', from: 'number' }, num(5))).toBeNull();
     expect(pictureFromQuestion({ kind: 'columns', from: 'number' }, num(5))).toBeNull();

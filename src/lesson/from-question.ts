@@ -53,6 +53,7 @@ function fromNumber(kind: LessonPicture['kind'], c: Record<string, unknown>): Le
     const digits = String(Math.trunc(Math.abs(n))).length;
     const step = Math.max(10, 10 ** (digits - 1));
     const from = Math.floor(n / step) * step;
+    if (step > MAX_SPAN) return null;
     return { kind, from, to: from + step, marks: [n] };
   }
   return null;
