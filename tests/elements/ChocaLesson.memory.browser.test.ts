@@ -4,6 +4,10 @@ import type { Lesson } from '../../src/lesson/index';
 
 // wtr starts Chromium with --expose-gc and --enable-precise-memory-info (web-test-runner.config.mjs).
 const CYCLES = 20;
+const WARM_UP = 3;
+const LONG_RUN = 100;
+// Measured in headless Chromium: 51 KB (every run) when nothing leaks, 234 KB when every removed element is kept.
+const MAX_GROWTH_KB = 120;
 
 let fixture: Lesson;
 const cleanups: (() => void)[] = [];
@@ -80,14 +84,17 @@ function stubSpeech(): { cancels: number; speaks: number } {
   return stub;
 }
 
-function cycle(): void {
+/** Mounts, sets the lesson, taps Read to me and removes the element. Returns the element and how many cancels the removal alone made. */
+function cycle(speech?: { cancels: number }): { el: ChocaLesson; cancelsOnRemove: number } {
   const el = document.createElement('chocabloc-lesson') as ChocaLesson;
   document.body.appendChild(el);
   el.lesson = fixture;
   const read = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="read-to-me"]');
   if (!read) throw new Error('no Read to me button');
   read.click();
+  const before = speech?.cancels ?? 0;
   el.remove();
+  return { el, cancelsOnRemove: (speech?.cancels ?? 0) - before };
 }
 
 const gc = (): Promise<void> => {
@@ -110,27 +117,27 @@ describe('<chocabloc-lesson> leaves nothing behind', () => {
     };
     const watch = watchListeners(mine);
     for (let i = 0; i < CYCLES; i++) {
-      const before = speech.cancels;
-      cycle();
-      expect(speech.cancels, `cycle ${i + 1} cancelled speech`).to.be.greaterThan(before);
+      // Speak and every screen cancel too, so only the count across remove() proves removal cancels.
+      const { cancelsOnRemove } = cycle(speech);
+      expect(cancelsOnRemove, `removal in cycle ${i + 1} cancelled speech`).to.be.greaterThan(0);
     }
     expect(watch.adds, 'the spy saw the element add listeners').to.be.greaterThan(0);
     expect(watch.open(), 'listeners added and never removed').to.deep.equal([]);
     expect(speech.speaks).to.equal(CYCLES);
   });
 
-  it(`${CYCLES} mount, read and remove cycles hold the heap within 10% of the first`, async function () {
-    this.timeout(20000);
+  it(`${LONG_RUN} mount, read and remove cycles grow the heap by under ${MAX_GROWTH_KB} KB`, async function () {
+    this.timeout(30000);
     stubSpeech();
-    cycle();
+    for (let i = 0; i < WARM_UP; i++) cycle();
     await gc();
     await gc();
     const first = heap();
-    for (let i = 1; i < CYCLES; i++) cycle();
+    for (let i = 0; i < LONG_RUN; i++) cycle();
     await gc();
     await gc();
-    const last = heap();
+    const grownKb = Math.round((heap() - first) / 1024);
     // Numbers, not nodes: a failed equal on DOM nodes stalls the runner.
-    expect(last, `heap after cycle 1 was ${first}, after cycle ${CYCLES} was ${last}`).to.be.at.most(first * 1.1);
+    expect(grownKb, `heap grew ${grownKb} KB over ${LONG_RUN} cycles`).to.be.below(MAX_GROWTH_KB);
   });
 });
