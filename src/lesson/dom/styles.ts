@@ -1,5 +1,5 @@
 // The game look from the Compare prototype: cream, ink, yellow buttons, chunky borders.
-// Chrome 103: no dvh/svh/lvh, :has(), container queries, color-mix() or CSS nesting.
+// Chrome 103: nothing newer (tests/lesson/chrome103.test.ts lists what is refused).
 const DISPLAY = 'var(--cl-font-display, var(--cl-font-body, var(--cq-font, system-ui)))';
 const BODY = 'var(--cl-font-body, var(--cq-font, system-ui))';
 const BG = 'var(--cl-bg, #fff8ec)';

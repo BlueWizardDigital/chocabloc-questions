@@ -154,3 +154,48 @@ will land in a later minor version.
 
 All events use `bubbles: true, composed: true` so they cross shadow DOM
 boundaries cleanly.
+
+## `<chocabloc-lesson>`
+
+Entry `chocabloc-questions/lesson`. `:host([hidden])` is `display: none`, so the `hidden` attribute hides the player.
+Headings use `--cl-font-display`; body text uses `--cl-font-body`, then `--cq-font`, then `system-ui`.
+The practice question inside Intro and Check is a `<chocabloc-question>`, so its own `--cq-*` vars and
+`::part()` names (above) reach it through the player's shadow root.
+
+| Part | What it targets |
+|------|-----------------|
+| `panel` | The whole player: border, background, padding |
+| `chips` | The row of step chips (Idea, Watch, Quick check, ...) |
+| `chip` | One step chip. The current one also has class `on`, finished ones `done` |
+| `close` | The Close button (also a `button`) |
+| `heading` | The screen heading (an `h2`; it takes focus on each screen) |
+| `text` | A line of explanation under the heading |
+| `tip` | A hint line (an idea's tip, or the tip after a wrong answer) |
+| `result` | The big worked result, such as `43 < 52` |
+| `card` | One idea card (a sign, its words and an example) |
+| `why` | The card shown after a wrong answer, holding the tip and picture |
+| `picture` | The box around a canvas picture |
+| `caption` | The words under one base-ten picture, such as "4 tens and 3 ones" |
+| `feedback` | The polite live region under the step (right, thanks, could not check) |
+| `actions` | The row of buttons at the bottom |
+| `button` | Every button. The pale ones also have class `secondary` |
+| `read-to-me` | The Read to me button (also a `button`). Absent where the browser has no speech |
+
+| Var | Default | Purpose |
+|-----|---------|---------|
+| `--cl-font-display` | `var(--cl-font-body, var(--cq-font, system-ui))` | Headings, buttons, big numbers |
+| `--cl-font-body` | `var(--cq-font, system-ui)` | Body text |
+| `--cl-bg` | `#fff8ec` | Panel background |
+| `--cl-ink` | `#2b2118` | Text and drawing colour |
+| `--cl-accent` | `#ffcf33` | Main buttons, the current chip, highlights |
+| `--cl-border` | `#2b2118` | Border and button-edge colour |
+| `--cl-radius` | `16px` | Corner radius of the panel, cards and buttons |
+
+| Event | Detail shape | Fires |
+|-------|--------------|-------|
+| `lesson-done` | Help: `{ mode: 'help' }`. Intro: `{ mode: 'intro', skillId, outcome: 'passed' \| 'passedEasier' \| 'notYet' \| 'incomplete', startSkillId, quickCheck, yourTurn, tryAgain?, incompleteStep? }`. Check: `{ mode: 'check', right, of, unsure, bySkill }`. Each score is `{ right, of, unsure }` | Once, when the kid finishes (Back to the game, or Play). The run then reports nothing more |
+| `lesson-close` | `{ step }` (the id of the screen Close was pressed on) | When the kid closes before the end. The run then reports nothing more. On the Intro and Check done screen, Close sends `lesson-done` instead |
+| `lesson-answer` | `{ step, skillId, question, studentAnswer, outcome }` (`step`: `quickCheck`, `yourTurn`, `tryAgain` or `check`; `outcome`: `right`, `wrong` or `unsure`; `question` is the host's own object) | After each checked answer, or "I'm not sure yet". The only place to record answers |
+| `lesson-error` | `{ reason }` | `unsupported-version` or `invalid` (the lesson file), `no-questions` (nothing arrived, or the practice code did not load), `no-validator` (no `validateAnswer`), `validation-unavailable` (a check failed; the kid can try again) |
+
+All events use `bubbles: true, composed: true`.

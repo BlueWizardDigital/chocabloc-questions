@@ -18,6 +18,31 @@ moves when it is switched on.
   is unchanged and shares the same internal fetch. New exported type `AdaptiveInfo`.
 - **`chocabloc-questions/level-picker`**, a kid-level picker entry point.
 
+**Minor**: a new `chocabloc-questions/lesson` entry; nothing renamed or removed.
+
+### Added
+
+- **`<chocabloc-lesson>`**, a skill-lesson player on the new `chocabloc-questions/lesson`
+  entry, in three modes: `help`, `intro` and `check`. Properties: `lesson`, `mode`,
+  `getQuestions`, `questions`, `validateAnswer`, `translator`. It is browser-only: importing
+  the entry defines the element. Help loads no question code; Intro and Check load it lazily.
+- **Events:** `lesson-done`, `lesson-close`, `lesson-answer` and `lesson-error`
+  (reasons `unsupported-version`, `invalid`, `no-questions`, `no-validator`,
+  `validation-unavailable`). See `PARTS-AND-VARS.md`.
+- **Parts:** `panel`, `chips`, `chip`, `close`, `heading`, `text`, `tip`, `result`, `card`,
+  `why`, `picture`, `caption`, `feedback`, `actions`, `button`, `read-to-me`.
+  **Vars:** `--cl-font-display`, `--cl-font-body`, `--cl-bg`, `--cl-ink`, `--cl-accent`,
+  `--cl-border`, `--cl-radius`.
+- **Helpers on the lesson entry:** `parseLesson`, `loadLesson`, `loadLessonIndex`,
+  `LESSON_FORMAT_VERSIONS` and `lessonMessagesEn`.
+- **Type exports** of `ValidateAnswer` and `Translator` (from the lesson entry).
+
+### Changed
+
+- The base-ten and array drawings moved into their own files (`draw-base10`, `draw-array`),
+  unchanged, so the lesson player can share them. `canvas-question` grew by about 50 B gz
+  from the new module order; no runtime code changed.
+
 ## [0.6.0-beta.21] — 2026-10-08
 
 **Minor**: new bridge API for the ChocaBLOC game page's own Mute button (Trello 383); nothing

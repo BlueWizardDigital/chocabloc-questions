@@ -47,4 +47,14 @@ module.exports = [
     limit: '8 KB',
     gzip: true,
   },
+  {
+    name: 'lesson Help (player + pictures, no practice chunk)',
+    path: 'dist/lesson.mjs',
+    limit: '12 KB',
+    gzip: true,
+    modifyEsbuildConfig(config) {
+      config.external = [...(config.external ?? []), './chunks/practice.*'];
+      return config;
+    },
+  },
 ];

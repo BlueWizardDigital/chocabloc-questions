@@ -26,7 +26,11 @@ export default {
     esbuildPlugin({ ts: true, target: 'es2020' }),
     jsonImports,
   ],
-  browsers: [playwrightLauncher({ product: 'chromium' })],
+  browsers: [playwrightLauncher({
+      product: 'chromium',
+      // The memory test needs gc() and exact heap numbers.
+      launchOptions: { args: ['--js-flags=--expose-gc', '--enable-precise-memory-info'] },
+    })],
   testRunnerHtml: (testRunnerImport) => `
     <!DOCTYPE html>
     <html>

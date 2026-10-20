@@ -15,6 +15,7 @@ export function speakableText(text: string, msg: Msg): string {
     }
   };
   return text
+    // shortcut: a digit-hyphen-digit also turns a date range ("1990-1995") into "minus", revisit if lessons carry dates.
     .replace(/(\d)\s*-\s*(?=\d)/g, (_m, d: string) => `${d} ${msg('symbols.minus')} `)
     .replace(/[<>=+−×÷☐]/g, (s) => ` ${word(s)} `)
     .replace(/\s+/g, ' ')

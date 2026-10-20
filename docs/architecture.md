@@ -146,6 +146,12 @@ and `docs/shared-kit-findings.md` ("lift into a `game-kit` entrypoint"): **both,
 
 ---
 
+## 6b. The lesson player (`chocabloc-questions/lesson`)
+
+`<chocabloc-lesson>` plays a skill lesson (a JSON file written elsewhere) in the iframe or on the host page. It sits beside the bridge, not on it: the host passes it `getQuestions`, `questions` and `validateAnswer` as properties, so the player never posts a message and never holds an answer. Help loads only the player and its pictures (capped at 12 KB gz); everything that needs `<chocabloc-question>` is one lazy chunk (`practice`) loaded for Intro and Check. It adds no listener to `window` or `document`, and the host records results from its `lesson-answer` and `lesson-done` events.
+
+---
+
 ## 7. Move spec — host glue → `chocabloc-questions`
 
 > **✅ Status (shipped 2026-06-29, `chocabloc-questions` v0.6.0-beta.5).** Done: the bridge is

@@ -338,6 +338,43 @@ Not every skill gets a word problem — arithmetic/fraction/numeric-scalar skill
 geometry, time, patterns, and base-10 fall back to their normal stem by design. See
 [`docs/word-problems-coverage.md`](docs/word-problems-coverage.md) for the full breakdown and why.
 
+## Lessons
+
+`chocabloc-questions/lesson` is a player for skill lessons: a short idea, a worked example,
+and (optionally) practice. `<chocabloc-lesson>` has three modes.
+
+| Mode | What it does | Needs |
+|------|--------------|-------|
+| `help` | The idea, then each worked step with Next and Back, then Back to the game | `lesson` |
+| `intro` | The idea, a quick check, the worked steps, then Your turn; a failed Your turn gets more examples and Try again on the easier skill | `lesson`, `getQuestions`, `validateAnswer` |
+| `check` | A placement check over questions the host already fetched | `questions`, `validateAnswer` |
+
+```ts
+import 'chocabloc-questions/lesson';
+import { loadLesson } from 'chocabloc-questions/lesson';
+
+const el = document.createElement('chocabloc-lesson');
+el.getQuestions = (skillId, count, excludeIds) => host.fetchQuestions(skillId, count, excludeIds);
+el.validateAnswer = host.validateAnswer;
+el.mode = 'intro';
+const got = await loadLesson('/data/lessons/en/COMPARE-NUMBERS-WITHIN-100.json'); // { ok, lesson } or { ok: false, reason }
+if (got.ok) el.lesson = got.lesson;
+el.addEventListener('lesson-answer', (e) => record(e.detail));
+el.addEventListener('lesson-done', (e) => finish(e.detail));
+document.body.append(el);
+```
+
+Rules for the host (session 4 builds on these):
+
+- **Browser-only.** Importing the entry defines a custom element, so don't import it in node or on the server.
+- **Set `questions` and `validateAnswer` together with `mode`.** Check reads both as soon as its code loads, so set them in the same synchronous code as `mode`. Intro reads `getQuestions` and `validateAnswer` only when it needs them, so they may come later.
+- **Record answers from `lesson-answer` only.** The question element's own events (`answered` and the rest) are stopped inside the player.
+- **To show the player again** after Close or done, set `lesson` or `mode` again. Either starts from the first screen. (Removing the element and adding it back does too.)
+- **Pass questions as the server sends them.** The player normalizes them itself; don't normalize first. It never holds an answer: every check goes through `validateAnswer`.
+- Words are English by default. Give `translator(key, vars)` to answer first for any of them; return `undefined` to fall back.
+
+Look: it takes headings from `--cl-font-display` and body text from `--cl-font-body`, then `--cq-font`, then `system-ui`. Parts, vars and events: [`PARTS-AND-VARS.md`](./PARTS-AND-VARS.md).
+
 ## Supported formats
 
 > **Before you write a guard against these:** `normalizeQuestion` rewrites `format`, overrides
