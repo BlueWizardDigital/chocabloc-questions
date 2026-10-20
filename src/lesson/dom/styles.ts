@@ -11,6 +11,7 @@ const PAPER = 'rgba(255, 255, 255, 0.6)';
 
 export const LESSON_CSS = `
 :host { display: block; font-family: ${BODY}; color: ${INK}; }
+:host([hidden]) { display: none; }
 [hidden] { display: none !important; }
 [part~="panel"] {
   box-sizing: border-box; height: 100%; overflow: auto;

@@ -1,22 +1,46 @@
 /**
  * Lesson entry verification script.
- * Checks the built lesson entry exists, and that a consumer bundle importing
- * it carries the parser.
+ * Checks the built lesson entry exists, that it loads the practice code (and
+ * with it <chocabloc-question>) only through one dynamic import, and that a
+ * consumer bundle importing it carries the parser and registers both elements.
  *
  * Run after `npm run build`: node tests/lesson-dist-test.mjs
  */
 import { build } from 'vite';
-import { existsSync, rmSync, mkdirSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, rmSync, mkdirSync, writeFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const tmpDir = resolve(__dirname, '../.lesson-dist-tmp');
+const dist = resolve(__dirname, '../dist');
 
 function fail(msg) {
   console.error(`FAIL: ${msg}`);
   process.exitCode = 1;
 }
+
+/** Specifiers of a built file's static imports: `from "x"` and bare `import "x"`, not `import("x")`. */
+function staticImports(code) {
+  return [...code.matchAll(/\bfrom\s*["']([^"']+)["']|\bimport\s*["']([^"']+)["']/g)].map((m) => m[1] ?? m[2]);
+}
+
+/** A built file and every file it reaches through static imports. */
+function staticClosure(file) {
+  const seen = new Set();
+  const queue = [file];
+  while (queue.length) {
+    const f = queue.shift();
+    if (seen.has(f)) continue;
+    seen.add(f);
+    for (const spec of staticImports(readFileSync(f, 'utf8'))) {
+      if (spec.startsWith('.')) queue.push(resolve(dirname(f), spec));
+    }
+  }
+  return [...seen];
+}
+
+const defines = (code, tag) => code.includes(`customElements.define("${tag}"`);
 
 try {
   rmSync(tmpDir, { recursive: true, force: true });
@@ -24,6 +48,25 @@ try {
 
   for (const f of ['../dist/lesson.mjs', '../dist/lesson/index.d.ts']) {
     if (!existsSync(resolve(__dirname, f))) fail(`${f.slice(3)} is missing`);
+  }
+
+  // Help must not load the practice code: one dynamic import, no static one.
+  const lessonCode = readFileSync(resolve(dist, 'lesson.mjs'), 'utf8');
+  const lazy = lessonCode.match(/\bimport\(\s*["'](\.\/chunks\/practice\.[^"']+\.mjs)["']\s*\)/);
+  if (!lazy) fail('dist/lesson.mjs has no dynamic import("./chunks/practice.…")');
+  const helpFiles = staticClosure(resolve(dist, 'lesson.mjs'));
+  if (helpFiles.some((f) => /[/\\]practice\.[^/\\]+\.mjs$/.test(f))) {
+    fail('dist/lesson.mjs reaches the practice chunk through a static import');
+  }
+  if (helpFiles.some((f) => defines(readFileSync(f, 'utf8'), 'chocabloc-question'))) {
+    fail('what Help loads statically registers <chocabloc-question>');
+  }
+  if (lazy) {
+    // The practice chunk, or a chunk it imports statically, registers the question element and its choice pad.
+    const practice = staticClosure(resolve(dist, lazy[1])).map((f) => readFileSync(f, 'utf8')).join('\n');
+    for (const tag of ['chocabloc-question', 'choca-choice-pad']) {
+      if (!defines(practice, tag)) fail(`the practice chunk and its static imports do not register <${tag}>`);
+    }
   }
 
   writeFileSync(resolve(tmpDir, 'entry.js'), `
@@ -54,10 +97,19 @@ try {
   }
   // The element registers itself as a side effect; a consumer that imports only
   // the parser must still get it (package.json sideEffects lists dist/lesson.mjs).
-  if (!code.includes('customElements.define("chocabloc-lesson"')) {
+  if (!defines(code, 'chocabloc-lesson')) {
     fail('lesson consumer bundle does not register <chocabloc-lesson>');
   }
-  if (process.exitCode !== 1) console.log('PASS: lesson entry built, bundles the parser and registers <chocabloc-lesson>.');
+  // The practice chunk is reached only through the dynamic import; a consumer
+  // bundler must keep its registrations (package.json sideEffects lists it).
+  for (const tag of ['chocabloc-question', 'choca-choice-pad']) {
+    if (!defines(code, tag)) fail(`lesson consumer bundle does not register <${tag}>`);
+  }
+  if (process.exitCode !== 1) {
+    console.log(
+      'PASS: lesson entry built, bundles the parser, registers <chocabloc-lesson>, and loads <chocabloc-question> only through the lazy practice chunk.',
+    );
+  }
 } catch (e) {
   console.error('FAIL: lesson dist test threw', e);
   process.exitCode = 1;
