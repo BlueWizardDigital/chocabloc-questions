@@ -1,0 +1,54 @@
+{
+  "readToMe": "Read to me",
+  "notSure": "I'm not sure yet",
+  "gotIt": "Got it",
+  "next": "Next",
+  "back": "Back",
+  "close": "Close",
+  "play": "Play",
+  "backToGame": "Back to the game",
+  "checkAgain": "Check again",
+  "gettingQuestions": "Getting your questions…",
+  "feedback": {
+    "right": "Yes!",
+    "checkThanks": "Thanks! On to the next one.",
+    "couldNotCheck": "Couldn't check that one.",
+    "answerIs": "The answer is {answer}."
+  },
+  "steps": {
+    "idea": "Idea",
+    "quickCheck": "Quick check",
+    "watch": "Watch",
+    "yourTurn": "Your turn",
+    "moreExamples": "More examples",
+    "tryAgain": "Try again"
+  },
+  "done": {
+    "passed": "You're ready!",
+    "passedEasier": "Nice work! We'll start with {title}…",
+    "notYet": "Good try! We'll start with easier ones and practise together.",
+    "incomplete": "Let's play!",
+    "checkAll": "All done!"
+  },
+  "errors": {
+    "unsupported": "Help isn't ready for this one yet.",
+    "noQuestions": "We couldn't get questions right now.",
+    "noValidator": "Questions can't be checked here yet."
+  },
+  "base10": {
+    "thousands": { "one": "{count} thousand", "other": "{count} thousands" },
+    "hundreds": { "one": "{count} hundred", "other": "{count} hundreds" },
+    "tens": { "one": "{count} ten", "other": "{count} tens" },
+    "ones": { "one": "{count} one", "other": "{count} ones" }
+  },
+  "symbols": {
+    "lessThan": "is less than",
+    "greaterThan": "is greater than",
+    "equals": "is equal to",
+    "plus": "plus",
+    "minus": "minus",
+    "times": "times",
+    "dividedBy": "divided by",
+    "blank": "blank"
+  }
+}

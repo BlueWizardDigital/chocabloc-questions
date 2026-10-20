@@ -13,3 +13,5 @@ export type {
 export { parseLesson, parseLessonIndex, LESSON_CAPS } from './parse';
 export { loadLesson, loadLessonIndex } from './load';
 export type { ValidateAnswer, NormalizedQuestion, AnswerValue } from '../types';
+export { lessonMessagesEn } from './messages';
+export type { Translator } from './messages';
