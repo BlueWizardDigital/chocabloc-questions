@@ -350,11 +350,20 @@ describe('<chocabloc-lesson> Intro', () => {
     await right(el, host, 'q5');
     await until(() => heading(el) === "You're ready!", 'done screen');
     part(el, 'close')!.click();
+    expect(done).to.have.length(1);
+    expect(done[0]).to.deep.equal({
+      mode: 'intro',
+      skillId: 'COMPARE-NUMBERS-WITHIN-100',
+      outcome: 'passed',
+      startSkillId: 'COMPARE-NUMBERS-WITHIN-100',
+      quickCheck: { right: 2, of: 2, unsure: 0 },
+      yourTurn: { right: 3, of: 3, unsure: 0 },
+    });
+    expect(closed).to.deep.equal([]);
     part(el, 'close')!.click();
     button(el, 'Play').click();
-    expect(closed).to.deep.equal([]);
     expect(done).to.have.length(1);
-    expect(done[0]).to.deep.include({ outcome: 'passed', startSkillId: 'COMPARE-NUMBERS-WITHIN-100' });
+    expect(closed).to.deep.equal([]);
   });
 
   it('Close ends the run: a second tap, and the screen\'s buttons, do nothing more', async () => {
@@ -408,8 +417,25 @@ describe('<chocabloc-lesson> Intro', () => {
     expect(host.calls).to.deep.equal([['COMPARE-NUMBERS-WITHIN-100', 5, []]]);
   });
 
+  it('with validateAnswer set at once and getQuestions only later, the first batch still arrives', async () => {
+    const host = fakeHost([five()]);
+    const errors = listen('lesson-error');
+    const el = mount();
+    el.validateAnswer = host.validateAnswer;
+    el.mode = 'intro';
+    el.lesson = fixture;
+    // A later task, after the practice code has loaded:
+    await until(() => customElements.get('chocabloc-question') !== undefined, 'practice code');
+    await tick();
+    el.getQuestions = host.getQuestions;
+    button(el, 'Next').click();
+    await right(el, host, 'q1');
+    expect(errors).to.deep.equal([]);
+    expect(host.calls).to.deep.equal([['COMPARE-NUMBERS-WITHIN-100', 5, []]]);
+  });
+
   it("<chocabloc-question>'s own events stop inside the player", async () => {
-    captureConsole();
+    const logged = captureConsole();
     const host = fakeHost([five()]);
     // Listeners on the page (document), where a host would listen.
     const seen = {
@@ -431,6 +457,11 @@ describe('<chocabloc-lesson> Intro', () => {
     expect(seen.answered).to.deep.equal([]);
     expect(seen.unavailable).to.deep.equal([]);
     expect(seen.misconfigured).to.deep.equal([]);
+    // The failed check's own warnings, captured so the run stays quiet.
+    expect(firstArgs(logged.warn).sort()).to.deep.equal([
+      '[chocabloc-lesson] could not check the answer:',
+      '[chocabloc-question] host validateAnswer rejected and no local answer to fall back on:',
+    ]);
   });
 
   describe('when the practice code fails to load', () => {

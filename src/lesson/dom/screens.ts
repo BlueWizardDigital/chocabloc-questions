@@ -84,9 +84,11 @@ export interface PracticeController extends ModeController {
 }
 
 /**
- * The element's host-set properties. The practice code reads each one at the
- * moment it needs it: getQuestions at each fetch, validateAnswer and questions
- * when the questions start. So a host may set them after `mode`.
+ * The element's host-set properties, read by the practice code when it needs
+ * them. Intro reads getQuestions at each fetch and validateAnswer when the kid
+ * leaves the idea, so a host may set those after `mode`. Check reads
+ * `questions` and validateAnswer as soon as its code loads; set them in the
+ * same synchronous code as `mode`.
  */
 export interface PracticeHost {
   readonly getQuestions: GetQuestions | undefined;

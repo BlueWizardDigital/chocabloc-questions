@@ -12,6 +12,7 @@ import {
   choose,
   cleanup,
   cmp,
+  deepText,
   fakeHost,
   feedback,
   feedbackLog,
@@ -122,6 +123,34 @@ describe('<chocabloc-lesson> Check', () => {
     await until(() => heading(el) === 'All done!', 'All done!');
   });
 
+  it('never shows the answer of a typed-answer question either', async () => {
+    const host = fakeHost();
+    // Not a bank row (those always carry choices): a host's own question with no choices.
+    const typed = {
+      id: 't1',
+      format: 'text',
+      skillIds: ['SKILL-A'],
+      questionText: 'Type the sum of 3 and 4.',
+      content: { stem: 'Type the sum of 3 and 4.' },
+      answer: '7',
+      distractors: [],
+    } as unknown as NormalizedQuestion;
+    const el = check(host, [typed]);
+    await shown(el, 't1');
+    // The element's typed-answer input, which prints the answer it is given.
+    const qel = root(el).querySelector('chocabloc-question')!;
+    qel.setAttribute('answer-mode', 'input');
+    const input = qel.shadowRoot!.querySelector('choca-answer-input')!;
+    (input.shadowRoot!.querySelector('[part="input-field"]') as HTMLInputElement).value = '8';
+    (input.shadowRoot!.querySelector('[part="input-submit"]') as HTMLButtonElement).click();
+    expect(host.checks.map((c) => c.answer)).to.deep.equal([8]);
+    host.last.reply.resolve({ correct: false, expected: 'SECRET-SUM' });
+    await microtasks();
+    expect(input.shadowRoot!.querySelector('[part="input-feedback"]')!.textContent).to.equal('Incorrect.');
+    expect(deepText(el)).to.not.include('SECRET');
+    await until(() => heading(el) === 'All done!', 'All done!');
+  });
+
   it('Close on the done screen sends lesson-done, not lesson-close', async () => {
     const host = fakeHost();
     const done = listen('lesson-done');
@@ -130,11 +159,14 @@ describe('<chocabloc-lesson> Check', () => {
     await shown(el, 'a1');
     button(el, "I'm not sure yet").click();
     await until(() => heading(el) === 'All done!', 'All done!');
+    const detail = { mode: 'check', right: 0, of: 1, unsure: 1, bySkill: { 'COMPARE-NUMBERS-WITHIN-100': { right: 0, of: 1, unsure: 1 } } };
     part(el, 'close')!.click();
+    expect(done).to.deep.equal([detail]);
+    expect(closed).to.deep.equal([]);
     part(el, 'close')!.click();
     button(el, 'Play').click();
+    expect(done).to.have.length(1);
     expect(closed).to.deep.equal([]);
-    expect(done).to.deep.equal([{ mode: 'check', right: 0, of: 1, unsure: 1, bySkill: { 'COMPARE-NUMBERS-WITHIN-100': { right: 0, of: 1, unsure: 1 } } }]);
   });
 
   it('questions that are not a list: a warning, lesson-error no-questions, and the done screen', async () => {

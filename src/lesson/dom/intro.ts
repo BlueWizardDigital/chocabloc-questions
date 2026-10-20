@@ -46,9 +46,9 @@ export function startIntro(shell: LessonShell, lesson: Lesson, host: PracticeHos
     );
   };
   const fetchFirst = (): Promise<Item[] | null> => fetchBatch(lesson.skillId, lesson.quickCheck + pass.questions);
-  // The first batch loads while the idea shows. With no validator yet, nothing
-  // could be checked, so it waits until the questions start.
-  let first = host.validateAnswer ? fetchFirst() : null;
+  // The first batch loads while the idea shows. Until the host has set both
+  // getQuestions and validateAnswer, it waits for the questions to start.
+  let first = host.validateAnswer && host.getQuestions ? fetchFirst() : null;
 
   /** Waits for a batch, saying "Getting your questions…" if it isn't here yet. */
   const arrived = async (batch: Promise<Item[] | null>): Promise<Item[] | null> => {

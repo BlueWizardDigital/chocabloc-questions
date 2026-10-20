@@ -172,7 +172,11 @@ export function ask(o: AskOptions): Asking {
   };
 
   // The validator first, so the element never holds this question without it.
-  el.validateAnswer = guard.validator;
+  // With no why card (Check), the element gets each verdict without `expected`:
+  // its typed-answer input would print "The answer is …". The guard still sees it all.
+  el.validateAnswer = o.afterWrong
+    ? guard.validator
+    : (q, a) => guard.validator(q, a).then(({ expected: _hidden, ...verdict }) => verdict);
   el.question = item.shown;
   buttons = shell.show(screen);
   const [, again, gotIt] = buttons;

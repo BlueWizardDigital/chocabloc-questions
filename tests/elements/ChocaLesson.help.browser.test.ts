@@ -163,6 +163,7 @@ describe('<chocabloc-lesson> Help', () => {
     el.lesson = fixture;
     button(el, 'Next').click();
     part(el, 'close')!.click();
+    expect(closed).to.have.length(2);
     expect(closed[1]).to.deep.equal({ step: 'watch' });
     expect(done).to.deep.equal([]);
   });

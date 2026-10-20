@@ -78,10 +78,11 @@ function speakerIcon(): SVGSVGElement {
  * The first screen renders synchronously once `lesson` is set on a connected
  * element (Check, which has no lesson, says it is getting its questions).
  * Setting `lesson` or `mode` starts again from the first screen, and so does
- * adding the element back after it was removed. `getQuestions`, `questions`
- * and `validateAnswer` are read when they are needed, so they may be set after
- * `mode`. Closing, or finishing, ends the run: its last screen stays and
- * reports nothing more. It adds no listener to `window` or `document`: one
+ * adding the element back after it was removed. Intro reads `getQuestions` and
+ * `validateAnswer` when it needs them, so they may be set after `mode`. Check
+ * reads `questions` and `validateAnswer` as soon as its code loads; set them in
+ * the same synchronous code as `mode`. Closing, or finishing, ends the run: its
+ * last screen stays and reports nothing more. It adds no listener to `window` or `document`: one
  * click listener lives on its shadow root, and each practice question stops
  * its question element's events there until the kid moves on.
  */

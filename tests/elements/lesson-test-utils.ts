@@ -118,6 +118,15 @@ export function captureConsole(): { warn: unknown[][]; error: unknown[][] } {
 /** The first argument of each captured console call. */
 export const firstArgs = (calls: unknown[][]): string[] => calls.map((c) => String(c[0]));
 
+/** All text under a node, its shadow roots included, at any depth. */
+export function deepText(node: Node): string {
+  let text = node.nodeType === Node.TEXT_NODE ? node.textContent ?? '' : '';
+  const shadow = node instanceof Element ? node.shadowRoot : null;
+  if (shadow) text += deepText(shadow);
+  node.childNodes.forEach((c) => (text += deepText(c)));
+  return text;
+}
+
 export interface Deferred<T> {
   promise: Promise<T>;
   resolve(v: T): void;
