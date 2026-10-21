@@ -18,6 +18,25 @@ describe('fixture sanity', () => {
   });
 });
 
+describe('pictureFromQuestion: rounding number line', () => {
+  const spec = { kind: 'numberLine', from: 'number' } as const;
+  const rnd = (number: number, round_to?: unknown) => q({ number, round_to, operation: 'rounding' });
+  test('spans the two multiples of round_to around the number', () => {
+    expect(pictureFromQuestion(spec, rnd(347, 10))).toEqual({ kind: 'numberLine', from: 340, to: 350, marks: [347] });
+    expect(pictureFromQuestion(spec, rnd(347, 100))).toEqual({ kind: 'numberLine', from: 300, to: 400, marks: [347] });
+    expect(pictureFromQuestion(spec, rnd(34, 10))).toEqual({ kind: 'numberLine', from: 30, to: 40, marks: [34] });
+    expect(pictureFromQuestion(spec, rnd(1000, 10))).toEqual({ kind: 'numberLine', from: 1000, to: 1010, marks: [1000] });
+  });
+  test('a multiple of round_to sits at the low end of its line', () => {
+    expect(pictureFromQuestion(spec, rnd(340, 10))).toEqual({ kind: 'numberLine', from: 340, to: 350, marks: [340] });
+  });
+  test('no round_to, or one that is not 10, 100 or 1000, keeps the digit rule', () => {
+    const old = { kind: 'numberLine', from: 300, to: 400, marks: [347] };
+    expect(pictureFromQuestion(spec, rnd(347))).toEqual(old);
+    expect(pictureFromQuestion(spec, rnd(347, 7))).toEqual(old);
+  });
+});
+
 describe('pictureFromQuestion: operands', () => {
   test('addition number line adds a jump a -> a+b', () => {
     expect(pictureFromQuestion({ kind: 'numberLine', from: 'operands' }, ops([8, 5]))).toEqual({

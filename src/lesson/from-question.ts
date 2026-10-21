@@ -52,8 +52,10 @@ function fromNumber(kind: LessonPicture['kind'], c: Record<string, unknown>): Le
   if (typeof n !== 'number' || !Number.isFinite(n)) return null;
   if (kind === 'base10') return isInt(n, 0, 9999) ? { kind, numbers: [n] } : null;
   if (kind === 'numberLine') {
+    // A rounding question spans the two multiples of round_to around n; a multiple sits at the low end.
+    const r = c.round_to;
     const digits = String(Math.trunc(Math.abs(n))).length;
-    const step = Math.max(10, 10 ** (digits - 1));
+    const step = r === 10 || r === 100 || r === 1000 ? r : Math.max(10, 10 ** (digits - 1));
     const from = Math.floor(n / step) * step;
     if (step > MAX_SPAN) return null;
     return { kind, from, to: from + step, marks: [n] };
