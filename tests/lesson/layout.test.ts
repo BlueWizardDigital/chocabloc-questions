@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { base10Blocks, base10Caption, focusColors, PALE } from '../../src/lesson/layout/base10';
-import { numberLineLayout } from '../../src/lesson/layout/number-line';
+import { LABEL_GAP, numberLineLayout } from '../../src/lesson/layout/number-line';
 import { columnsLayout } from '../../src/lesson/layout/columns';
 import { createMessages } from '../../src/lesson/messages';
 
@@ -64,6 +64,37 @@ describe('numberLineLayout', () => {
     expect(l.marks.map((m) => m.value)).toEqual([8, 5]);
     expect(l.jumps.map((j) => j.label)).toEqual(['+5', '−9']);
     expect(l.jumps[0].fromX).toBeLessThan(l.jumps[0].toX);
+  });
+  test('0-20 at 320: every mark and jump end is labelled, and no labels on one row touch', () => {
+    const l = numberLineLayout(
+      {
+        kind: 'numberLine',
+        from: 0,
+        to: 20,
+        marks: [9, 13],
+        jumps: [{ from: 9, to: 10 }, { from: 10, to: 13 }],
+      },
+      W,
+    );
+    const shown = [
+      ...l.ends.map((e) => ({ v: e.value, x: e.x, row: e.row })),
+      ...l.ticks.filter((t) => t.label).map((t) => ({ v: t.value, x: t.x, row: t.row })),
+    ];
+    for (const v of [9, 10, 13]) expect(shown.some((s) => s.v === v)).toBe(true);
+    // no double label at one value
+    expect(new Set(shown.map((s) => s.v)).size).toBe(shown.length);
+    for (let i = 0; i < shown.length; i++)
+      for (let j = i + 1; j < shown.length; j++)
+        if (shown[i].row === shown[j].row) expect(Math.abs(shown[i].x - shown[j].x)).toBeGreaterThanOrEqual(LABEL_GAP);
+    // the plain ticks beside 9 and 13 gave way
+    expect(l.ticks.find((t) => t.value === 8)?.label).toBe(false);
+    expect(l.ticks.find((t) => t.value === 12)?.label).toBe(false);
+    expect(l.ticks.find((t) => t.value === 4)?.label).toBe(true);
+  });
+  test('a 0-10 line with marks keeps every tick labelled', () => {
+    const l = numberLineLayout({ kind: 'numberLine', from: 0, to: 10, marks: [3, 7] }, W);
+    expect(l.ticks.every((t) => t.label)).toBe(true);
+    expect(l.ends).toEqual([]);
   });
   test('a zero-width line does not divide by zero', () => {
     const l = numberLineLayout({ kind: 'numberLine', from: 5, to: 5 }, W);

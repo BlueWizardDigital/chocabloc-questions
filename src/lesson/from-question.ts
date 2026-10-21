@@ -35,7 +35,9 @@ function fromOperands(kind: LessonPicture['kind'], c: Record<string, unknown>): 
       const from = Math.min(...points);
       const to = Math.max(...points);
       if (to - from > MAX_SPAN) return null;
-      return jumps.length ? { kind, from, to, marks: ops, jumps } : { kind, from, to, marks: ops };
+      // A jump's size is not a spot on the line: mark where it starts and ends.
+      const j = jumps[0];
+      return j ? { kind, from, to, marks: [j.from, j.to], jumps } : { kind, from, to, marks: ops };
     }
     case 'columns': {
       const op = typeof c.operation === 'string' && c.operation in OPS ? OPS[c.operation as keyof typeof OPS] : null;

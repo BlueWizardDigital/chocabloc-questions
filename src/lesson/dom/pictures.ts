@@ -12,7 +12,7 @@ type Draw = (ctx: CanvasRenderingContext2D, w: number, h: number) => void;
 const CANVAS_H = 140;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const NL_W = 360;
-const NL_H = 90;
+const NL_H = 106;
 const AXIS = 56;
 const PLACE_OFFSET: Record<Place, number> = { ones: 0, tens: 1, hundreds: 2, thousands: 3 };
 
@@ -92,14 +92,15 @@ function base10(pic: Pic<'base10'>, msg: Msg, lang: string): HTMLElement {
 }
 
 function numberLine(pic: Pic<'numberLine'>): SVGSVGElement {
-  const { ticks, marks, jumps } = numberLineLayout(pic, NL_W);
+  const { ticks, ends, marks, jumps } = numberLineLayout(pic, NL_W);
   const line = svg('svg', { viewBox: `0 0 ${NL_W} ${NL_H}`, class: 'nl', 'aria-hidden': 'true' });
   line.append(svg('line', { x1: 8, y1: AXIS, x2: NL_W - 8, y2: AXIS }));
   for (const t of ticks) {
     const x = round(t.x);
     line.append(svg('line', { x1: x, y1: AXIS - 7, x2: x, y2: AXIS + 7 }));
-    if (t.label) line.append(svg('text', { x, y: AXIS + 26 }, signed(t.value)));
+    if (t.label) line.append(svg('text', { x, y: AXIS + 26 + t.row * 16 }, signed(t.value)));
   }
+  for (const e of ends) line.append(svg('text', { x: round(e.x), y: AXIS + 26 + e.row * 16 }, signed(e.value)));
   for (const j of jumps) {
     // A hop from `from` to `to`, with an arrowhead along the curve's last direction.
     const mid = (j.fromX + j.toX) / 2;

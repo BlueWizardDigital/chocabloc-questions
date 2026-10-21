@@ -24,7 +24,7 @@ describe('pictureFromQuestion: operands', () => {
       kind: 'numberLine',
       from: 0,
       to: 13,
-      marks: [8, 5],
+      marks: [8, 13],
       jumps: [{ from: 8, to: 13 }],
     });
   });
@@ -33,9 +33,17 @@ describe('pictureFromQuestion: operands', () => {
       kind: 'numberLine',
       from: 0,
       to: 9,
-      marks: [9, 4],
+      marks: [9, 5],
       jumps: [{ from: 9, to: 5 }],
     });
+  });
+  test('9 + 4 marks where the jump starts and ends, not its size', () => {
+    const p = pictureFromQuestion({ kind: 'numberLine', from: 'operands' }, ops([9, 4]));
+    expect(p).toMatchObject({ marks: [9, 13], jumps: [{ from: 9, to: 13 }] });
+  });
+  test('13 - 5 marks [13, 8]', () => {
+    const p = pictureFromQuestion({ kind: 'numberLine', from: 'operands' }, ops([13, 5], 'subtraction'));
+    expect(p).toMatchObject({ marks: [13, 8], jumps: [{ from: 13, to: 8 }] });
   });
   test('other operations stop at the largest operand', () => {
     expect(pictureFromQuestion({ kind: 'numberLine', from: 'operands' }, ops([3, 12], 'comparison'))).toEqual({
