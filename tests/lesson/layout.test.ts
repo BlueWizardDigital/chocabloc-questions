@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { base10Blocks, base10Caption, focusColors, PALE } from '../../src/lesson/layout/base10';
-import { LABEL_GAP, numberLineLayout } from '../../src/lesson/layout/number-line';
+import { labelGap, numberLineLayout } from '../../src/lesson/layout/number-line';
 import { columnsLayout } from '../../src/lesson/layout/columns';
 import { createMessages } from '../../src/lesson/messages';
 
@@ -85,11 +85,30 @@ describe('numberLineLayout', () => {
     expect(new Set(shown.map((s) => s.v)).size).toBe(shown.length);
     for (let i = 0; i < shown.length; i++)
       for (let j = i + 1; j < shown.length; j++)
-        if (shown[i].row === shown[j].row) expect(Math.abs(shown[i].x - shown[j].x)).toBeGreaterThanOrEqual(LABEL_GAP);
+        if (shown[i].row === shown[j].row) expect(Math.abs(shown[i].x - shown[j].x)).toBeGreaterThanOrEqual(labelGap(shown[i].v, shown[j].v));
     // the plain ticks beside 9 and 13 gave way
-    expect(l.ticks.find((t) => t.value === 8)?.label).toBe(false);
+    // 8 is one character wide beside 9, so it still fits (gap 10.5 < 14.4)
+    expect(l.ticks.find((t) => t.value === 8)?.label).toBe(true);
     expect(l.ticks.find((t) => t.value === 12)?.label).toBe(false);
     expect(l.ticks.find((t) => t.value === 4)?.label).toBe(true);
+  });
+  test('three close forced values (width 160) use three rows, none touching', () => {
+    const l = numberLineLayout({ kind: 'numberLine', from: 0, to: 20, marks: [9, 10, 11] }, 160);
+    const shown = [...l.ends, ...l.ticks.filter((t) => t.label && [9, 10, 11].includes(t.value))];
+    expect(l.rows).toBe(3);
+    for (let i = 0; i < shown.length; i++)
+      for (let j = i + 1; j < shown.length; j++)
+        if (shown[i].row === shown[j].row)
+          expect(Math.abs(shown[i].x - shown[j].x)).toBeGreaterThanOrEqual(labelGap(shown[i].value, shown[j].value));
+  });
+  test('4-character labels need a wider gap than 2-digit ones', () => {
+    expect(labelGap(1000, -150)).toBeGreaterThanOrEqual(34);
+    expect(labelGap(9, 10)).toBeLessThan(labelGap(1000, 900));
+    const l = numberLineLayout({ kind: 'numberLine', from: 900, to: 1000, marks: [995, 1000] }, W);
+    expect(l.rows).toBe(2);
+  });
+  test('one row for a plain line', () => {
+    expect(numberLineLayout({ kind: 'numberLine', from: 0, to: 10, marks: [3, 7] }, W).rows).toBe(1);
   });
   test('a 0-10 line with marks keeps every tick labelled', () => {
     const l = numberLineLayout({ kind: 'numberLine', from: 0, to: 10, marks: [3, 7] }, W);

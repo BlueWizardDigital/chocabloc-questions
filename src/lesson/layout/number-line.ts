@@ -6,8 +6,14 @@ const STEPS = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000];
 const MAX_TICKS = 20;
 const FULL_LABEL_TICKS = 11;
 const PAD = 16;
-/** Least distance between two label centres on one row: a 3-digit label in the 14px bold font is about 26px wide. */
-export const LABEL_GAP = 28;
+/** One character of the 14px bold label font is about 8.5px wide ("1000" and "−150" come to about 34px). */
+const CHAR_W = 8.5;
+const AIR = 2;
+/** Least distance between two label centres on one row: half of each label's width, plus a little air. */
+export function labelGap(a: number, b: number): number {
+  const chars = (n: number) => (n < 0 ? 1 : 0) + String(Math.abs(n)).length;
+  return ((chars(a) + chars(b)) / 2) * CHAR_W + AIR;
+}
 
 export function numberLineLayout(
   pic: NumberLine,
@@ -16,6 +22,8 @@ export function numberLineLayout(
   ticks: { value: number; x: number; label: boolean; row: number }[];
   /** Labels for marks and jump ends that fall between ticks. Row 1 sits below row 0 when two would touch. */
   ends: { value: number; x: number; row: number }[];
+  /** How many label rows were used (1 unless forced labels crowd). */
+  rows: number;
   marks: { value: number; x: number }[];
   jumps: { fromX: number; toX: number; label: string }[];
 } {
@@ -47,11 +55,13 @@ export function numberLineLayout(
   const forced = [...new Set([...(pic.marks ?? []), ...(pic.jumps ?? []).flatMap((j) => [j.from, j.to])])]
     .map((value) => ({ value, x: xOf(value) }))
     .sort((p, q) => p.x - q.x);
-  let lastRow0 = -Infinity;
+  const rowsUsed: { value: number; x: number }[][] = [];
   const ends: { value: number; x: number; row: number }[] = [];
   for (const f of forced) {
-    const row = f.x - lastRow0 >= LABEL_GAP ? 0 : 1;
-    if (row === 0) lastRow0 = f.x;
+    // First row where this label clears every label already placed there.
+    let row = rowsUsed.findIndex((r) => r.every((o) => Math.abs(f.x - o.x) >= labelGap(f.value, o.value)));
+    if (row < 0) row = rowsUsed.length;
+    (rowsUsed[row] ??= []).push(f);
     const tick = ticks.find((t) => t.value === f.value);
     if (tick) {
       tick.label = true;
@@ -59,15 +69,16 @@ export function numberLineLayout(
     } else ends.push({ ...f, row });
   }
   for (const t of ticks) {
-    if (forced.some((f) => f.value !== t.value && Math.abs(f.x - t.x) < LABEL_GAP)) {
-      // Forced ticks keep their label; only plain ones drop.
-      if (!forced.some((f) => f.value === t.value)) t.label = false;
+    // Forced ticks keep their label; a plain one beside a forced label drops.
+    if (!forced.some((f) => f.value === t.value) && forced.some((f) => Math.abs(f.x - t.x) < labelGap(f.value, t.value))) {
+      t.label = false;
     }
   }
 
   return {
     ticks,
     ends,
+    rows: Math.max(1, rowsUsed.length),
     marks: (pic.marks ?? []).map((value) => ({ value, x: xOf(value) })),
     jumps: (pic.jumps ?? []).map((j) => ({
       fromX: xOf(j.from),
