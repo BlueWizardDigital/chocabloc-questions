@@ -2,31 +2,29 @@ import { LESSON_FORMAT_VERSIONS } from './types';
 import type { Lesson, LessonIndex } from './types';
 
 /** Caps mirror the lesson-format contract (mathSkills docs/contracts/lesson-format.md). */
-export const LESSON_CAPS = {
-  title: 40,
-  heading: 80,
-  text: 240,
-  tip: 160,
-  cardBig: 6,
-  cardWords: 40,
-  cardExample: 20,
-  result: 40,
-  say: 300,
-  cards: { min: 0, max: 4 },
-  exampleSteps: { min: 2, max: 6 },
-  moreHelpExamples: { min: 1, max: 3 },
-  moreHelpSteps: { min: 1, max: 4 },
-  operands: { min: 1, max: 3 },
-  passQuestions: { min: 1, max: 5 },
-  quickCheck: { min: 0, max: 3 },
-  base10Numbers: { min: 1, max: 2 },
-  base10Value: { min: 0, max: 9999 },
-  arrayDim: { min: 1, max: 15 },
-  numberLineMarks: 10,
-  numberLineJumps: 10,
-  columnsCarry: 12,
-  columnsResult: 16,
-} as const;
+const CAP_title = 40;
+const CAP_heading = 80;
+const CAP_text = 240;
+const CAP_tip = 160;
+const CAP_cardBig = 6;
+const CAP_cardWords = 40;
+const CAP_cardExample = 20;
+const CAP_result = 40;
+const CAP_say = 300;
+const CAP_cards = { min: 0, max: 4 };
+const CAP_exampleSteps = { min: 2, max: 6 };
+const CAP_moreHelpExamples = { min: 1, max: 3 };
+const CAP_moreHelpSteps = { min: 1, max: 4 };
+const CAP_operands = { min: 1, max: 3 };
+const CAP_passQuestions = { min: 1, max: 5 };
+const CAP_quickCheck = { min: 0, max: 3 };
+const CAP_base10Numbers = { min: 1, max: 2 };
+const CAP_base10Value = { min: 0, max: 9999 };
+const CAP_arrayDim = { min: 1, max: 15 };
+const CAP_numberLineMarks = 10;
+const CAP_numberLineJumps = 10;
+const CAP_columnsCarry = 12;
+const CAP_columnsResult = 16;
 
 const SKILL_ID = /^[A-Z0-9]+(-[A-Z0-9]+)*$/;
 const LANG = /^[a-z]{2}(-[a-z]{2})?$/;
@@ -85,20 +83,20 @@ function picture(v: unknown): void {
   const kind = (v as Obj).kind;
   if (kind === 'base10') {
     const o = obj(v, ['kind', 'numbers', 'focus'], ['kind', 'numbers']);
-    for (const n of arr(o.numbers, LESSON_CAPS.base10Numbers.min, LESSON_CAPS.base10Numbers.max))
-      int(n, LESSON_CAPS.base10Value.min, LESSON_CAPS.base10Value.max);
+    for (const n of arr(o.numbers, CAP_base10Numbers.min, CAP_base10Numbers.max))
+      int(n, CAP_base10Value.min, CAP_base10Value.max);
     if ('focus' in o) place(o.focus);
   } else if (kind === 'array') {
     const o = obj(v, ['kind', 'rows', 'cols'], ['kind', 'rows', 'cols']);
-    int(o.rows, LESSON_CAPS.arrayDim.min, LESSON_CAPS.arrayDim.max);
-    int(o.cols, LESSON_CAPS.arrayDim.min, LESSON_CAPS.arrayDim.max);
+    int(o.rows, CAP_arrayDim.min, CAP_arrayDim.max);
+    int(o.cols, CAP_arrayDim.min, CAP_arrayDim.max);
   } else if (kind === 'numberLine') {
     const o = obj(v, ['kind', 'from', 'to', 'marks', 'jumps'], ['kind', 'from', 'to']);
     num(o.from);
     num(o.to);
-    if ('marks' in o) for (const m of arr(o.marks, 0, LESSON_CAPS.numberLineMarks)) num(m);
+    if ('marks' in o) for (const m of arr(o.marks, 0, CAP_numberLineMarks)) num(m);
     if ('jumps' in o)
-      for (const j of arr(o.jumps, 0, LESSON_CAPS.numberLineJumps)) {
+      for (const j of arr(o.jumps, 0, CAP_numberLineJumps)) {
         const jo = obj(j, ['from', 'to'], ['from', 'to']);
         num(jo.from);
         num(jo.to);
@@ -115,34 +113,34 @@ function picture(v: unknown): void {
         if (!DECIMAL.test(n)) fail();
       } else num(n);
     }
-    optStr(o, 'carry', LESSON_CAPS.columnsCarry);
-    optStr(o, 'result', LESSON_CAPS.columnsResult);
+    optStr(o, 'carry', CAP_columnsCarry);
+    optStr(o, 'result', CAP_columnsResult);
     if ('focus' in o) place(o.focus);
   } else fail();
 }
 
 function step(v: unknown): void {
   const o = obj(v, ['heading', 'text', 'picture', 'result', 'say'], ['heading', 'text']);
-  str(o.heading, LESSON_CAPS.heading);
-  str(o.text, LESSON_CAPS.text);
+  str(o.heading, CAP_heading);
+  str(o.text, CAP_text);
   if ('picture' in o && 'result' in o) fail();
   if ('picture' in o) picture(o.picture);
-  optStr(o, 'result', LESSON_CAPS.result);
-  optStr(o, 'say', LESSON_CAPS.say);
+  optStr(o, 'result', CAP_result);
+  optStr(o, 'say', CAP_say);
 }
 
 function example(v: unknown, steps: { min: number; max: number }): void {
   const o = obj(v, ['operands', 'steps'], ['operands', 'steps']);
-  for (const n of arr(o.operands, LESSON_CAPS.operands.min, LESSON_CAPS.operands.max)) num(n);
+  for (const n of arr(o.operands, CAP_operands.min, CAP_operands.max)) num(n);
   for (const s of arr(o.steps, steps.min, steps.max)) step(s);
 }
 
 function card(v: unknown): void {
   const o = obj(v, ['big', 'words', 'example', 'say'], ['big', 'words', 'example']);
-  str(o.big, LESSON_CAPS.cardBig);
-  str(o.words, LESSON_CAPS.cardWords);
-  str(o.example, LESSON_CAPS.cardExample);
-  optStr(o, 'say', LESSON_CAPS.say);
+  str(o.big, CAP_cardBig);
+  str(o.words, CAP_cardWords);
+  str(o.example, CAP_cardExample);
+  optStr(o, 'say', CAP_say);
 }
 
 function checkLesson(v: unknown): void {
@@ -153,21 +151,21 @@ function checkLesson(v: unknown): void {
   );
   if (typeof o.lang !== 'string' || !LANG.test(o.lang)) fail();
   if (typeof o.skillId !== 'string' || !SKILL_ID.test(o.skillId)) fail();
-  str(o.title, LESSON_CAPS.title);
+  str(o.title, CAP_title);
 
   const idea = obj(o.idea, ['heading', 'text', 'cards', 'tip', 'picture', 'say'], ['heading', 'text']);
-  str(idea.heading, LESSON_CAPS.heading);
-  str(idea.text, LESSON_CAPS.text);
+  str(idea.heading, CAP_heading);
+  str(idea.text, CAP_text);
   if ('cards' in idea)
-    for (const c of arr(idea.cards, LESSON_CAPS.cards.min, LESSON_CAPS.cards.max)) card(c);
-  optStr(idea, 'tip', LESSON_CAPS.tip);
+    for (const c of arr(idea.cards, CAP_cards.min, CAP_cards.max)) card(c);
+  optStr(idea, 'tip', CAP_tip);
   if ('picture' in idea) picture(idea.picture);
-  optStr(idea, 'say', LESSON_CAPS.say);
+  optStr(idea, 'say', CAP_say);
 
-  example(o.example, LESSON_CAPS.exampleSteps);
+  example(o.example, CAP_exampleSteps);
 
   const aw = obj(o.afterWrong, ['tip', 'picture'], ['tip']);
-  str(aw.tip, LESSON_CAPS.tip);
+  str(aw.tip, CAP_tip);
   if ('picture' in aw) {
     const p = obj(aw.picture, ['kind', 'from'], ['kind', 'from']);
     if (typeof p.kind !== 'string' || !KINDS.includes(p.kind)) fail();
@@ -176,14 +174,14 @@ function checkLesson(v: unknown): void {
 
   const mh = obj(o.moreHelp, ['skillId', 'title', 'examples'], ['skillId', 'title', 'examples']);
   if (typeof mh.skillId !== 'string' || !SKILL_ID.test(mh.skillId)) fail();
-  str(mh.title, LESSON_CAPS.title);
-  for (const e of arr(mh.examples, LESSON_CAPS.moreHelpExamples.min, LESSON_CAPS.moreHelpExamples.max))
-    example(e, LESSON_CAPS.moreHelpSteps);
+  str(mh.title, CAP_title);
+  for (const e of arr(mh.examples, CAP_moreHelpExamples.min, CAP_moreHelpExamples.max))
+    example(e, CAP_moreHelpSteps);
 
   const pass = obj(o.pass, ['questions', 'right'], ['questions', 'right']);
-  const q = int(pass.questions, LESSON_CAPS.passQuestions.min, LESSON_CAPS.passQuestions.max);
+  const q = int(pass.questions, CAP_passQuestions.min, CAP_passQuestions.max);
   int(pass.right, 1, q);
-  int(o.quickCheck, LESSON_CAPS.quickCheck.min, LESSON_CAPS.quickCheck.max);
+  int(o.quickCheck, CAP_quickCheck.min, CAP_quickCheck.max);
 }
 
 function checkIndex(v: unknown): void {

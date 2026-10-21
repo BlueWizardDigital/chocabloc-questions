@@ -57,11 +57,10 @@ function canvasDrawing(draw: Draw): HTMLCanvasElement {
   // The box is set here, not left to a stylesheet: if the bitmap size could change
   // the box, every redraw would trigger the observer again.
   canvas.style.cssText = `display:block;width:100%;height:${CANVAS_H}px`;
-  let drawn = false;
   const ro = new ResizeObserver((entries) => {
     // A removed canvas reports one last zero size; stop watching it then.
     if (!canvas.isConnected) {
-      if (drawn) ro.disconnect();
+      ro.disconnect();
       return;
     }
     const w = entries[entries.length - 1]!.contentRect.width;
@@ -72,7 +71,6 @@ function canvasDrawing(draw: Draw): HTMLCanvasElement {
     canvas.height = Math.round(CANVAS_H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     draw(ctx, w, CANVAS_H);
-    drawn = true;
   });
   ro.observe(canvas);
   return canvas;

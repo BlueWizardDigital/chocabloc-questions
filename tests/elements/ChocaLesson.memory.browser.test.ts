@@ -92,10 +92,40 @@ function cycle(speech?: { cancels: number }): { el: ChocaLesson; cancelsOnRemove
   const read = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="read-to-me"]');
   if (!read) throw new Error('no Read to me button');
   read.click();
+  // Next onto the first worked-example step, which draws a base10 picture on a canvas.
+  const next = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="actions"] [part~="button"]:not([part~="read-to-me"])');
+  if (!next) throw new Error('no Next button');
+  next.click();
+  if (!el.shadowRoot!.querySelector('canvas')) throw new Error('the step drew no canvas');
   const before = speech?.cancels ?? 0;
   el.remove();
   return { el, cancelsOnRemove: (speech?.cancels ?? 0) - before };
 }
+
+/** Counts ResizeObservers created and not yet disconnected. Restored after the test. */
+function watchObservers(): { live(): number; made: number } {
+  const Real = window.ResizeObserver;
+  const open = new Set<object>();
+  const out = { made: 0, live: () => open.size };
+  class Spy extends Real {
+    constructor(cb: ResizeObserverCallback) {
+      super(cb);
+      out.made++;
+      open.add(this);
+    }
+    disconnect(): void {
+      open.delete(this);
+      super.disconnect();
+    }
+  }
+  window.ResizeObserver = Spy;
+  cleanups.push(() => {
+    window.ResizeObserver = Real;
+  });
+  return out;
+}
+
+const frame = (): Promise<void> => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 
 const gc = (): Promise<void> => {
   (window as unknown as { gc(): void }).gc();
@@ -124,6 +154,15 @@ describe('<chocabloc-lesson> leaves nothing behind', () => {
     expect(watch.adds, 'the spy saw the element add listeners').to.be.greaterThan(0);
     expect(watch.open(), 'listeners added and never removed').to.deep.equal([]);
     expect(speech.speaks).to.equal(CYCLES);
+  });
+
+  it('every picture canvas observer is disconnected when its screen is removed before it draws', async () => {
+    stubSpeech();
+    const obs = watchObservers();
+    for (let i = 0; i < CYCLES; i++) cycle();
+    await frame();
+    expect(obs.made, 'the cycles made picture observers').to.be.greaterThan(0);
+    expect(obs.live(), 'observers still connected').to.equal(0);
   });
 
   it(`${LONG_RUN} mount, read and remove cycles grow the heap by under ${MAX_GROWTH_KB} KB`, async function () {
