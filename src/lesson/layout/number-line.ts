@@ -3,7 +3,8 @@ import type { LessonPicture } from '../types';
 type NumberLine = Extract<LessonPicture, { kind: 'numberLine' }>;
 
 const STEPS = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000];
-const MAX_TICKS = 20;
+// 0-20 is 21 whole numbers, so step 1 must fit.
+const MAX_TICKS = 21;
 const FULL_LABEL_TICKS = 11;
 const PAD = 16;
 /** One character of the 14px bold label font is about 8.5px wide ("1000" and "−150" come to about 34px). */
@@ -38,7 +39,7 @@ export function numberLineLayout(
   if (span === 0) values.push(to);
   else if (Number.isFinite(span) && span > 0 && from + step > from) {
     // Bounded by index, not by value, so no span can make this loop run long.
-    for (let i = 0; i < MAX_TICKS && from + i * step < to; i++) values.push(from + i * step);
+    for (let i = 0; i < MAX_TICKS - 1 && from + i * step < to; i++) values.push(from + i * step);
     values.push(to);
   }
 

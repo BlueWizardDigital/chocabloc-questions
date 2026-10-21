@@ -29,21 +29,30 @@ describe('base10', () => {
 
 describe('numberLineLayout', () => {
   const W = 320;
-  test('0-20 uses step 2, 11 ticks, all labelled', () => {
+  test('0-20 has a tick for every whole number, labelled every second one', () => {
     const l = numberLineLayout({ kind: 'numberLine', from: 0, to: 20 }, W);
-    expect(l.ticks).toHaveLength(11);
-    expect(l.ticks[1].value - l.ticks[0].value).toBe(2);
-    expect(l.ticks.every((t) => t.label)).toBe(true);
+    expect(l.ticks.map((t) => t.value)).toEqual(Array.from({ length: 21 }, (_, i) => i));
+    expect(l.ticks.filter((t) => t.label).map((t) => t.value)).toEqual([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]);
+  });
+  test('0-20 with marks 10 and 12 and a jump 12 to 10 keeps ticks 10, 11, 12', () => {
+    const l = numberLineLayout({ kind: 'numberLine', from: 0, to: 20, marks: [10, 12], jumps: [{ from: 12, to: 10 }] }, W);
+    for (const v of [10, 11, 12]) expect(l.ticks.some((t) => t.value === v)).toBe(true);
+    for (const v of [10, 12]) expect(l.ticks.find((t) => t.value === v)?.label).toBe(true);
+  });
+  test('0-100 uses step 5 and labels 0, 10 ... 100', () => {
+    const l = numberLineLayout({ kind: 'numberLine', from: 0, to: 100 }, W);
+    expect(l.ticks[1].value).toBe(5);
+    expect(l.ticks.filter((t) => t.label).map((t) => t.value)).toEqual([0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
   });
   test('0-10 is fully labelled', () => {
     const l = numberLineLayout({ kind: 'numberLine', from: 0, to: 10 }, W);
     expect(l.ticks).toHaveLength(11);
     expect(l.ticks.every((t) => t.label)).toBe(true);
   });
-  test('0-1000 uses step 100, 11 ticks', () => {
+  test('0-1000 uses step 50, 21 ticks', () => {
     const l = numberLineLayout({ kind: 'numberLine', from: 0, to: 1000 }, W);
-    expect(l.ticks).toHaveLength(11);
-    expect(l.ticks[1].value).toBe(100);
+    expect(l.ticks).toHaveLength(21);
+    expect(l.ticks[1].value).toBe(50);
   });
   test('more than 11 ticks label every second tick plus the ends', () => {
     const l = numberLineLayout({ kind: 'numberLine', from: 0, to: 15 }, W);
