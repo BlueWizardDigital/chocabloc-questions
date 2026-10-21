@@ -53,6 +53,19 @@ describe('pictureFromQuestion: operands', () => {
       marks: [3, 12],
     });
   });
+  test('decimal_addition draws a columns picture', () => {
+    const spec = { kind: 'columns', from: 'operands' } as const;
+    expect(pictureFromQuestion(spec, ops([0.27, 87.39], 'decimal_addition'))).toEqual({
+      kind: 'columns',
+      op: '+',
+      numbers: [0.27, 87.39],
+    });
+    expect(pictureFromQuestion(spec, ops([16.8, 32.8], 'decimal_addition'))).toEqual({
+      kind: 'columns',
+      op: '+',
+      numbers: [16.8, 32.8],
+    });
+  });
   test('a span over 1000 gives null', () => {
     expect(pictureFromQuestion({ kind: 'numberLine', from: 'operands' }, ops([900, 200]))).toBeNull();
   });

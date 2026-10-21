@@ -2,7 +2,7 @@ import type { NormalizedQuestion } from '../types';
 import type { FromQuestionPicture, LessonPicture } from './types';
 
 const MAX_SPAN = 1000;
-const OPS = { addition: '+', subtraction: '−', multiplication: '×', comparison: 'compare' } as const;
+const OPS = { addition: '+', decimal_addition: '+', subtraction: '−', multiplication: '×', comparison: 'compare' } as const;
 
 const isInt = (n: number, lo: number, hi: number) => Number.isInteger(n) && n >= lo && n <= hi;
 

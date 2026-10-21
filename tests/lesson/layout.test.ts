@@ -169,6 +169,11 @@ describe('columnsLayout', () => {
     expect(l.rows[0].cells).toEqual(['', '', '2', '.', '5', '0']);
     expect(l.rows[1].cells).toEqual(['+', '1', '3', '.', '4', '']);
   });
+  test('float operands with one and two decimals line their points up', () => {
+    const l = columnsLayout({ kind: 'columns', op: '+', numbers: [16.8, 87.39] });
+    expect(l.rows[0].cells).toEqual(['', '1', '6', '.', '8', '']);
+    expect(l.rows[1].cells).toEqual(['+', '8', '7', '.', '3', '9']);
+  });
   test('compare has no op column', () => {
     const l = columnsLayout({ kind: 'columns', op: 'compare', numbers: [12, 7] });
     expect(l.opColumn).toBe(false);
