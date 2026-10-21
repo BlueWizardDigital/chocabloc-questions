@@ -3,22 +3,10 @@
 All notable changes to chocabloc-questions are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.6.0-beta.22] — 2026-10-21
+## [0.7.0-beta.0] — 2026-10-21
 
-**Minor**: two additive entry points for adaptive questions (Math Progression session 1);
-nothing renamed or removed. Only Math Bingo moves to this release now; each other bulk game
-moves when it is switched on.
-
-### Added
-
-- **`bridge.requestQuestionBatch(opts)`** returns `{ questions, adaptive }`: the batch raw (as
-  `requestQuestions` returns it, `kidLevel` per row included) plus the server's
-  `adaptive: { version, start, up, down }` block. `adaptive` is `null` unless the reply carries
-  an object with `version === 1` and three integer fields. Never throws. `requestQuestions`
-  is unchanged and shares the same internal fetch. New exported type `AdaptiveInfo`.
-- **`chocabloc-questions/level-picker`**, a kid-level picker entry point.
-
-**Minor**: a new `chocabloc-questions/lesson` entry; nothing renamed or removed.
+**Minor**: a new `chocabloc-questions/lesson` entry point; nothing renamed or removed. Per the
+public-API rule a new entry point is minor, so the line moves from 0.6 to 0.7.
 
 ### Added
 
@@ -42,6 +30,33 @@ moves when it is switched on.
 - The base-ten and array drawings moved into their own files (`draw-base10`, `draw-array`),
   unchanged, so the lesson player can share them. `canvas-question` grew by about 50 B gz
   from the new module order; no runtime code changed.
+- **Size:** the lesson entry has its own size line, `lesson Help` (`dist/lesson.mjs`), limit
+  12 KB gz. Question code loads lazily from a separate chunk and is not in that line.
+
+### Fixed
+
+- **Number-line picture:** an adding or subtracting question marks where the jump starts and
+  ends, not the second number. A 0-20 line has a tick for every whole number. Every mark and
+  jump end has its number, and a plain tick label beside one drops out; labels that would
+  touch go on a second row.
+- **Decimal adding:** `decimal_addition` questions draw their columns picture.
+- **Rounding:** a rounding question's number line spans the two multiples of `round_to`
+  (10, 100 or 1000) around the number.
+
+## [0.6.0-beta.22] — 2026-10-21
+
+**Minor**: two additive entry points for adaptive questions (Math Progression session 1);
+nothing renamed or removed. Only Math Bingo moves to this release now; each other bulk game
+moves when it is switched on.
+
+### Added
+
+- **`bridge.requestQuestionBatch(opts)`** returns `{ questions, adaptive }`: the batch raw (as
+  `requestQuestions` returns it, `kidLevel` per row included) plus the server's
+  `adaptive: { version, start, up, down }` block. `adaptive` is `null` unless the reply carries
+  an object with `version === 1` and three integer fields. Never throws. `requestQuestions`
+  is unchanged and shares the same internal fetch. New exported type `AdaptiveInfo`.
+- **`chocabloc-questions/level-picker`**, a kid-level picker entry point.
 
 ## [0.6.0-beta.21] — 2026-10-08
 
