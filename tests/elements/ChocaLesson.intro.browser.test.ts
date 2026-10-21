@@ -515,7 +515,48 @@ describe('<chocabloc-lesson> Intro', () => {
       const el = await wrongFirst(cmp('w2', [34, 99]), { correct: false, expected: null as unknown as string });
       const why = part(el, 'why')!;
       expect(why.textContent).to.include(fixture.afterWrong.tip).and.not.include('The answer is');
-      expect(why.querySelectorAll('canvas')).to.have.length(2);
+      expect(why.querySelector('[part~="picture"]') === null, 'no picture without the server verdict').to.equal(true);
+    });
+
+    describe('the picture waits for the server', () => {
+      const adding = (id: string): NormalizedQuestion =>
+        ({ ...cmp(id, [2, 9]), content: { operands: [2, 9], operation: 'addition' } }) as unknown as NormalizedQuestion;
+      const lineLesson = (): Lesson =>
+        ({ ...fixture, afterWrong: { tip: 'Count on.', picture: { kind: 'numberLine', from: 'operands' } } }) as Lesson;
+
+      async function whyFor(act: (el: ChocaLesson, host: Host) => void): Promise<HTMLElement> {
+        const host = fakeHost([[adding('n1'), ...five().slice(1)]]);
+        const el = intro(host, lineLesson());
+        button(el, 'Next').click();
+        await shown(el, 'n1');
+        act(el, host);
+        await until(() => part(el, 'why') !== null, 'the why card');
+        return part(el, 'why')!;
+      }
+
+      it('"I\'m not sure yet" shows no 11 anywhere in the why card', async () => {
+        const why = await whyFor((el) => button(el, "I'm not sure yet").click());
+        expect(why.querySelector('svg') === null, 'no number line').to.equal(true);
+        expect(why.textContent).to.not.include('11');
+        expect(why.textContent).to.include('Count on.');
+      });
+
+      it('a wrong answer with expected still draws the picture', async () => {
+        const why = await whyFor((el, host) => {
+          choose(el, '<');
+          host.last.reply.resolve({ correct: false, expected: '11' });
+        });
+        expect(why.querySelector('svg') !== null, 'number line drawn').to.equal(true);
+      });
+
+      it('a wrong answer with no expected draws no picture', async () => {
+        const why = await whyFor((el, host) => {
+          choose(el, '<');
+          host.last.reply.resolve({ correct: false });
+        });
+        expect(why.querySelector('svg') === null, 'no number line').to.equal(true);
+        expect(why.textContent).to.not.include('11');
+      });
     });
 
     it('for a question with no operands: the tip only', async () => {
@@ -535,6 +576,7 @@ describe('<chocabloc-lesson> Intro', () => {
       await until(() => part(el, 'why') !== null, 'the why card');
       expect(host.checks).to.have.length(0);
       expect(part(el, 'why')!.textContent).to.not.include('The answer is');
+      expect(part(el, 'why')!.querySelector('[part~="picture"]') === null, 'no picture after unsure').to.equal(true);
       expect(answerRows(answers)).to.deep.equal([['quickCheck', 'q1', null, 'unsure']]);
     });
   });
@@ -579,6 +621,23 @@ describe('<chocabloc-lesson> Intro', () => {
       const done = listen('lesson-done');
       const el = intro(host, { ...fixture, quickCheck: 0 });
       await until(() => logged.warn.length === 3, 'three warnings');
+      expect(firstArgs(logged.warn).every((w) => w.startsWith('[chocabloc-lesson] skipped a question'))).to.equal(true);
+      button(el, 'Next').click();
+      await walk(el, fixture.example.steps);
+      await finish(el, "Let's play!");
+      expect(done[0]).to.deep.include({ outcome: 'incomplete', incompleteStep: 'yourTurn', startSkillId: null });
+    });
+  });
+
+  describe('questions that carry an answer', () => {
+    it('a legacy {answer, distractors} row and a row with no token are dropped, so a short batch is incomplete', async () => {
+      const logged = captureConsole();
+      const legacy = { ...cmp('l1', [34, 99]), answer: '<', distractors: [{ value: '>' }] } as unknown as NormalizedQuestion;
+      const tokenless = { ...cmp('l2', [34, 99]), answerToken: undefined } as unknown as NormalizedQuestion;
+      const host = fakeHost([[...five().slice(0, 2), legacy, tokenless]]);
+      const done = listen('lesson-done');
+      const el = intro(host, { ...fixture, quickCheck: 0 });
+      await until(() => logged.warn.length === 2, 'two warnings');
       expect(firstArgs(logged.warn).every((w) => w.startsWith('[chocabloc-lesson] skipped a question'))).to.equal(true);
       button(el, 'Next').click();
       await walk(el, fixture.example.steps);

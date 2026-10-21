@@ -27,7 +27,9 @@ export interface Item {
  * The questions in `batch` that can be shown, minus ids already in `seen` and
  * repeats within the batch, in order. normalizeQuestion keeps `answerToken` and
  * accepts a question that is already normalized; one it can't read is skipped
- * with a warning, so it counts as not arrived. Callers treat a batch that is
+ * with a warning, so it counts as not arrived. So is one that carries an `answer`
+ * or has no `answerToken`: the player only takes choices-only questions the server
+ * checks, never one that hands the answer to the page. Callers treat a batch that is
  * not a list as a failed fetch.
  */
 export function prepare(batch: readonly NormalizedQuestion[], seen: ReadonlySet<string>): Item[] {
@@ -39,6 +41,13 @@ export function prepare(batch: readonly NormalizedQuestion[], seen: ReadonlySet<
       n = normalizeQuestion(q, { onMalformed: (r) => console.warn('[chocabloc-lesson] skipped a question:', r.reason) });
     } catch (err) {
       console.warn('[chocabloc-lesson] skipped a question that could not be shown:', err);
+    }
+    if (n && ((q as { answer?: unknown }).answer != null || (n as { answer?: unknown }).answer != null)) {
+      console.warn('[chocabloc-lesson] skipped a question that carries its answer:', n.id);
+      n = null;
+    } else if (n && !(n as { answerToken?: unknown }).answerToken) {
+      console.warn('[chocabloc-lesson] skipped a question with no answerToken:', n.id);
+      n = null;
     }
     if (n) {
       hostsOwn.set(n, q);
@@ -76,8 +85,9 @@ const promptOf = (q: NormalizedQuestion): string => (q.format === 'text' ? q.con
 
 /**
  * <chocabloc-question>'s own composed events. They stop at the question, so the
- * page sees only the player's events: `answered` carries `expected`, and a check
- * must never hand the answer to anything listening on the page.
+ * page sees only the player's events. That is tidiness, not a seal: a capture-phase
+ * listener on document still sees them. The control that keeps the answer from the
+ * page in Check is stripping `expected` from the verdict the element gets (below).
  */
 const INNER_EVENTS = ['answered', 'chocabloc-validation-unavailable', 'chocabloc-misconfigured'];
 const stop = (e: Event): void => e.stopPropagation();
@@ -158,7 +168,9 @@ export function ask(o: AskOptions): Asking {
   const whyCard = (afterWrong: Lesson['afterWrong'], expected: unknown): void => {
     const card = h('div', 'why');
     card.tabIndex = -1;
-    const pic = afterWrong.picture ? pictureFromQuestion(afterWrong.picture, item.q) : null;
+    // The picture shows the question's numbers, and often the answer (a jump's end, a digit's
+    // place), so it waits for the server's verdict: no `expected`, no picture. The tip still shows.
+    const pic = afterWrong.picture && expected != null ? pictureFromQuestion(afterWrong.picture, item.q) : null;
     if (pic) card.append(renderPicture(pic, msg, shell.lang));
     card.append(h('p', 'tip', undefined, afterWrong.tip));
     // `== null`, never truthiness: 0 is an answer.

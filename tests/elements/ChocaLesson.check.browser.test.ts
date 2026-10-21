@@ -125,15 +125,15 @@ describe('<chocabloc-lesson> Check', () => {
 
   it('never shows the answer of a typed-answer question either', async () => {
     const host = fakeHost();
-    // Not a bank row (those always carry choices): a host's own question with no choices.
+    // Choices-only with a token, switched to the typed-answer input below.
     const typed = {
       id: 't1',
       format: 'text',
       skillIds: ['SKILL-A'],
       questionText: 'Type the sum of 3 and 4.',
       content: { stem: 'Type the sum of 3 and 4.' },
-      answer: '7',
-      distractors: [],
+      choices: [{ value: '7' }, { value: '9' }],
+      answerToken: 'token-t1',
     } as unknown as NormalizedQuestion;
     const el = check(host, [typed]);
     await shown(el, 't1');
