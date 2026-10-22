@@ -24,6 +24,13 @@ public-API rule a new entry point is minor, so the line moves from 0.6 to 0.7.
 - **Helpers on the lesson entry:** `parseLesson`, `loadLesson`, `loadLessonIndex`,
   `LESSON_FORMAT_VERSIONS` and `lessonMessagesEn`.
 - **Type exports** of `ValidateAnswer` and `Translator` (from the lesson entry).
+- **Answer guard:** Intro and Check use only choices-only questions. A question that carries an
+  `answer`, or has no `answerToken`, is dropped with a console warning and counts as not
+  arrived, so a short batch ends the run the usual way. The "why" card draws its picture only
+  when the validator returned `expected`, so "I'm not sure yet" and a check with no answer
+  show the tip alone.
+- **Base-ten pictures:** every number in one picture is drawn with the same block size, so the
+  larger number never has smaller blocks.
 
 ### Changed
 
