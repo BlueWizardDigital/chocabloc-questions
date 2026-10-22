@@ -137,16 +137,24 @@ function b10Render(
   }
 }
 
+/** The scale `blocks` need to fit a w x h box, capped at 1: what a lone set is drawn at. */
+export function base10FitScale(blocks: B10, w: number, h: number): number {
+  const natW = b10W(blocks);
+  const natH = b10H(blocks);
+  if (natW <= 0 || natH <= 0) return 1;
+  const pad = 4;
+  return Math.min((w - 2 * pad) / natW, (h - 2 * pad) / natH, 1);
+}
+
 function b10ScaledSet(
   ctx: CanvasRenderingContext2D, blocks: B10,
   ox: number, oy: number, availW: number, availH: number,
-  fills: B10Fills, stroke: string,
+  fills: B10Fills, stroke: string, forcedScale?: number,
 ): void {
   const natW = b10W(blocks);
   const natH = b10H(blocks);
   if (natW <= 0 || natH <= 0) return;
-  const pad = 4;
-  const scale = Math.min((availW - 2 * pad) / natW, (availH - 2 * pad) / natH, 1);
+  const scale = forcedScale ?? base10FitScale(blocks, availW, availH);
   const offX = ox + (availW - natW * scale) / 2;
   const offY = oy + (availH - natH * scale) / 2;
   ctx.save();
@@ -160,6 +168,8 @@ export function drawBase10Blocks(
   ctx: CanvasRenderingContext2D, w: number, h: number,
   content: {
     operation?: string; blocks?: B10;
+    /** Draw `blocks` at this scale instead of their own fit, so several sets can share one block size. */
+    scale?: number;
     tens_shown?: number; ones_shown?: number;
     set_a?: { number: number; blocks: B10 };
     set_b?: { number: number; blocks: B10 };
@@ -195,5 +205,5 @@ export function drawBase10Blocks(
   const blocks: B10 = op === 'base10_regroup'
     ? { tens: content.tens_shown ?? 0, ones: content.ones_shown ?? 0 }
     : content.blocks ?? {};
-  b10ScaledSet(ctx, blocks, 0, 0, w, h, fills, stroke);
+  b10ScaledSet(ctx, blocks, 0, 0, w, h, fills, stroke, content.scale);
 }

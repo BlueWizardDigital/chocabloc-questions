@@ -1,4 +1,4 @@
-import { drawBase10Blocks } from '../../elements/draw-base10';
+import { base10FitScale, drawBase10Blocks } from '../../elements/draw-base10';
 import { drawArray } from '../../elements/draw-array';
 import { base10Blocks, base10Caption, focusColors } from '../layout/base10';
 import { numberLineLayout } from '../layout/number-line';
@@ -79,11 +79,16 @@ function canvasDrawing(draw: Draw): HTMLCanvasElement {
 function base10(pic: Pic<'base10'>, msg: Msg, lang: string): HTMLElement {
   const row = h('div', undefined, pic.numbers.length > 1 ? 'b10 two' : 'b10');
   const colors = focusColors(pic.focus);
+  const sets = pic.numbers.map(base10Blocks);
   for (const n of pic.numbers) {
     const fig = h('div', undefined, 'fig');
     fig.append(
       h('span', undefined, 'num', String(n)),
-      canvasDrawing((ctx, w, ht) => drawBase10Blocks(ctx, w, ht, { blocks: base10Blocks(n) }, colors)),
+      // One block size for every number: a kid reads size as value, so all use the smallest fit.
+      canvasDrawing((ctx, w, ht) => {
+        const scale = Math.min(...sets.map((b) => base10FitScale(b, w, ht)));
+        drawBase10Blocks(ctx, w, ht, { blocks: base10Blocks(n), scale }, colors);
+      }),
       h('span', 'caption', undefined, base10Caption(n, msg, lang)),
     );
     row.append(fig);
