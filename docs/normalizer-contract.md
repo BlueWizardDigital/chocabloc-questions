@@ -73,6 +73,8 @@ Most formats **ignore** whatever the bank sent and set `imageType` themselves. F
 | `geometry_angle_classify` | `angle` |
 | `geometry_circle_parts` | `circle_parts` |
 | `fraction_concept` | `fraction_visual` |
+| `fraction_models` | `fraction_models` |
+| `fraction_number_line` | `fraction_number_line` |
 | `time` | `analog_clock` |
 | `pattern` | `pattern_visual` |
 | `coordinate_distance` | `coordinate_plane` |
@@ -113,6 +115,8 @@ including `content.operation`, which only `base10_blocks` keeps.
 | `geometry_area` | `content.components` keeps only entries with numeric `width` **and** `height` |
 | `pattern` | `content.sequence` entries are coerced to strings |
 | `fraction_concept` | `content.fraction` must be `[numerator, denominator]` numbers, else throws |
+| `fraction_models`, `fraction_number_line` | `content` is kept as sent. The draw function checks it (models 1-4, `d` 1-12, `n` within `d x wholes`, `max x d` at most 16, and so on) and paints nothing, with the canvas hidden, when it is malformed; the normalizer does not throw |
+| `fraction_text` | stem format: `questionText` is the question, and `content` holds `operation` only |
 
 ---
 

@@ -39,6 +39,9 @@ const TEXT_ONLY_BY_DESIGN: Record<string, string> = {
   // The canonical text format — the stem is the question.
   text: 'the row ships its own stem and nothing else',
 
+  // Fractions as words and numbers (Trello 427): every value the question needs is in its stem.
+  fraction_text: 'the fractions, decimals and mixed numbers are in the stem',
+
   // Arithmetic: both operands and the operator are in the stem.
   addition: 'both addends are in the stem',
   addition_three: 'all three addends are in the stem',
@@ -139,6 +142,8 @@ const PRINTS_ANSWER_BY_DESIGN: Record<string, string> = {
   data_graph: 'reading the graph is the question: its axis numbers and category names are what it asks about',
   coordinate_distance: 'the axis numbers label the grid the child counts on; the distance itself is never drawn',
   pattern: 'a repeating pattern shows its own items, so the next item already appears earlier in the sequence',
+  fraction_models: 'the letter labels and the captions are the options, and a letter answer is one of them',
+  fraction_number_line: 'the letter labels and the whole-number ticks are the options; the marked fraction is never labelled',
 };
 
 /* ================================================================
@@ -359,8 +364,20 @@ describe('format conformance — every dispatched format renders something', () 
         const out = await render(q);
         const printed = out.pictureText.filter((t) => tokens(t).includes(String(answer)));
         if (exempt) {
+          // An exemption covers the format, not each row: a row whose answer is a
+          // computed fraction (strip equivalence, number-line equivalence) prints
+          // nothing, and that is correct. The exemption is stale only when no row
+          // of the format prints its answer.
+          let printedAny = printed.length > 0;
+          for (const other of variants) {
+            if (printedAny || other === raw) continue;
+            const oq = normalizeQuestion(other);
+            if (!oq || oq.answer === undefined || typeof oq.answer === 'object') continue;
+            const oo = await render(oq);
+            printedAny = oo.pictureText.some((t) => tokens(t).includes(String(oq.answer)));
+          }
           expect(
-            printed,
+            printedAny ? [true] : printed,
             `${label}: PRINTS_ANSWER_BY_DESIGN says this picture shows its answer (${String(answer)}), ` +
             'but it no longer does. Remove the stale exemption',
           ).to.not.have.lengthOf(0);

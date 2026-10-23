@@ -1,5 +1,5 @@
 {
-  "_source": "server-new ab5ee39 services/renderContent.js",
+  "_source": "server-new 47f82ae services/renderContent.js",
   "CONTENT_BY_FORMAT": {
     "addition": [
       "operands",
@@ -579,6 +579,42 @@
       "operation",
       "place",
       "number"
+    ],
+    "fraction_models": [
+      "operation",
+      "layout",
+      {
+        "models": [
+          "shape",
+          "d",
+          "n",
+          "wholes",
+          "label",
+          "caption",
+          "split"
+        ]
+      },
+      "guide"
+    ],
+    "fraction_number_line": [
+      "operation",
+      "tick_labels",
+      {
+        "lines": [
+          "max",
+          "d"
+        ]
+      },
+      {
+        "points": [
+          "line",
+          "n",
+          "label"
+        ]
+      }
+    ],
+    "fraction_text": [
+      "operation"
     ]
   }
 }

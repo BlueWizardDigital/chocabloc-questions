@@ -367,6 +367,9 @@ geometry, time, patterns, and base-10 fall back to their normal stem by design. 
 | `geometry_circle_parts` | `circle_parts` | `ChocaCanvasQuestion` |
 | `data_graph` | `bar_graph` / `pictograph` | `ChocaCanvasQuestion` |
 | `fraction_concept` | `fraction_visual` | `ChocaCanvasQuestion` |
+| `fraction_models` | `fraction_models` | `ChocaCanvasQuestion` (bars, circles, wholes, stacked strips) |
+| `fraction_number_line` | `fraction_number_line` | `ChocaCanvasQuestion` (one or two lines, labelled points) |
+| `fraction_text` | — | stem only (no picture; the stem is `questionText`) |
 | `time` | `analog_clock` | `ChocaCanvasQuestion` |
 | `coordinate_distance` | `coordinate_plane` | `ChocaCanvasQuestion` |
 | `base10_blocks` | `base10_blocks` | `ChocaCanvasQuestion` |
@@ -392,6 +395,7 @@ chocabloc-question {
   --cq-coin-penny-img: url('/sprites/penny.png');
   --cq-choice-bg: #D4881F;
   --cq-focus-ring: #1C2B45;
+  --cq-frac-fill: #42a5f5; /* fraction pictures: shaded parts */
 }
 chocabloc-question::part(container) {
   background: #FFF8E5;

@@ -3,6 +3,32 @@
 All notable changes to chocabloc-questions are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+**Minor** (Trello 427, fraction skills for grades 3-6): new formats and CSS variables;
+nothing renamed or removed. The version is set at release.
+
+### Added
+
+- **Three formats.** `fraction_models` and `fraction_number_line` draw on
+  `<choca-canvas-question>` (`drawFractionModels`, `drawFractionNumberLine`); `fraction_text`
+  is a stem-only format. Malformed content paints nothing and hides the canvas.
+- **Five CSS variables:** `--cq-frac-fill`, `--cq-frac-empty`, `--cq-frac-stroke`,
+  `--cq-frac-guide` and `--cq-frac-text` (defaults `#42a5f5`, `#ffffff`, `#1976d2`, `#ef4444`,
+  `#1d1d1f`).
+- **Fixed choice orders.** A choice set whose values all belong to one of `A, B, C, D, Same`,
+  `less than, equal to, greater than` or `0, 1/2, 1` is shown in that order; any other set keeps
+  the server's order.
+
+### Fixed
+
+- **`fraction_concept` guard (Trello 426).** `fraction_visual` content without a usable
+  `fraction` (for example `{}`) no longer throws or draws a broken picture: nothing is drawn and
+  the canvas is hidden. Type change: `drawFractionVisual` now returns a boolean, and
+  `FractionConceptContent.fraction` is optional.
+- **Canvas on narrow screens.** The question canvas has a `max-width`, so it no longer overflows
+  its container at a 320 px viewport.
+
 ## [0.6.0-beta.22] — 2026-10-21
 
 **Minor**: two additive entry points for adaptive questions (Math Progression session 1);

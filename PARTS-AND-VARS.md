@@ -79,6 +79,19 @@ element via `getComputedStyle` and passed to the canvas draw function.
 | `--cq-b10-thousands` | `#ef9a9a` | Thousand cube fill |
 | `--cq-b10-stroke` | `#000` | Block stroke/outline color |
 
+## `<choca-canvas-question>` — fraction pictures
+
+Applies when `format` is `fraction_models` or `fraction_number_line`. Read from the host
+element via `getComputedStyle`, like the base-10 vars.
+
+| Var | Default | Purpose |
+|-----|---------|---------|
+| `--cq-frac-fill` | `#42a5f5` | Shaded part fill |
+| `--cq-frac-empty` | `#ffffff` | Unshaded part fill |
+| `--cq-frac-stroke` | `#1976d2` | Part and number-line outline |
+| `--cq-frac-guide` | `#ef4444` | Dashed guide line on stacked strips |
+| `--cq-frac-text` | `#1d1d1f` | Labels, captions and tick numbers |
+
 ## `<choca-choice-pad>` specific
 
 | Part | What it targets |

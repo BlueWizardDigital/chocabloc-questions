@@ -183,6 +183,92 @@ export const REPRESENTATIVE_ROWS: Record<string, Row | Row[]> = {
   fraction_concept: row('fraction_concept', {
     content: { fraction: [1, 2] }, answer: '1/2',
   }),
+  // Trello 427. One row per operation family. More than two models stack.
+  fraction_models: [
+    row('fraction_models', {
+      imageType: 'fraction_models', answer: '3/4',
+      content: { operation: 'fraction_read', layout: 'row', models: [{ shape: 'bar', d: 4, n: 3, wholes: 1 }] },
+    }),
+    row('fraction_models', {
+      imageType: 'fraction_models', answer: '5/6',
+      content: { operation: 'fraction_read', layout: 'row', models: [{ shape: 'circle', d: 6, n: 5, wholes: 1 }] },
+    }),
+    row('fraction_models', {
+      imageType: 'fraction_models', answer: '1 3/4',
+      content: { operation: 'fraction_read_mixed', layout: 'row', models: [{ shape: 'bar', d: 4, n: 7, wholes: 2 }] },
+    }),
+    row('fraction_models', {
+      imageType: 'fraction_models', answer: 'B',
+      content: {
+        operation: 'fraction_pick', layout: 'stack',
+        models: [{ shape: 'bar', d: 4, n: 1, wholes: 1, label: 'A' }, { shape: 'bar', d: 4, n: 3, wholes: 1, label: 'B' }, { shape: 'bar', d: 8, n: 2, wholes: 1, label: 'C' }, { shape: 'bar', d: 3, n: 1, wholes: 1, label: 'D' }],
+      },
+    }),
+    row('fraction_models', {
+      imageType: 'fraction_models', answer: 'C',
+      content: {
+        operation: 'fraction_equal_parts', layout: 'stack',
+        models: [
+          { shape: 'bar', d: 4, n: 0, wholes: 1, label: 'A', split: [1, 2, 3, 2] },
+          { shape: 'bar', d: 4, n: 0, wholes: 1, label: 'B', split: [3, 1, 2, 1] },
+          { shape: 'bar', d: 4, n: 0, wholes: 1, label: 'C' },
+        ],
+      },
+    }),
+    row('fraction_models', {
+      imageType: 'fraction_models', answer: 'A',
+      content: {
+        operation: 'fraction_compare_models', layout: 'row',
+        models: [{ shape: 'bar', d: 4, n: 3, wholes: 1, label: 'A', caption: '3/4' }, { shape: 'bar', d: 4, n: 2, wholes: 1, label: 'B', caption: '2/4' }],
+      },
+    }),
+    row('fraction_models', {
+      imageType: 'fraction_models', answer: 'A',
+      content: {
+        operation: 'fraction_compare_mixed', layout: 'row',
+        models: [{ shape: 'bar', d: 4, n: 6, wholes: 2, label: 'A', caption: '6/4' }, { shape: 'bar', d: 3, n: 4, wholes: 2, label: 'B', caption: '4/3' }],
+      },
+    }),
+    row('fraction_models', {
+      imageType: 'fraction_models', answer: '4/8',
+      content: {
+        operation: 'fraction_equivalent_strips', layout: 'stack', guide: [1, 2],
+        models: [{ shape: 'bar', d: 2, n: 1, wholes: 1, caption: '1/2' }, { shape: 'bar', d: 8, n: 0, wholes: 1 }],
+      },
+    }),
+  ],
+  fraction_number_line: [
+    row('fraction_number_line', {
+      imageType: 'fraction_number_line', answer: '3/4',
+      content: { operation: 'fraction_line_read', tick_labels: false, lines: [{ max: 1, d: 4 }], points: [{ line: 0, n: 3 }] },
+    }),
+    row('fraction_number_line', {
+      imageType: 'fraction_number_line', answer: 'B',
+      content: {
+        operation: 'fraction_line_pick', tick_labels: false, lines: [{ max: 2, d: 4 }],
+        points: [{ line: 0, n: 1, label: 'A' }, { line: 0, n: 5, label: 'B' }, { line: 0, n: 3, label: 'C' }, { line: 0, n: 6, label: 'D' }],
+      },
+    }),
+    row('fraction_number_line', {
+      imageType: 'fraction_number_line', answer: '2/4',
+      content: {
+        operation: 'fraction_line_equivalent', tick_labels: false, lines: [{ max: 1, d: 2 }, { max: 1, d: 4 }],
+        points: [{ line: 0, n: 1 }],
+      },
+    }),
+    row('fraction_number_line', {
+      imageType: 'fraction_number_line', answer: 'B',
+      content: {
+        operation: 'fraction_line_greatest', tick_labels: false, lines: [{ max: 1, d: 6 }],
+        points: [{ line: 0, n: 1, label: 'A' }, { line: 0, n: 5, label: 'B' }, { line: 0, n: 3, label: 'C' }],
+      },
+    }),
+  ],
+  // No picture: the stem is the question. The server ships only `operation`.
+  fraction_text: row('fraction_text', {
+    questionText: 'Is 3/8 less than, equal to, or greater than 1/2?',
+    content: { operation: 'fraction_half_benchmark' }, answer: 'less than',
+  }),
   time: row('time', {
     content: { hour: 3, minute: 30, time: '3:30' }, answer: '3:30',
   }),
