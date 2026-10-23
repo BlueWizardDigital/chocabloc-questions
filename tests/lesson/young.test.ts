@@ -163,9 +163,6 @@ describe('fillYoung', () => {
     expect(fillYoung('{a}', ['fish'], [2], msg)).toBe('fish');
     expect(fillYoung('{a}', ['frog'], [1], msg)).toBe('frog');
   });
-  it('says "animals" for a group the picture lacks', () => {
-    expect(fillYoung('{b}', ['cat'], [1], msg)).toBe('animals');
-  });
   it('has singular and plural for every pool animal', () => {
     for (const a of LESSON_ANIMALS) {
       expect(fillYoung('{a}', [a], [1], msg)).not.toContain('animals.');

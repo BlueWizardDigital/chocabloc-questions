@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { LESSON_CSS } from '../../src/lesson/dom/styles';
+import { CSS as YOUNG_CSS } from '../../src/lesson/dom/young';
 
 // Old Chromebooks run Chrome 103. Every API and CSS feature below arrived after it
 // (source: MDN browser compatibility data). structuredClone (98) and findLast (97) are fine.
@@ -43,12 +44,16 @@ describe('Chrome 103 scan of src/lesson', () => {
     for (const bad of JS_TOO_NEW) expect(text, bad).not.toContain(bad);
   });
 
-  test('the stylesheet has no CSS nesting (a rule inside a rule, or a leading &)', () => {
-    expect(LESSON_CSS).not.toMatch(/&/);
+  test.each([
+    ['the player stylesheet', LESSON_CSS],
+    ["the young chunk's stylesheet", YOUNG_CSS],
+  ])('%s has no CSS nesting (a rule inside a rule, or a leading &) and nothing newer than Chrome 103', (_name, css) => {
+    for (const bad of CSS_TOO_NEW) expect(css, bad).not.toContain(bad);
+    expect(css).not.toMatch(/&/);
     // Nesting means a `{` opens while another block is still open, outside an @media block.
     let depth = 0;
     let inMedia = false;
-    for (const ch of LESSON_CSS.replace(/@media[^{]*\{/g, '\u0001')) {
+    for (const ch of css.replace(/@media[^{]*\{/g, '\u0001')) {
       if (ch === '\u0001') inMedia = true;
       else if (ch === '{') depth++;
       else if (ch === '}') {

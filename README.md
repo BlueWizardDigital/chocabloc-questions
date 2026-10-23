@@ -371,7 +371,8 @@ Rules for the host (session 4 builds on these):
 - **Record answers from `lesson-answer` only.** The question element's own events (`answered` and the rest) are stopped inside the player.
 - **To show the player again** after Close or done, set `lesson` or `mode` again. Either starts from the first screen. (Removing the element and adding it back does too.)
 - **Pass questions as the server sends them.** The player normalizes them itself; don't normalize first. It never holds an answer: every check goes through `validateAnswer`.
-- Words are English by default. Give `translator(key, vars)` to answer first for any of them; return `undefined` to fall back.
+- **Set `grade` and `pictureBase`.** `grade` is the signed-in kid's `gradeLevel` (`'K'` or `'1'` to `'6'`), or `null` for a guest; K to 3 get the young look (animals, the lesson's `young` words), 4 to 6 ones blocks. Anything else counts as `null` with one console warning, and then the lesson's own `skillGrade` decides. `pictureBase` is where the animal drawings are served (`/images/animals/` in the app; a missing trailing slash is added). Without it, or if any animal fails to load, pictures draw blocks.
+- Words are English by default. Give `translator(key, vars)` to answer first for any of them; return `undefined` to fall back. The `animals.*` words (the eight animal names, singular and plural) join `lessonMessagesEn` only after the young chunk has loaded, so read them from there after that, or just answer them in your translator.
 
 Look: it takes headings from `--cl-font-display` and body text from `--cl-font-body`, then `--cq-font`, then `system-ui`. Parts, vars and events: [`PARTS-AND-VARS.md`](./PARTS-AND-VARS.md).
 

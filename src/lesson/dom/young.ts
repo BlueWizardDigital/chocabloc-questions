@@ -27,13 +27,14 @@ export function register(table: Record<string, unknown>): void {
 /** Rules for the cells, frames and the dim/cross/dash states. The element adds this once the chunk has loaded. */
 export const CSS = `
 .cnt { display: flex; flex-direction: column; align-items: center; gap: 10px; --cell: 42px; }
-.cnt.apart { --cell: 30px; }
+.cnt.apart { flex-direction: row; align-items: flex-start; justify-content: center; gap: 28px; width: 100%; --cell: 30px; }
 .grp { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .frame {
   display: grid; grid-template-columns: repeat(5, var(--cell)); grid-auto-rows: var(--cell); gap: 3px; padding: 4px;
   background: rgba(255, 255, 255, 0.6); border: 2px solid currentColor; border-radius: 8px;
 }
-.slot { position: relative; display: block; }
+/* Every one of the frame's 10 places has a faint outline, filled or not. */
+.slot { position: relative; display: block; box-sizing: border-box; border: 1px solid rgba(43, 33, 24, 0.25); border-radius: 6px; }
 .cell { position: absolute; top: 0; right: 0; bottom: 0; left: 0; box-sizing: border-box; border-radius: 6px; }
 .cell img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .cell:empty { border: 2px solid currentColor; }
@@ -68,6 +69,16 @@ function cellOf(cls: string, src: string | null): HTMLElement {
   return cell;
 }
 
+/** Cells small enough that two frames, 10 cells and their gaps, fit the box: never a sideways scroll. */
+function fitCells(root: HTMLElement): void {
+  const ro = new ResizeObserver(() => {
+    // A removed box reports one last size; stop watching it then.
+    if (!root.isConnected) return ro.disconnect();
+    root.style.setProperty('--cell', `${Math.max(12, Math.min(30, (root.clientWidth - 76) / 10))}px`);
+  });
+  ro.observe(root);
+}
+
 /** Ten frames (two rows of 5) of equal cells. `names` are the animals per group, or null for blocks. */
 function frames(pic: Count, names: string[] | null, base: string | null): HTMLElement {
   const root = el(pic.apart ? 'cnt apart' : 'cnt');
@@ -83,6 +94,7 @@ function frames(pic: Count, names: string[] | null, base: string | null): HTMLEl
     }
     root.append(grp);
   }
+  if (pic.apart) fitCells(root);
   for (const c of cells) {
     const name = names?.[c.group];
     const src = name && c.state !== 'empty' ? `${base}${name}.webp` : null;

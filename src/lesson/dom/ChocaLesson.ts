@@ -5,7 +5,7 @@ import type { IdeaCard, Lesson } from '../types';
 import type { NormalizedQuestion, ValidateAnswer } from '../../types';
 import { h, svg, renderPicture } from './pictures';
 import type { PictureLook } from './pictures';
-import { lookFor } from '../look';
+import { lookFor, normalizeGrade } from '../look';
 import { createSpeaker } from './speaker';
 import type { Speaker } from './speaker';
 import { LESSON_CSS } from './styles';
@@ -98,6 +98,7 @@ export class ChocaLesson extends HTMLElement {
   private _validateAnswer: ValidateAnswer | undefined = undefined;
   private _translator: Translator | undefined = undefined;
   private _grade: string | null = null;
+  private _youngCss: HTMLStyleElement | null = null;
   private _pictureBase: string | null = null;
   private _mode: LessonMode = 'help';
   private _lesson: Lesson | null = null;
@@ -191,7 +192,8 @@ export class ChocaLesson extends HTMLElement {
   }
 
   set grade(g: string | null) {
-    this._grade = g;
+    // Normalized here, so a bad grade warns once, not at every restart.
+    this._grade = normalizeGrade(g);
     this._start();
   }
 
@@ -291,13 +293,16 @@ export class ChocaLesson extends HTMLElement {
       (y) => {
         if (run !== this._run) return;
         y.register(lessonMessagesEn);
-        const css = document.createElement('style');
-        css.textContent = y.CSS;
-        this._root.append(css);
+        if (!this._youngCss) {
+          this._youngCss = document.createElement('style');
+          this._youngCss.textContent = y.CSS;
+          this._root.append(this._youngCss);
+        }
         look.y = y;
         look.wait.splice(0).forEach((f) => f(true));
       },
       (err: unknown) => {
+        if (run !== this._run) return;
         console.warn('[chocabloc-lesson] could not load the young look:', err);
         look.y = false;
         look.wait.splice(0).forEach((f) => f(false));

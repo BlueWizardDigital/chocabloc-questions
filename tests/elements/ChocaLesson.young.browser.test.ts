@@ -10,6 +10,7 @@ import { createMessages, lessonMessagesEn } from '../../src/lesson/messages';
 import type { NormalizedQuestion } from '../../src/types';
 import { button, cleanup, heading, mount, part, parts, root, until } from './lesson-test-utils';
 
+
 let fixture: Lesson;
 const BASE = new URL('../fixtures/animals/', import.meta.url).pathname;
 const msg = createMessages({ lang: 'en' });
@@ -242,5 +243,155 @@ describe('<chocabloc-lesson> young look', () => {
     expect(parts(el, 'picture')[0]!.querySelectorAll('.grp')).to.have.length(2);
     expect(root(el).querySelectorAll('.grp')[0]!.querySelectorAll('.frame')).to.have.length(2);
     expect(root(el).querySelectorAll('.grp')[1]!.querySelectorAll('.frame')).to.have.length(1);
+  });
+
+  describe('compare groups apart', () => {
+    const apart = (groups: number[]): Lesson =>
+      lessonWith({ heading: 'Compare', text: 'More or fewer?', picture: { kind: 'count', groups, apart: true } });
+
+    for (const width of [320, 560]) {
+      it(`sit side by side, top-aligned, and never scroll sideways at ${width} px`, async () => {
+        const el = mount();
+        el.style.display = 'block';
+        el.style.width = `${width}px`;
+        el.grade = '5';
+        el.mode = 'help';
+        el.lesson = apart([17, 12]);
+        await until(() => root(el).querySelectorAll('style').length === 2, 'the young chunk');
+        button(el, 'Next').click();
+        // The cell size is set by a ResizeObserver, which runs before the next paint.
+        await until(() => {
+          const c = root(el).querySelector('.cnt');
+          return c !== null && c.scrollWidth <= c.clientWidth && c.clientWidth > 0 && root(el).querySelectorAll('.cell').length > 0;
+        }, 'the cells to fit');
+        const grps = Array.from(root(el).querySelectorAll<HTMLElement>('.grp'));
+        expect(grps).to.have.length(2);
+        const [a, b] = grps.map((g) => g.getBoundingClientRect());
+        expect(Math.abs(a!.top - b!.top)).to.be.below(1);
+        expect(b!.left).to.be.greaterThan(a!.right);
+        // The gap between groups is clearly bigger than the gap between frames inside one.
+        const frames = Array.from(grps[0]!.querySelectorAll('.frame')).map((f) => f.getBoundingClientRect());
+        expect(b!.left - a!.right).to.be.greaterThan(frames[1]!.top - frames[0]!.bottom + 8);
+        const pic = parts(el, 'picture')[0]!;
+        expect(pic.scrollWidth).to.be.at.most(pic.clientWidth);
+        const cnt = root(el).querySelector('.cnt')!;
+        expect(cnt.scrollWidth).to.be.at.most(cnt.clientWidth);
+        for (const f of root(el).querySelectorAll('.frame')) {
+          expect(f.getBoundingClientRect().right).to.be.at.most(pic.getBoundingClientRect().right + 0.5);
+        }
+      });
+    }
+  });
+
+  describe('ten frame places', () => {
+    const framed = (pic: Record<string, unknown>) =>
+      open(lessonWith({ heading: 'Count', text: 'Count them.', picture: pic }), '5');
+    const places = (el: ChocaLesson): HTMLElement[] => Array.from(root(el).querySelectorAll('.frame > .slot'));
+
+    for (const grade of ['K', '5']) {
+      it(`[8] shows 10 places, 8 filled and 2 outlined but empty (grade ${grade})`, async () => {
+        const el = await open(lessonWith({ heading: 'Count', text: 'Count them.', picture: { kind: 'count', groups: [8] } }), grade);
+        expect(places(el)).to.have.length(10);
+        expect(places(el).filter((p) => p.querySelector('.cell'))).to.have.length(8);
+        for (const p of places(el)) {
+          const css = getComputedStyle(p);
+          expect([css.borderTopStyle, css.borderTopWidth]).to.deep.equal(['solid', '1px']);
+        }
+      });
+    }
+
+    it('[3] with empty 2 has 2 dashed places and 5 plain unused ones', async () => {
+      const el = await framed({ kind: 'count', groups: [3], empty: 2 });
+      expect(places(el)).to.have.length(10);
+      const dashed = places(el).filter((p) => p.querySelector('.cell.empty'));
+      expect(dashed).to.have.length(2);
+      expect(getComputedStyle(dashed[0]!.querySelector('.cell')!).borderTopStyle).to.equal('dashed');
+      expect(places(el).filter((p) => !p.querySelector('.cell'))).to.have.length(5);
+    });
+
+    it('every place is the same size, filled or not', async () => {
+      const el = await framed({ kind: 'count', groups: [8, 5] });
+      const sizes = places(el).map((p) => `${Math.round(p.getBoundingClientRect().width)}x${Math.round(p.getBoundingClientRect().height)}`);
+      expect(new Set(sizes).size).to.equal(1);
+    });
+  });
+
+  describe('tidy-ups', () => {
+    it('a bad grade warns once, however often the lesson, mode or base is set later', async () => {
+      const warn = console.warn;
+      const seen: string[] = [];
+      console.warn = (...a: unknown[]) => void seen.push(String(a[0]));
+      try {
+        const el = mount();
+        el.grade = 'Grade 3';
+        el.lesson = counting();
+        el.mode = 'help';
+        el.pictureBase = BASE;
+        el.lesson = counting();
+        el.mode = 'intro';
+        await tick();
+        expect(seen.filter((m) => m.includes('unknown grade'))).to.have.length(1);
+        expect(el.grade).to.equal(null);
+      } finally {
+        console.warn = warn;
+      }
+    });
+
+    it('the young chunk adds its stylesheet once per element', async () => {
+      const el = mount();
+      el.pictureBase = BASE;
+      el.mode = 'help';
+      el.grade = 'K';
+      el.lesson = counting();
+      await until(() => root(el).querySelectorAll('style').length === 2, 'the young chunk');
+      el.grade = '4';
+      el.grade = 'K';
+      for (let i = 0; i < 3; i++) {
+        el.lesson = counting();
+        await tick();
+      }
+      await new Promise((r) => setTimeout(r, 50));
+      expect(root(el).querySelectorAll('style')).to.have.length(2);
+    });
+
+    it('a stale run whose chunk fails stays quiet; only the current run warns', async () => {
+      const warn = console.warn;
+      const seen: string[] = [];
+      console.warn = (...a: unknown[]) => void seen.push(String(a[0]));
+      try {
+        youngChunk.load = () => Promise.reject(new Error('offline'));
+        const el = mount();
+        el.grade = 'K';
+        el.mode = 'help';
+        el.lesson = counting();
+        el.lesson = counting();
+        await tick();
+        await tick();
+        expect(seen.filter((m) => m.includes('young look'))).to.have.length(1);
+      } finally {
+        console.warn = warn;
+      }
+    });
+
+    for (const [rows, cols] of [[3, 10], [2, 15]] as const) {
+      it(`a young ${rows} x ${cols} array holds its final height before the chunk arrives`, async () => {
+        let arrive!: (m: Awaited<ReturnType<typeof realLoad>>) => void;
+        youngChunk.load = () => new Promise((r) => (arrive = r));
+        const el = mount();
+        el.style.display = 'block';
+        el.style.width = '700px';
+        el.grade = 'K';
+        el.pictureBase = BASE;
+        el.mode = 'help';
+        el.lesson = lessonWith({ heading: 'Rows', text: 'Rows.', picture: { kind: 'array', rows, cols }, young: '{a} in rows.' });
+        button(el, 'Next').click();
+        const box = parts(el, 'picture')[0]!;
+        const before = box.getBoundingClientRect().height;
+        arrive(await realLoad());
+        await tick();
+        expect(root(el).querySelectorAll('.arr .cell').length).to.equal(rows * cols);
+        expect(Math.abs(box.getBoundingClientRect().height - before)).to.be.below(2);
+      });
+    }
   });
 });

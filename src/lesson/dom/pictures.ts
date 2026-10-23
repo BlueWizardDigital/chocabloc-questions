@@ -158,24 +158,34 @@ export interface PictureLook {
   wait: ((ok: boolean) => void)[];
 }
 
-/** Draws with the young chunk: now if it is here, else an empty box of the same height until it arrives. A failed chunk leaves the picture out. */
+/**
+ * Draws with the young chunk: now if it is here, else the box holds its final
+ * height (`height`, the largest it can be) until the chunk arrives. A failed
+ * chunk leaves the picture out.
+ */
 function viaYoung(box: HTMLElement, look: PictureLook | undefined, height: number, build: (y: Young) => HTMLElement): void {
   if (!look || look.y === false) return;
   if (look.y) {
     box.append(build(look.y));
     return;
   }
-  const hold = h('div');
-  hold.style.minHeight = `${height}px`;
-  box.append(hold);
-  look.wait.push((ok) => (ok ? hold.replaceWith(build(look.y as Young)) : hold.remove()));
+  box.style.minHeight = `${height}px`;
+  look.wait.push((ok) => {
+    if (ok) box.append(build(look.y as Young));
+  });
 }
 
-/** Frame rows a count takes: each ten frame stands on its own row (cell 42 px, 30 px when apart), 10 px apart. */
+/** Height of a count: each ten frame stands in a column (75 px at 30 px cells when apart, 99 px at 42), 10 px apart; apart, the taller group sets it. */
 function countHeight(pic: Extract<LessonPicture, { kind: 'count' }>): number {
   const frames = (n: number): number => Math.max(1, Math.ceil(n / 10));
-  const rows = pic.apart ? pic.groups.reduce((t, n) => t + frames(n), 0) : frames(pic.groups.reduce((t, n) => t + n, 0) + (pic.empty ?? 0));
-  return rows * ((pic.apart ? 60 : 84) + 15) + (rows - 1) * 10;
+  const rows = pic.apart ? Math.max(...pic.groups.map(frames)) : frames(pic.groups.reduce((t, n) => t + n, 0) + (pic.empty ?? 0));
+  return rows * (pic.apart ? 75 : 99) + (rows - 1) * 10;
+}
+
+/** Height of a young array at full width: the box is at most 560 px, and a cell at most 46, with 3 px gaps. */
+function arrayHeight(rows: number, cols: number): number {
+  const cell = (Math.min(560, cols * 46) - (cols - 1) * 3) / cols;
+  return rows * cell + (rows - 1) * 3;
 }
 
 /** A lesson picture: base-ten and arrays on canvas, number lines in SVG, column sums as a grid, counts and animal arrays from the young chunk. */
@@ -188,7 +198,7 @@ export function renderPicture(pic: LessonPicture, msg: Msg, lang: string, look?:
     case 'array': {
       const squares = (): HTMLElement => canvasDrawing((ctx, w, ht) => drawArray(ctx, w, ht, [pic.rows, pic.cols]));
       if (look?.young && look.base != null && pic.rows * pic.cols <= 30) {
-        viaYoung(box, look, pic.rows * Math.min(46, 280 / pic.cols), (y) => y.array(pic, look, squares));
+        viaYoung(box, look, arrayHeight(pic.rows, pic.cols), (y) => y.array(pic, look, squares));
       } else box.append(squares());
       break;
     }
