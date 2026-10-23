@@ -3,10 +3,12 @@
 All notable changes to chocabloc-questions are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.7.0-beta.0] — 2026-10-23
 
 **Minor** (Trello 427, fraction skills for grades 3-6): new formats and CSS variables;
-nothing renamed or removed. The version is set at release.
+nothing renamed or removed. Only the ChocaBLOC host app moves to this release now; a game moves
+when it uses the fraction skills. The lessons work (`skill-lessons`) had claimed this number
+untagged and takes the next one.
 
 ### Added
 
