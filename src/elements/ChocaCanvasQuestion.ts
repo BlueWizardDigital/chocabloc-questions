@@ -10,7 +10,8 @@ import {
   type Base10Colors,
 } from './canvas-draws';
 import { drawFractionModels, FRACTION_COLOURS, type FractionColours } from './draw-fraction';
-import { parseFractionModels } from '../helpers/fraction-content';
+import { drawFractionNumberLine } from './draw-fraction-line';
+import { parseFractionModels, parseFractionNumberLine } from '../helpers/fraction-content';
 import './ChocaChoicePad';
 
 const CANVAS_W = 300;
@@ -179,6 +180,7 @@ export class ChocaCanvasQuestion extends HTMLElement {
       else if (q.format === 'geometry_circle_convert') text = `Find the ${q.content.find_type}.`;
       else if (q.format === 'fraction_concept') text = 'What fraction is shaded?';
       else if (q.format === 'fraction_models') text = 'Look at the shapes.';
+      else if (q.format === 'fraction_number_line') text = 'Look at the number line.';
       else if (q.format === 'time') text = 'What time is shown?';
       else if (q.format === 'coordinate_distance') text = 'What is the distance between the points?';
       else if (q.format === 'multiplication') text = `What is ${q.content.operands[0]} × ${q.content.operands[1]}?`;
@@ -320,6 +322,17 @@ export class ChocaCanvasQuestion extends HTMLElement {
         } else {
           ctx.clearRect(0, 0, w, h);
           console.warn(`[chocabloc-questions] fraction_models question ${q.id} has picture content it can't draw; showing no picture`);
+        }
+        this._canvas.hidden = !spec;
+        break;
+      }
+      case 'fraction_number_line': {
+        const spec = parseFractionNumberLine(q.content);
+        if (spec) {
+          drawFractionNumberLine(ctx, w, h, spec, this._fractionColours());
+        } else {
+          ctx.clearRect(0, 0, w, h);
+          console.warn(`[chocabloc-questions] fraction_number_line question ${q.id} has picture content it can't draw; showing no picture`);
         }
         this._canvas.hidden = !spec;
         break;
