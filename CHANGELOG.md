@@ -38,6 +38,13 @@ public-API rule a new entry point is minor, so the line moves from 0.6 to 0.7.
   lessons and the lesson's `young` words; grade 4 to 6 get ones blocks and the normal words.
   With no grade, the lesson's `skillGrade` decides. With no `pictureBase`, or if any animal
   fails to load, the whole picture draws as blocks.
+- **Voice for young kids:** a K to 3 kid hears every screen as it appears (the same words as
+  Read to me, and the young words where a step has them), each question's text, and the short
+  feedback ("Yes!"). Moving on cancels the last speech, so each screen speaks once. Browsers refuse
+  speech before the page is tapped, so a young kid whose page has not been tapped
+  (`navigator.userActivation.hasBeenActive` is false) first sees a large **Tap to hear** button
+  (new part `tap-to-hear`); its tap starts the voice. Where there is no `speechSynthesis`, nothing
+  is spoken and the words still show. Grade 4 and up hear nothing until Read to me is tapped.
 - **Format v1 grows** (nothing was served yet, so no version bump): a `count` picture (1 to 3
   groups of 0 to 20, at most 20 together, with optional `takeAway`, `empty` or `apart`; and
   `{ "kind": "count", "from": "operands" }` for `afterWrong`), an optional `young` line on a

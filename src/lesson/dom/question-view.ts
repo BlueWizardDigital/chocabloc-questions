@@ -178,6 +178,7 @@ export function ask(o: AskOptions): Asking {
     if (answer != null) card.append(h('p', 'text', undefined, answer));
     el.after(card);
     screen.say = spoken(msg, afterWrong.tip, answer);
+    shell.speak(screen.say);
     const gotIt = buttons[2];
     if (gotIt) gotIt.hidden = false;
     card.focus();

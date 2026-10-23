@@ -20,6 +20,8 @@ interface Run {
   msg: Msg;
   speaker: Speaker;
   look: PictureLook;
+  /** The kid has tapped Tap to hear, so the voice may start. */
+  tapped: boolean;
   controller: ModeController | null;
   /** Closed by the kid, or done: the run reports nothing more. */
   ended: boolean;
@@ -259,6 +261,7 @@ export class ChocaLesson extends HTMLElement {
         y: null,
         wait: [],
       },
+      tapped: false,
       controller: null,
       ended: false,
     };
@@ -378,7 +381,12 @@ export class ChocaLesson extends HTMLElement {
       active,
       show: (screen) => this._show(run, screen),
       feedback: (text) => {
-        if (active()) this._feedback.textContent = text;
+        if (!active()) return;
+        this._feedback.textContent = text;
+        if (text) this._voice(run, text);
+      },
+      speak: (text) => {
+        if (active()) this._voice(run, text);
       },
       emit: (type, detail) => {
         if (active()) this._emit(type, detail);
@@ -390,6 +398,15 @@ export class ChocaLesson extends HTMLElement {
         this._emit('lesson-done', detail);
       },
     };
+  }
+
+  /** A young kid hears every screen. Browsers refuse speech until the page has been tapped, so until then the kid gets Tap to hear. */
+  private _voiced(run: Run): boolean {
+    return run.look.young && run.speaker.supported && (run.tapped || navigator.userActivation?.hasBeenActive !== false);
+  }
+
+  private _voice(run: Run, text: string): void {
+    if (this._voiced(run)) run.speaker.speak(text);
   }
 
   private _show(run: Run, screen: Screen): HTMLButtonElement[] {
@@ -440,6 +457,15 @@ export class ChocaLesson extends HTMLElement {
       read.prepend(speakerIcon());
       bar.push(read);
     }
+    if (speaker.supported && run.look.young && !this._voiced(run)) {
+      const tap = this._button('button tap-to-hear', msg('tapToHear'), () => {
+        run.tapped = true;
+        tap.remove();
+        speaker.speak(screen.say);
+      });
+      tap.prepend(speakerIcon());
+      bar.unshift(tap);
+    }
     const acts = screen.actions.map((a) => this._button('button', a.label, a.run, a.primary ? undefined : 'secondary'));
     this._actionBar.replaceChildren(...bar, ...acts);
     this._panel.hidden = false;
@@ -449,6 +475,7 @@ export class ChocaLesson extends HTMLElement {
     // Under reduced motion the step has no transition, so it simply appears.
     void step.offsetWidth;
     step.classList.remove('enter');
+    this._voice(run, screen.say);
     return acts;
   }
 

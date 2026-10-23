@@ -94,7 +94,7 @@ function cycle(speech?: { cancels: number }): { el: ChocaLesson; cancelsOnRemove
   if (!read) throw new Error('no Read to me button');
   read.click();
   // Next onto the first worked-example step, which draws a base10 picture on a canvas.
-  const next = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="actions"] [part~="button"]:not([part~="read-to-me"])');
+  const next = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="actions"] [part~="button"]:not([part~="read-to-me"]):not([part~="tap-to-hear"])');
   if (!next) throw new Error('no Next button');
   next.click();
   if (!el.shadowRoot!.querySelector('canvas')) throw new Error('the step drew no canvas');

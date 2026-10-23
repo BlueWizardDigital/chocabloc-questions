@@ -180,6 +180,7 @@ The practice question inside Intro and Check is a `<chocabloc-question>`, so its
 | `actions` | The row of buttons at the bottom |
 | `button` | Every button. The pale ones also have class `secondary` |
 | `read-to-me` | The Read to me button (also a `button`). Absent where the browser has no speech |
+| `tap-to-hear` | The big Tap to hear button (also a `button`), shown to a young kid until the page has been tapped, because browsers refuse speech before that. Its tap starts the voice. Absent where the browser has no speech |
 
 The young look's counting pictures (ten frames of animals or coloured blocks, and animal arrays) are plain
 elements inside `picture`. They add no parts: lines and the crossed-out mark use `--cl-ink`, and the block

@@ -485,7 +485,7 @@ describe('<chocabloc-lesson> Intro', () => {
       button(el, 'Next').click();
       expect(heading(el)).to.equal("We couldn't get questions right now.");
       expect(feedback(el)).to.equal('');
-      expect(labels(el).filter((l) => l !== 'Read to me')).to.deep.equal(['Close']);
+      expect(labels(el).filter((l) => l !== 'Read to me' && l !== 'Tap to hear')).to.deep.equal(['Close']);
     });
   });
 
