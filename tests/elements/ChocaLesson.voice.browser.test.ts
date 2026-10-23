@@ -174,6 +174,58 @@ describe('<chocabloc-lesson> voice for young kids', () => {
     expect(heading(el)).to.equal(fixture.example.steps[0]!.heading);
   });
 
+  it('after Tap to hear, focus moves to the heading, not the body', () => {
+    stubSpeech(true, false);
+    const el = help('K');
+    const tap = button(el, 'Tap to hear');
+    tap.focus();
+    expect(el.shadowRoot!.activeElement).to.equal(tap);
+    tap.click();
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('heading');
+  });
+
+  describe('Check, at real speed', () => {
+    const check = (host: ReturnType<typeof fakeHost>): ChocaLesson => {
+      const el = mount();
+      el.grade = 'K';
+      el.mode = 'check';
+      el.questions = [cmp('c1', [3, 8]), cmp('c2', [8, 3])];
+      el.validateAnswer = host.validateAnswer;
+      return el;
+    };
+    const real = timing.advanceMs;
+    beforeEach(() => {
+      timing.advanceMs = 900;
+    });
+    afterEach(() => {
+      timing.advanceMs = 0;
+      void real;
+    });
+
+    it('a right answer says "Yes!" before the next question; nothing is cut off', async () => {
+      const s = stubSpeech();
+      const host = fakeHost();
+      const el = check(host);
+      await until(() => questionId(el) === 'c1', 'c1');
+      choose(el, '<');
+      host.last.reply.resolve({ correct: true });
+      await until(() => questionId(el) === 'c2', 'c2', 3000);
+      expect(s.spoken.filter((t) => !t.startsWith('Getting')).map((t) => (t.startsWith('Which') ? 'question' : t))).to.deep.equal(['question', 'Yes!', 'question']);
+    });
+
+    it('a wrong answer voices no thanks (it would be cut off), then the next question', async () => {
+      const s = stubSpeech();
+      const host = fakeHost();
+      const el = check(host);
+      await until(() => questionId(el) === 'c1', 'c1');
+      choose(el, '<');
+      host.last.reply.resolve({ correct: false });
+      await until(() => questionId(el) === 'c2', 'c2', 3000);
+      expect(s.spoken.filter((t) => !t.startsWith('Getting')).map((t) => (t.startsWith('Which') ? 'question' : t))).to.deep.equal(['question', 'question']);
+      expect(s.spoken.join(' ')).to.not.include('Thanks');
+    });
+  });
+
   it('close and removal cancel speech', () => {
     const s = stubSpeech();
     const el = help('K');

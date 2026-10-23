@@ -380,10 +380,10 @@ export class ChocaLesson extends HTMLElement {
       look: run.look,
       active,
       show: (screen) => this._show(run, screen),
-      feedback: (text) => {
+      feedback: (text, say = true) => {
         if (!active()) return;
         this._feedback.textContent = text;
-        if (text) this._voice(run, text);
+        if (text && say) this._voice(run, text);
       },
       speak: (text) => {
         if (active()) this._voice(run, text);
@@ -400,13 +400,14 @@ export class ChocaLesson extends HTMLElement {
     };
   }
 
-  /** A young kid hears every screen. Browsers refuse speech until the page has been tapped, so until then the kid gets Tap to hear. */
-  private _voiced(run: Run): boolean {
-    return run.look.young && run.speaker.supported && (run.tapped || navigator.userActivation?.hasBeenActive !== false);
+  /** Browsers refuse speech until the page has been tapped; until then a young kid gets Tap to hear. */
+  private _unlocked(run: Run): boolean {
+    return run.tapped || navigator.userActivation?.hasBeenActive !== false;
   }
 
+  /** A young kid hears what is shown, once the voice is allowed. */
   private _voice(run: Run, text: string): void {
-    if (this._voiced(run)) run.speaker.speak(text);
+    if (run.look.young && run.speaker.supported && this._unlocked(run)) run.speaker.speak(text);
   }
 
   private _show(run: Run, screen: Screen): HTMLButtonElement[] {
@@ -452,18 +453,24 @@ export class ChocaLesson extends HTMLElement {
     if (screen.feedback != null) this._feedback.textContent = screen.feedback;
 
     const bar: HTMLButtonElement[] = [];
-    if (speaker.supported) {
-      const read = this._button('button read-to-me', msg('readToMe'), () => speaker.speak(screen.say));
-      read.prepend(speakerIcon());
-      bar.push(read);
-    }
-    if (speaker.supported && run.look.young && !this._voiced(run)) {
-      const tap = this._button('button tap-to-hear', msg('tapToHear'), () => {
-        run.tapped = true;
-        tap.remove();
+    // A speaker button: `part` and label, and what it says is the screen's read-to-me words.
+    const sayButton = (part: string, label: string, after?: () => void): HTMLButtonElement => {
+      const b = this._button(part, label, () => {
+        after?.();
         speaker.speak(screen.say);
       });
-      tap.prepend(speakerIcon());
+      b.prepend(speakerIcon());
+      return b;
+    };
+    const talks = speaker.supported && run.look.young;
+    const voiced = talks && this._unlocked(run);
+    if (speaker.supported) bar.push(sayButton('button read-to-me', msg('readToMe')));
+    if (talks && !voiced) {
+      const tap = sayButton('button tap-to-hear', msg('tapToHear'), () => {
+        run.tapped = true;
+        tap.remove();
+        heading.focus();
+      });
       bar.unshift(tap);
     }
     const acts = screen.actions.map((a) => this._button('button', a.label, a.run, a.primary ? undefined : 'secondary'));
@@ -475,7 +482,7 @@ export class ChocaLesson extends HTMLElement {
     // Under reduced motion the step has no transition, so it simply appears.
     void step.offsetWidth;
     step.classList.remove('enter');
-    this._voice(run, screen.say);
+    if (voiced) speaker.speak(screen.say);
     return acts;
   }
 

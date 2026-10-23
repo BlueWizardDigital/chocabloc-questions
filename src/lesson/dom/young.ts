@@ -27,7 +27,8 @@ export function register(table: Record<string, unknown>): void {
 /** Rules for the cells, frames and the dim/cross/dash states. The element adds this once the chunk has loaded. */
 export const CSS = `
 .cnt { display: flex; flex-direction: column; align-items: center; gap: 10px; --cell: 42px; }
-.cnt.apart { flex-direction: row; align-items: flex-start; justify-content: center; gap: 28px; width: 100%; --cell: 30px; }
+.probe { position: absolute; top: 0; left: 0; right: 0; height: 0; }
+.cnt.apart { position: relative; flex-direction: row; align-items: flex-start; justify-content: center; gap: 28px; width: 100%; --cell: 30px; }
 .grp { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .frame {
   display: grid; grid-template-columns: repeat(5, var(--cell)); grid-auto-rows: var(--cell); gap: 3px; padding: 4px;
@@ -71,12 +72,16 @@ function cellOf(cls: string, src: string | null): HTMLElement {
 
 /** Cells small enough that two frames, 10 cells and their gaps, fit the box: never a sideways scroll. */
 function fitCells(root: HTMLElement): void {
+  // Watch a zero-height probe as wide as the box, not the box: changing the cells changes the box's
+  // height, and observing that would loop.
+  const probe = el('probe');
+  root.append(probe);
   const ro = new ResizeObserver(() => {
     // A removed box reports one last size; stop watching it then.
     if (!root.isConnected) return ro.disconnect();
-    root.style.setProperty('--cell', `${Math.max(12, Math.min(30, (root.clientWidth - 76) / 10))}px`);
+    root.style.setProperty('--cell', `${Math.max(12, Math.min(30, (probe.clientWidth - 76) / 10))}px`);
   });
-  ro.observe(root);
+  ro.observe(probe);
 }
 
 /** Ten frames (two rows of 5) of equal cells. `names` are the animals per group, or null for blocks. */

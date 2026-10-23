@@ -153,7 +153,8 @@ export function ask(o: AskOptions): Asking {
         whyCard(o.afterWrong, r.expected);
         return;
       }
-      shell.feedback(r.outcome === 'right' ? msg('feedback.right') : msg('feedback.checkThanks'));
+      // "Yes!" is short enough to finish; the Check thanks is not, and the next question cancels it.
+      shell.feedback(r.outcome === 'right' ? msg('feedback.right') : msg('feedback.checkThanks'), r.outcome === 'right');
       timer = setTimeout(() => finish(r.outcome), timing.advanceMs);
     },
     onFailed(err) {

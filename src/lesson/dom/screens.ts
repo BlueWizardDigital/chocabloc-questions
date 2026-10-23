@@ -65,8 +65,8 @@ export interface LessonShell {
   readonly look: PictureLook;
   /** Draws the screen and returns its action buttons, in order ([] for a run that was replaced or ended). */
   show(screen: Screen): HTMLButtonElement[];
-  /** Writes the polite live region. A young kid hears it too. */
-  feedback(text: string): void;
+  /** Writes the polite live region. A young kid hears it too, unless `say` is false (the next screen would cut it off). */
+  feedback(text: string, say?: boolean): void;
   /** Speaks `text` for a young kid, where the voice is allowed; does nothing otherwise. */
   speak(text: string): void;
   /** Sends an event while the run is active. */

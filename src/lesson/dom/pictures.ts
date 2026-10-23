@@ -160,8 +160,8 @@ export interface PictureLook {
 
 /**
  * Draws with the young chunk: now if it is here, else the box holds its final
- * height (`height`, the largest it can be) until the chunk arrives. A failed
- * chunk leaves the picture out.
+ * height (`height`, the largest it can be) until the chunk settles. A failed
+ * chunk leaves the picture out and the box empty.
  */
 function viaYoung(box: HTMLElement, look: PictureLook | undefined, height: number, build: (y: Young) => HTMLElement): void {
   if (!look || look.y === false) return;
@@ -172,6 +172,8 @@ function viaYoung(box: HTMLElement, look: PictureLook | undefined, height: numbe
   box.style.minHeight = `${height}px`;
   look.wait.push((ok) => {
     if (ok) box.append(build(look.y as Young));
+    // Held height only keeps the page still while waiting: after, the box is as tall as what it holds.
+    box.style.minHeight = '';
   });
 }
 

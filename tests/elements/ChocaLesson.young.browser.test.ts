@@ -350,7 +350,9 @@ describe('<chocabloc-lesson> young look', () => {
         el.lesson = counting();
         await tick();
       }
-      await new Promise((r) => setTimeout(r, 50));
+      // Every earlier import was queued before this one, so awaiting it lets them all finish.
+      await realLoad();
+      await tick();
       expect(root(el).querySelectorAll('style')).to.have.length(2);
     });
 
@@ -371,6 +373,49 @@ describe('<chocabloc-lesson> young look', () => {
       } finally {
         console.warn = warn;
       }
+    });
+
+    it('when the chunk fails after a count was drawn, the held height is let go', async () => {
+      const warn = console.warn;
+      console.warn = () => undefined;
+      try {
+        let fail!: (e: Error) => void;
+        youngChunk.load = () => new Promise((_, rej) => (fail = rej));
+        const el = mount();
+        el.grade = '5';
+        el.mode = 'help';
+        el.lesson = lessonWith({ heading: 'Count', text: 'Count them.', picture: { kind: 'count', groups: [8, 5] } });
+        button(el, 'Next').click();
+        const box = parts(el, 'picture')[0]!;
+        expect(box.style.minHeight).to.not.equal('');
+        fail(new Error('offline'));
+        await tick();
+        await tick();
+        expect(box.style.minHeight).to.equal('');
+        expect(box.getBoundingClientRect().height).to.be.below(2);
+      } finally {
+        console.warn = warn;
+      }
+    });
+
+    it('after the chunk loads, the box is as tall as the picture, even on a 320 px phone', async () => {
+      let arrive!: (m: Awaited<ReturnType<typeof realLoad>>) => void;
+      youngChunk.load = () => new Promise((r) => (arrive = r));
+      const el = mount();
+      el.style.display = 'block';
+      el.style.width = '320px';
+      el.grade = '5';
+      el.mode = 'help';
+      el.lesson = lessonWith({ heading: 'Compare', text: 'More?', picture: { kind: 'count', groups: [17, 12], apart: true } });
+      button(el, 'Next').click();
+      const box = parts(el, 'picture')[0]!;
+      arrive(await realLoad());
+      await tick();
+      await frame();
+      await frame();
+      const cnt = root(el).querySelector('.cnt')!;
+      expect(box.style.minHeight).to.equal('');
+      expect(Math.abs(box.getBoundingClientRect().height - cnt.getBoundingClientRect().height)).to.be.below(1);
     });
 
     for (const [rows, cols] of [[3, 10], [2, 15]] as const) {

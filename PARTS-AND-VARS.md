@@ -184,7 +184,7 @@ The practice question inside Intro and Check is a `<chocabloc-question>`, so its
 
 The young look's counting pictures (ten frames of animals or coloured blocks, and animal arrays) are plain
 elements inside `picture`. They add no parts: lines and the crossed-out mark use `--cl-ink`, and the block
-colours are fixed.
+colours and the faint outline round each of a frame's ten places (a fixed `rgba`) are fixed.
 
 | Var | Default | Purpose |
 |-----|---------|---------|
