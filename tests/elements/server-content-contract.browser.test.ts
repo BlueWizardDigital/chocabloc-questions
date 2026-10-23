@@ -235,6 +235,11 @@ describe('server content map contract: whole and trimmed rows render identically
     expect(Object.keys(map).filter((f) => !seen.has(f) && !AWAITING_BANK_ROWS.has(f))).to.deep.equal([]);
   });
 
+  it('AWAITING_BANK_ROWS has expired: no format in it has a real bank row (empty the set)', () => {
+    const seen = new Set(rows.filter((r) => r.source === 'bank').map((r) => r.format));
+    expect([...AWAITING_BANK_ROWS].filter((f) => seen.has(f))).to.deep.equal([]);
+  });
+
   it('every row renders the same with its content whole and trimmed, except no-picture formats', () => {
     const spy = spyCalls();
     const diffs = new Map<string, { n: number; example: string }>();

@@ -133,6 +133,21 @@ const TEXT_ONLY_BY_DESIGN: Record<string, string> = {
   // excuse exactly the bug that shipped: "What coin is this?" with no coins.
 };
 
+// Rows of an exempt format that legitimately print nothing: the answer is a
+// fraction the child reads off the shading or the marked point, or works out (an
+// equivalent of the drawn one), so printing it on the picture would give it away.
+// Only these operations, only on the two fraction picture formats. Every letter
+// answer (pick, equal parts, compare, greatest) still has to print its letter.
+const COMPUTED_ANSWER_OPERATIONS = new Set([
+  'fraction_read', 'fraction_read_mixed', 'fraction_equivalent_strips',
+  'fraction_line_read', 'fraction_line_equivalent',
+]);
+const isComputedAnswerRow = (raw: Record<string, unknown>): boolean => {
+  const content = raw['content'] as { operation?: unknown } | undefined;
+  return (raw['format'] === 'fraction_models' || raw['format'] === 'fraction_number_line') &&
+    COMPUTED_ANSWER_OPERATIONS.has(String(content?.operation));
+};
+
 // A picture must not print its own answer (beta.19: a radius label on "What is
 // the radius?", the product at the end of a number line, "face: triangle").
 // A format here may show text equal to the answer, because the text is part of
@@ -364,20 +379,14 @@ describe('format conformance — every dispatched format renders something', () 
         const out = await render(q);
         const printed = out.pictureText.filter((t) => tokens(t).includes(String(answer)));
         if (exempt) {
-          // An exemption covers the format, not each row: a row whose answer is a
-          // computed fraction (strip equivalence, number-line equivalence) prints
-          // nothing, and that is correct. The exemption is stale only when no row
-          // of the format prints its answer.
-          let printedAny = printed.length > 0;
-          for (const other of variants) {
-            if (printedAny || other === raw) continue;
-            const oq = normalizeQuestion(other);
-            if (!oq || oq.answer === undefined || typeof oq.answer === 'object') continue;
-            const oo = await render(oq);
-            printedAny = oo.pictureText.some((t) => tokens(t).includes(String(oq.answer)));
+          // Every row of an exempt format must print its answer, except a row whose
+          // answer is computed, not printed (see COMPUTED_ANSWER_OPERATIONS).
+          if (isComputedAnswerRow(raw)) {
+            expect(printed, `${label}: a computed answer must not be printed on the picture`).to.have.lengthOf(0);
+            return;
           }
           expect(
-            printedAny ? [true] : printed,
+            printed,
             `${label}: PRINTS_ANSWER_BY_DESIGN says this picture shows its answer (${String(answer)}), ` +
             'but it no longer does. Remove the stale exemption',
           ).to.not.have.lengthOf(0);
@@ -395,6 +404,19 @@ describe('format conformance — every dispatched format renders something', () 
 
 describe('the allowlist itself', () => {
   const allowlisted = { ...TEXT_ONLY_BY_DESIGN, ...NO_PICTURE_BY_DESIGN, ...PRINTS_ANSWER_BY_DESIGN };
+
+  it('only fraction rows are excused from printing their answer; every other exempt row must', () => {
+    const excused: string[] = [];
+    for (const format of Object.keys(PRINTS_ANSWER_BY_DESIGN)) {
+      const entry = REPRESENTATIVE_ROWS[format];
+      for (const raw of Array.isArray(entry) ? entry : entry ? [entry] : []) {
+        if (isComputedAnswerRow(raw)) excused.push(String((raw['content'] as { operation: string }).operation));
+      }
+    }
+    expect([...new Set(excused)].sort()).to.deep.equal([...COMPUTED_ANSWER_OPERATIONS].sort());
+    expect(isComputedAnswerRow({ format: 'data_graph', content: { operation: 'fraction_line_equivalent' } })).to.equal(false);
+    expect(isComputedAnswerRow({ format: 'fraction_models', content: { operation: 'fraction_pick' } })).to.equal(false);
+  });
 
   it('every allowlisted format is still a dispatched format', () => {
     const dispatched = new Set(DISPATCH_FORMATS);
