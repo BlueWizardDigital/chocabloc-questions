@@ -110,6 +110,8 @@ const VISUAL_FORMAT_STRINGS: ReadonlySet<string> = new Set([
   'data_graph',
   'multiplication',
   'fraction_concept',
+  'fraction_models',
+  'fraction_number_line',
   'time',
   'pattern',
   'coordinate_distance',

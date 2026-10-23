@@ -29,6 +29,8 @@ import type {
   DataGraphQuestion,
   MultiplicationVisualQuestion,
   FractionConceptQuestion,
+  FractionModelsQuestion,
+  FractionNumberLineQuestion,
   TimeQuestion,
   PatternQuestion,
   CoordinateDistanceQuestion,
@@ -37,7 +39,7 @@ import type {
   Base10Blocks,
   Base10BlocksContent,
 } from '../types';
-import { NormalizeError } from '../types';
+import { NormalizeError, ParseError } from '../types';
 import { parseQuestion, isQuestionLike } from './parsers';
 import { isProd } from '../internal/env';
 
@@ -556,6 +558,25 @@ function normalizeFractionConceptRow(r: Record<string, unknown>): FractionConcep
   };
 }
 
+// The picture is not validated here: bad picture data is caught at draw time
+// (parseFractionModels / parseFractionNumberLine), so it costs the picture and
+// never the question.
+function normalizeFractionModelsRow(r: Record<string, unknown>): FractionModelsQuestion {
+  return {
+    ...extractBase(r), format: 'fraction_models', imageType: 'fraction_models',
+    content: requireContent(r),
+    answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+  };
+}
+
+function normalizeFractionNumberLineRow(r: Record<string, unknown>): FractionNumberLineQuestion {
+  return {
+    ...extractBase(r), format: 'fraction_number_line', imageType: 'fraction_number_line',
+    content: requireContent(r),
+    answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+  };
+}
+
 // -- Special formats --
 
 function normalizeTimeRow(r: Record<string, unknown>): TimeQuestion {
@@ -900,6 +921,9 @@ function buildStem(format: string, c: Record<string, unknown>, answer?: AnswerVa
       return `What are the coordinates of the point?`;
     case 'number_line':
       return `What number is shown on the number line?`;
+    case 'fraction_text':
+      // The stem is the whole question and the server always ships it.
+      throw new ParseError('fraction_text needs questionText', c);
     default:
       return 'Solve:';
   }
@@ -996,6 +1020,8 @@ const FORMAT_NORMALIZERS: Record<string, (r: Record<string, unknown>) => Normali
     return normalizeWithStem(r);
   },
   fraction_concept: normalizeFractionConceptRow,
+  fraction_models: normalizeFractionModelsRow,
+  fraction_number_line: normalizeFractionNumberLineRow,
   time: normalizeTimeRow,
   pattern: normalizePatternRow,
   coordinate_distance: normalizeCoordinateDistanceRow,
@@ -1032,6 +1058,7 @@ const STEM_FORMATS = [
   'money_coin_colour', 'money_coin_denomination', 'money_coin_name', 'money_coin_size',
   'money_budget_balance', 'money_budget_plan', 'money_financial_records', 'money_price_list',
   'coordinate', 'number_line',
+  'fraction_text',
 ] as const;
 for (const f of STEM_FORMATS) FORMAT_NORMALIZERS[f] = normalizeWithStem;
 const STEM_FORMAT_SET: ReadonlySet<string> = new Set(STEM_FORMATS);

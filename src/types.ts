@@ -295,6 +295,19 @@ export type FractionConceptQuestion = VisualQuestion<
   FractionConceptContent
 >;
 
+// Picture content stays in its wire shape (`tick_labels`, not `tickLabels`).
+// Read it only through parseFractionModels / parseFractionNumberLine.
+export type FractionModelsQuestion = VisualQuestion<
+  'fraction_models',
+  'fraction_models',
+  Record<string, unknown>
+>;
+export type FractionNumberLineQuestion = VisualQuestion<
+  'fraction_number_line',
+  'fraction_number_line',
+  Record<string, unknown>
+>;
+
 // — Special formats —
 
 export type TimeContent = { hour: number; minute: number; time: string };
@@ -385,6 +398,8 @@ export type NormalizedQuestion =
   | DataGraphQuestion
   | MultiplicationVisualQuestion
   | FractionConceptQuestion
+  | FractionModelsQuestion
+  | FractionNumberLineQuestion
   | TimeQuestion
   | PatternQuestion
   | CoordinateDistanceQuestion

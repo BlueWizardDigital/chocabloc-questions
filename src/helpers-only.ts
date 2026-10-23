@@ -98,6 +98,8 @@ export type {
   MultiplicationVisualContent,
   FractionConceptQuestion,
   FractionConceptContent,
+  FractionModelsQuestion,
+  FractionNumberLineQuestion,
   TimeQuestion,
   TimeContent,
   PatternQuestion,
