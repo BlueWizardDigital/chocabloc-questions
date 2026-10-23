@@ -1,0 +1,150 @@
+{
+  "formatVersion": 1,
+  "lang": "en",
+  "skillId": "SUB-WITHIN-20-WITH-CROSSING",
+  "skillGrade": "1",
+  "title": "Count back past 10",
+  "idea": {
+    "heading": "Back to ten, then the rest",
+    "text": "Count back to 10 first. Then take away the rest.",
+    "tip": "10 is an easy place to stop."
+  },
+  "example": {
+    "operands": [
+      12,
+      4
+    ],
+    "steps": [
+      {
+        "heading": "Let's solve 12 − 4.",
+        "text": "Start with 12.",
+        "picture": {
+          "kind": "count",
+          "groups": [
+            12
+          ]
+        },
+        "young": "12 {a}."
+      },
+      {
+        "heading": "Count back to 10.",
+        "text": "That takes away 2.",
+        "picture": {
+          "kind": "count",
+          "groups": [
+            12
+          ],
+          "takeAway": 2
+        },
+        "young": "2 go away. 10 are left."
+      },
+      {
+        "heading": "Then take away the rest.",
+        "text": "4 is 2 and 2. Count back 2 more to 8.",
+        "picture": {
+          "kind": "count",
+          "groups": [
+            12
+          ],
+          "takeAway": 4
+        },
+        "young": "2 more go away. 8 are left."
+      },
+      {
+        "heading": "12 take away 4 is 8.",
+        "text": "Count back to 10 first. Then take away the rest.",
+        "result": "12 − 4 = 8"
+      }
+    ]
+  },
+  "afterWrong": {
+    "tip": "Count back to 10 first. Then take away the rest.",
+    "picture": {
+      "kind": "count",
+      "from": "operands"
+    }
+  },
+  "moreHelp": {
+    "skillId": "SUB-WITHIN-10",
+    "title": "numbers up to 10",
+    "examples": [
+      {
+        "operands": [
+          10,
+          2
+        ],
+        "steps": [
+          {
+            "heading": "Let's try smaller numbers: 10 − 2.",
+            "text": "Start with 10.",
+            "picture": {
+              "kind": "count",
+              "groups": [
+                10
+              ]
+            },
+            "young": "10 {a}."
+          },
+          {
+            "heading": "Count back 2.",
+            "text": "Say 9, 8. 8 are left.",
+            "picture": {
+              "kind": "count",
+              "groups": [
+                10
+              ],
+              "takeAway": 2
+            },
+            "young": "2 go away. 8 are left."
+          },
+          {
+            "heading": "10 take away 2 is 8.",
+            "text": "From 10, count back by ones.",
+            "result": "10 − 2 = 8"
+          }
+        ]
+      },
+      {
+        "operands": [
+          10,
+          4
+        ],
+        "steps": [
+          {
+            "heading": "Let's try smaller numbers: 10 − 4.",
+            "text": "Start with 10.",
+            "picture": {
+              "kind": "count",
+              "groups": [
+                10
+              ]
+            },
+            "young": "10 {a}."
+          },
+          {
+            "heading": "Count back 4.",
+            "text": "Say 9, 8, 7, 6. 6 are left.",
+            "picture": {
+              "kind": "count",
+              "groups": [
+                10
+              ],
+              "takeAway": 4
+            },
+            "young": "4 go away. 6 are left."
+          },
+          {
+            "heading": "10 take away 4 is 6.",
+            "text": "From 10, count back by ones.",
+            "result": "10 − 4 = 6"
+          }
+        ]
+      }
+    ]
+  },
+  "pass": {
+    "questions": 3,
+    "right": 2
+  },
+  "quickCheck": 2
+}

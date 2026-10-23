@@ -174,6 +174,45 @@ describe('<chocabloc-lesson> voice for young kids', () => {
     expect(heading(el)).to.equal(fixture.example.steps[0]!.heading);
   });
 
+  describe('words and voice match the picture', () => {
+    const counting = (): Lesson =>
+      ({
+        ...fixture,
+        example: {
+          ...fixture.example,
+          steps: [
+            { heading: 'Count them', text: 'Count the animals.', picture: { kind: 'count', groups: [3, 2] }, young: '{a} 3. {b} 2.' },
+            ...fixture.example.steps.slice(1),
+          ],
+        },
+      }) as Lesson;
+    const open = async (base: string | null): Promise<ChocaLesson> => {
+      const el = mount();
+      el.grade = 'K';
+      el.pictureBase = base;
+      el.mode = 'help';
+      el.lesson = counting();
+      await until(() => el.shadowRoot!.querySelectorAll('style').length === 2, 'the young chunk');
+      button(el, 'Next').click();
+      return el;
+    };
+
+    it('with animals drawn, the young line is shown and spoken', async () => {
+      const s = stubSpeech();
+      const el = await open('/images/animals/');
+      expect(heading(el)).to.not.equal('Count them');
+      expect(s.spoken[s.spoken.length - 1]).to.include(heading(el)!.replace(/\.$/, ''));
+    });
+
+    it('with no pictureBase the normal words are shown and spoken', async () => {
+      const s = stubSpeech();
+      const el = await open(null);
+      expect(heading(el)).to.equal('Count them');
+      expect(s.spoken[s.spoken.length - 1]).to.include('Count them');
+      expect(s.spoken[s.spoken.length - 1]).to.include('Count the animals');
+    });
+  });
+
   it('after Tap to hear, focus moves to the heading, not the body', () => {
     stubSpeech(true, false);
     const el = help('K');

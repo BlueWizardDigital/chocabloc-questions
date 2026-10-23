@@ -102,16 +102,41 @@ describe('lookFor and normalizeGrade', () => {
     expect(lookFor(null, null)).toBe('standard');
     expect(lookFor(undefined, undefined)).toBe('standard');
   });
+  it('grades 4 to 12 are standard, even on a K skill: old accounts carry 7 to 12', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    for (const g of ['4', '5', '6', '7', '8', '9', '10', '11', '12']) expect(lookFor(g, 'K')).toBe('standard');
+    for (const g of ['K', '1', '2', '3']) expect(lookFor(g, '8')).toBe('young');
+    expect(lookFor(12, 'K')).toBe('standard');
+    expect(lookFor(3, '8')).toBe('young');
+    expect(warn).not.toHaveBeenCalled();
+  });
   it('treats an unknown grade as null with one warning, and skillGrade decides', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     expect(lookFor('Grade 3', '4')).toBe('standard');
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(lookFor('7', 'K')).toBe('young');
-    expect(lookFor('', 'K')).toBe('young');
-    expect(lookFor(3, 'K')).toBe('young');
-    expect(warn).toHaveBeenCalledTimes(4);
+    for (const g of ['13', '', '0', 3.5, true]) expect(lookFor(g, 'K')).toBe('young');
+    expect(warn).toHaveBeenCalledTimes(6);
     expect(normalizeGrade('1')).toBe('1');
     expect(normalizeGrade(null)).toBeNull();
+  });
+  it('never throws on a value with no string form', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    for (const v of [Object.create(null), { toString: () => { throw new Error('boom'); } }, Symbol('x'), () => 1]) {
+      expect(normalizeGrade(v)).toBeNull();
+    }
+    expect(warn).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe('built lessons from mathSkills', () => {
+  const files = ['lesson-sub-crossing', 'lesson-missing-addend-10', 'lesson-compare-10'];
+  it.each(files)('%s is accepted', async (name) => {
+    const lesson = (await import(`../fixtures/${name}.json`)).default;
+    expect(parseLesson(lesson).ok).toBe(true);
+  });
+  it('they cover takeAway, empty and apart', async () => {
+    const text = await Promise.all(files.map(async (n) => JSON.stringify((await import(`../fixtures/${n}.json`)).default)));
+    for (const k of ['"takeAway"', '"empty"', '"apart"']) expect(text.some((t) => t.includes(k)), k).toBe(true);
   });
 });
 

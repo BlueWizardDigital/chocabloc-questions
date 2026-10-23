@@ -44,7 +44,7 @@ function fail(): never {
   throw new Invalid();
 }
 
-function obj(v: unknown, allowed: string[], required: string[]): Obj {
+function obj(v: unknown, allowed: string[], required = allowed): Obj {
   if (v === null || typeof v !== 'object' || Array.isArray(v)) fail();
   const o = v as Obj;
   for (const k of Object.keys(o)) if (!allowed.includes(k)) fail();
@@ -90,7 +90,7 @@ function picture(v: unknown): void {
       int(n, CAP_base10Value.min, CAP_base10Value.max);
     if ('focus' in o) place(o.focus);
   } else if (kind === 'array') {
-    const o = obj(v, ['kind', 'rows', 'cols'], ['kind', 'rows', 'cols']);
+    const o = obj(v, ['kind', 'rows', 'cols']);
     int(o.rows, CAP_arrayDim.min, CAP_arrayDim.max);
     int(o.cols, CAP_arrayDim.min, CAP_arrayDim.max);
   } else if (kind === 'count') {
@@ -114,7 +114,7 @@ function picture(v: unknown): void {
     if ('marks' in o) for (const m of arr(o.marks, 0, CAP_numberLineMarks)) num(m);
     if ('jumps' in o)
       for (const j of arr(o.jumps, 0, CAP_numberLineJumps)) {
-        const jo = obj(j, ['from', 'to'], ['from', 'to']);
+        const jo = obj(j, ['from', 'to']);
         num(jo.from);
         num(jo.to);
       }
@@ -157,7 +157,7 @@ function step(v: unknown): void {
 }
 
 function example(v: unknown, steps: { min: number; max: number }): void {
-  const o = obj(v, ['operands', 'steps'], ['operands', 'steps']);
+  const o = obj(v, ['operands', 'steps']);
   for (const n of arr(o.operands, CAP_operands.min, CAP_operands.max)) num(n);
   for (const s of arr(o.steps, steps.min, steps.max)) step(s);
 }
@@ -173,7 +173,6 @@ function card(v: unknown): void {
 function checkLesson(v: unknown): void {
   const o = obj(
     v,
-    ['formatVersion', 'lang', 'skillId', 'skillGrade', 'title', 'idea', 'example', 'afterWrong', 'moreHelp', 'pass', 'quickCheck'],
     ['formatVersion', 'lang', 'skillId', 'skillGrade', 'title', 'idea', 'example', 'afterWrong', 'moreHelp', 'pass', 'quickCheck'],
   );
   if (typeof o.lang !== 'string' || !LANG.test(o.lang)) fail();
@@ -195,30 +194,30 @@ function checkLesson(v: unknown): void {
   const aw = obj(o.afterWrong, ['tip', 'picture'], ['tip']);
   str(aw.tip, CAP_tip);
   if ('picture' in aw) {
-    const p = obj(aw.picture, ['kind', 'from'], ['kind', 'from']);
+    const p = obj(aw.picture, ['kind', 'from']);
     if (typeof p.kind !== 'string' || !KINDS.includes(p.kind)) fail();
     if (p.from !== 'operands' && p.from !== 'number') fail();
   }
 
-  const mh = obj(o.moreHelp, ['skillId', 'title', 'examples'], ['skillId', 'title', 'examples']);
+  const mh = obj(o.moreHelp, ['skillId', 'title', 'examples']);
   if (typeof mh.skillId !== 'string' || !SKILL_ID.test(mh.skillId)) fail();
   str(mh.title, CAP_title);
   for (const e of arr(mh.examples, CAP_moreHelpExamples.min, CAP_moreHelpExamples.max))
     example(e, CAP_moreHelpSteps);
 
-  const pass = obj(o.pass, ['questions', 'right'], ['questions', 'right']);
+  const pass = obj(o.pass, ['questions', 'right']);
   const q = int(pass.questions, CAP_passQuestions.min, CAP_passQuestions.max);
   int(pass.right, 1, q);
   int(o.quickCheck, CAP_quickCheck.min, CAP_quickCheck.max);
 }
 
 function checkIndex(v: unknown): void {
-  const o = obj(v, ['formatVersion', 'lang', 'lessons', 'concepts'], ['formatVersion', 'lang', 'lessons', 'concepts']);
+  const o = obj(v, ['formatVersion', 'lang', 'lessons', 'concepts']);
   if (typeof o.lang !== 'string' || !LANG.test(o.lang)) fail();
   const lessons = obj(o.lessons, Object.keys(o.lessons ?? {}), []);
   for (const [id, entry] of Object.entries(lessons)) {
     if (!SKILL_ID.test(id)) fail();
-    const e = obj(entry, ['standards'], ['standards']);
+    const e = obj(entry, ['standards']);
     for (const s of arr(e.standards, 0, Infinity)) if (typeof s !== 'string') fail();
   }
   const concepts = obj(o.concepts, Object.keys(o.concepts ?? {}), []);

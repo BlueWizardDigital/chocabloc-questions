@@ -76,8 +76,7 @@ describe('<chocabloc-lesson> young look', () => {
     ]);
     expect(imgs(el).every((i) => i.alt === '')).to.equal(true);
     expect(heading(el)).to.equal(`${msg(`animals.${cat}`, { count: 3 })} 3. ${msg(`animals.${dog}`, { count: 2 })} 2.`);
-    expect(part(el, 'text')).to.equal(null);
-    expect(root(el).textContent).to.not.include('Count the animals in the picture.');
+    expect(part(el, 'text')!.hidden).to.equal(true);
   });
 
   it('grade 5 draws ones blocks and the normal words', async () => {
@@ -91,9 +90,23 @@ describe('<chocabloc-lesson> young look', () => {
   it('with no grade, skillGrade decides; an unknown grade falls back to it', async () => {
     expect(imgs(await open(counting('2'), null))).to.have.length(5);
     expect(imgs(await open(counting('5'), null))).to.have.length(0);
-    for (const bad of ['7', 'Grade 3', '']) {
-      expect(imgs(await open(counting('K'), bad))).to.have.length(5);
-      expect(imgs(await open(counting('6'), bad))).to.have.length(0);
+    const warn = console.warn;
+    console.warn = () => undefined;
+    try {
+      for (const bad of ['13', 'Grade 3', '']) {
+        expect(imgs(await open(counting('K'), bad))).to.have.length(5);
+        expect(imgs(await open(counting('6'), bad))).to.have.length(0);
+      }
+    } finally {
+      console.warn = warn;
+    }
+  });
+
+  it('grades 7 to 12 are standard even on a K skill: never the young look', async () => {
+    for (const g of ['7', '12']) {
+      const el = await open(counting('K'), g);
+      expect(imgs(el)).to.have.length(0);
+      expect(heading(el)).to.equal('Count them');
     }
   });
 
@@ -125,12 +138,23 @@ describe('<chocabloc-lesson> young look', () => {
     expect(cells(el)).to.have.length(5);
   });
 
-  it('pictureBase null draws blocks but the young text still shows', async () => {
+  it('pictureBase null draws blocks and the words are the normal ones, not the animal line', async () => {
     const el = await open(counting(), 'K', null);
     expect(imgs(el)).to.have.length(0);
     expect(cells(el)).to.have.length(5);
-    expect(heading(el)).to.include('3.');
-    expect(root(el).textContent).to.not.include('Count the animals');
+    expect(heading(el)).to.equal('Count them');
+    expect(part(el, 'text')!.hidden).to.equal(false);
+    expect(part(el, 'text')!.textContent).to.equal('Count the animals in the picture.');
+  });
+
+  it('the words swap back at the moment a failed image turns the picture into blocks', async () => {
+    const el = await open(counting(), 'K');
+    expect(heading(el)).to.not.equal('Count them');
+    expect(part(el, 'text')!.hidden).to.equal(true);
+    imgs(el)[0]!.dispatchEvent(new Event('error'));
+    expect(imgs(el)).to.have.length(0);
+    expect(heading(el)).to.equal('Count them');
+    expect(part(el, 'text')!.hidden).to.equal(false);
   });
 
   it('a young array of 5 x 6 draws 30 images; 5 x 7 draws squares on a canvas', async () => {
@@ -223,16 +247,31 @@ describe('<chocabloc-lesson> young look', () => {
     plain.lesson = fixture;
     await tick();
     expect(asked).to.equal(0);
+    // A young kid on base-ten pictures needs nothing from the chunk.
     const young = mount();
     young.grade = 'K';
     young.mode = 'help';
     young.lesson = fixture;
     await tick();
-    expect(asked).to.equal(1);
+    expect(asked).to.equal(0);
     const counts = mount();
     counts.grade = '5';
     counts.mode = 'help';
     counts.lesson = counting();
+    await tick();
+    expect(asked).to.equal(1);
+    // An array needs it only for a young kid.
+    const rows = { heading: 'Rows', text: 'Rows.', picture: { kind: 'array', rows: 2, cols: 3 } };
+    const oldArray = mount();
+    oldArray.grade = '5';
+    oldArray.mode = 'help';
+    oldArray.lesson = lessonWith(rows);
+    await tick();
+    expect(asked).to.equal(1);
+    const youngArray = mount();
+    youngArray.grade = 'K';
+    youngArray.mode = 'help';
+    youngArray.lesson = lessonWith(rows);
     await tick();
     expect(asked).to.equal(2);
   });
@@ -317,6 +356,36 @@ describe('<chocabloc-lesson> young look', () => {
   });
 
   describe('tidy-ups', () => {
+    it('a grade with no string form never throws from the setter, and warns once', () => {
+      const warn = console.warn;
+      const seen: string[] = [];
+      console.warn = (...a: unknown[]) => void seen.push(String(a[0]));
+      try {
+        const el = mount();
+        expect(() => {
+          el.grade = Object.create(null) as unknown as string;
+        }).to.not.throw();
+        expect(el.grade).to.equal(null);
+        expect(seen.filter((m) => m.includes('unknown grade'))).to.have.length(1);
+      } finally {
+        console.warn = warn;
+      }
+    });
+
+    it('a cyclic lesson object shows the invalid screen and does not throw from the setter', () => {
+      const cyclic: Record<string, unknown> = { formatVersion: 1 };
+      cyclic.self = cyclic;
+      const el = mount();
+      el.mode = 'help';
+      const errors: unknown[] = [];
+      el.addEventListener('lesson-error', (e) => errors.push((e as CustomEvent).detail));
+      expect(() => {
+        el.lesson = cyclic as unknown as Lesson;
+      }).to.not.throw();
+      expect(errors).to.deep.equal([{ reason: 'invalid' }]);
+      expect(heading(el)).to.equal("Help isn't ready for this one yet.");
+    });
+
     it('a bad grade warns once, however often the lesson, mode or base is set later', async () => {
       const warn = console.warn;
       const seen: string[] = [];

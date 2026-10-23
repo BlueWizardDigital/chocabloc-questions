@@ -1,0 +1,151 @@
+{
+  "formatVersion": 1,
+  "lang": "en",
+  "skillId": "COMPARE-NUMBERS-WITHIN-10",
+  "skillGrade": "K",
+  "title": "Compare numbers",
+  "idea": {
+    "heading": "Meet the signs",
+    "text": "These signs show how two numbers compare.",
+    "cards": [
+      {
+        "big": "<",
+        "words": "is less than",
+        "example": "2 < 4"
+      },
+      {
+        "big": ">",
+        "words": "is greater than",
+        "example": "4 > 2"
+      },
+      {
+        "big": "=",
+        "words": "is equal to",
+        "example": "2 = 2"
+      }
+    ],
+    "tip": "The pointy end points at the smaller number."
+  },
+  "example": {
+    "operands": [
+      2,
+      4
+    ],
+    "steps": [
+      {
+        "heading": "Let's compare 2 and 4.",
+        "text": "Each square is 1. A full frame is 10.",
+        "picture": {
+          "kind": "count",
+          "groups": [
+            2,
+            4
+          ],
+          "apart": true
+        },
+        "young": "2 {a} and 4 {b}."
+      },
+      {
+        "heading": "Count the ones.",
+        "text": "2 has 2 ones. 4 has 4 ones.",
+        "picture": {
+          "kind": "count",
+          "groups": [
+            2,
+            4
+          ],
+          "apart": true
+        },
+        "young": "Count them: 2 and 4."
+      },
+      {
+        "heading": "2 ones is less than 4 ones.",
+        "text": "2 comes before 4 when you count.",
+        "picture": {
+          "kind": "count",
+          "groups": [
+            2,
+            4
+          ],
+          "apart": true
+        },
+        "young": "2 is less than 4."
+      },
+      {
+        "heading": "So 2 is less than 4.",
+        "text": "The pointy end points at the smaller number.",
+        "result": "2 < 4"
+      }
+    ]
+  },
+  "afterWrong": {
+    "tip": "When you count, the bigger number comes after.",
+    "picture": {
+      "kind": "count",
+      "from": "operands"
+    }
+  },
+  "moreHelp": {
+    "skillId": "COMPARE-NUMBERS-WITHIN-10",
+    "title": "numbers up to 10",
+    "examples": [
+      {
+        "operands": [
+          5,
+          4
+        ],
+        "steps": [
+          {
+            "heading": "Let's try 5 and 4.",
+            "text": "5 has 5 ones. 4 has 4 ones.",
+            "picture": {
+              "kind": "count",
+              "groups": [
+                5,
+                4
+              ],
+              "apart": true
+            },
+            "young": "5 {a} and 4 {b}. 5 is greater than 4."
+          },
+          {
+            "heading": "5 is greater than 4.",
+            "text": "5 ones is greater than 4 ones.",
+            "result": "5 > 4"
+          }
+        ]
+      },
+      {
+        "operands": [
+          2,
+          2
+        ],
+        "steps": [
+          {
+            "heading": "Now 2 and 2.",
+            "text": "They are the same number.",
+            "picture": {
+              "kind": "count",
+              "groups": [
+                2,
+                2
+              ],
+              "apart": true
+            },
+            "young": "2 {a} and 2 {b}. They are the same."
+          },
+          {
+            "heading": "They are equal.",
+            "text": "Same number on both sides? Use the = sign.",
+            "result": "2 = 2"
+          }
+        ]
+      }
+    ]
+  },
+  "pass": {
+    "questions": 3,
+    "right": 2
+  },
+  "quickCheck": 2
+}

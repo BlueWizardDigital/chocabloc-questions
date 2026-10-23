@@ -26,6 +26,8 @@ export interface Screen {
   text?: string | undefined;
   cards?: IdeaCard[] | undefined;
   picture?: LessonPicture | undefined;
+  /** Young kids' words for a count or array step, in place of heading and text while the picture draws animals. */
+  young?: { text: string; say: string } | undefined;
   result?: string | undefined;
   /** A mode's own content under the text, such as a question. */
   body?: HTMLElement | undefined;
@@ -148,17 +150,18 @@ export function walkSteps(
   const show = (i: number): void => {
     const s = steps[i]!;
     const prev = i > 0 ? () => show(i - 1) : back;
-    // The young line needs the chunk: until it has loaded, the normal words show.
+    // The young line needs the chunk; until it has loaded, the normal words show.
     const { y, young, skillId } = shell.look;
     const line = young && y && s.young != null ? y.line(skillId, s, msg) : undefined;
     shell.show({
       step,
       chips,
-      heading: line ?? s.heading,
-      text: line == null ? s.text : undefined,
+      heading: s.heading,
+      text: s.text,
       picture: s.picture,
+      young: line == null ? undefined : { text: line, say: spoken(msg, line, s.result) },
       result: s.result,
-      say: line == null ? (s.say ?? spoken(msg, s.heading, s.text, s.result)) : spoken(msg, line, s.result),
+      say: s.say ?? spoken(msg, s.heading, s.text, s.result),
       actions: [
         ...(prev ? [{ label: msg('back'), run: prev }] : []),
         i === steps.length - 1 ? end : { label: msg('next'), primary: true, run: () => show(i + 1) },

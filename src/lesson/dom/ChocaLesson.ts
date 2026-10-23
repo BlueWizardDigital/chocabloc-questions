@@ -266,7 +266,6 @@ export class ChocaLesson extends HTMLElement {
       ended: false,
     };
     this._run = run;
-    this._loadYoung(run);
     const shell = this._shell(run);
     if (this._mode === 'check') {
       this._practice(run, shell, null);
@@ -280,18 +279,21 @@ export class ChocaLesson extends HTMLElement {
       this._show(run, { step: 'error', heading: sorry, say: sorry, actions: [] });
       return;
     }
+    this._loadYoung(run, parsed.lesson);
     if (this._mode === 'help') run.controller = startHelp(shell, parsed.lesson);
     else this._practice(run, shell, parsed.lesson);
   }
 
   /**
-   * Starts the young chunk at once, without waiting, when the lesson has a count
-   * picture anywhere or the kid is young. Screens that need it before it arrives
+   * Starts the young chunk at once, without waiting, when the parsed lesson has a
+   * count picture anywhere, or the kid is young and it has an array picture:
+   * young lines exist only on those steps. Screens that need it before it arrives
    * wait in `look.wait`; if it fails, they are left out and the normal words show.
    */
-  private _loadYoung(run: Run): void {
+  private _loadYoung(run: Run, lesson: Lesson): void {
     const { look } = run;
-    if (this._mode === 'check' || !this._lesson || !(look.young || JSON.stringify(this._lesson).includes('"kind":"count"'))) return;
+    const kinds = [lesson.idea.picture, lesson.afterWrong.picture, ...[lesson.example, ...lesson.moreHelp.examples].flatMap((e) => e.steps.map((s) => s.picture))].map((p) => p?.kind);
+    if (!(kinds.includes('count') || (look.young && kinds.includes('array')))) return;
     youngChunk.load().then(
       (y) => {
         if (run !== this._run) return;
@@ -442,9 +444,22 @@ export class ChocaLesson extends HTMLElement {
     const heading = h('h2', 'heading', undefined, screen.heading);
     heading.tabIndex = -1;
     step.append(heading);
-    if (screen.text != null) step.append(h('p', 'text', undefined, screen.text));
+    const text = screen.text != null ? h('p', 'text', undefined, screen.text) : null;
+    if (text) step.append(text);
     if (screen.cards?.length) step.append(cardsOf(screen.cards));
     if (screen.picture) step.append(renderPicture(screen.picture, msg, run.lang, run.look));
+    // The young words go with animals: shown, and spoken, only while the picture really draws them.
+    const { young } = screen;
+    if (young && step.querySelector('.animals')) {
+      const normal = screen.say;
+      const words = (on: boolean): void => {
+        heading.textContent = on ? young.text : screen.heading;
+        if (text) text.hidden = on;
+        screen.say = on ? young.say : normal;
+      };
+      words(true);
+      step.addEventListener('error', () => words(false), { once: true, capture: true });
+    }
     if (screen.result != null) step.append(h('p', 'result', undefined, screen.result));
     if (screen.body) step.append(screen.body);
     if (screen.tip != null) step.append(h('p', 'tip', undefined, screen.tip));

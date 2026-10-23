@@ -15,7 +15,16 @@ const cleanups: (() => void)[] = [];
 
 before(async () => {
   const res = await fetch(new URL('../fixtures/lesson-compare-100.json', import.meta.url));
-  fixture = (await res.json()) as Lesson;
+  const base = (await res.json()) as Lesson;
+  // A young kid (by skillGrade) on an array step: the first worked step draws a canvas and loads the young chunk,
+  // so the cycles exercise the chunk's import as well as the picture's observer.
+  fixture = {
+    ...base,
+    example: {
+      ...base.example,
+      steps: [{ heading: 'Rows', text: 'Rows of three.', picture: { kind: 'array', rows: 2, cols: 3 }, young: '{a} in rows.' }, ...base.example.steps.slice(1)],
+    },
+  } as Lesson;
 });
 
 afterEach(() => {
