@@ -288,7 +288,7 @@ export type MultiplicationVisualQuestion = VisualQuestion<
   MultiplicationVisualContent
 >;
 
-export type FractionConceptContent = { fraction: [number, number] };
+export type FractionConceptContent = { fraction?: [number, number] };
 export type FractionConceptQuestion = VisualQuestion<
   'fraction_concept',
   'fraction_visual',

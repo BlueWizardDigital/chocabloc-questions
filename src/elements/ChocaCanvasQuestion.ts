@@ -87,6 +87,8 @@ function buildShell(): {
     [part="canvas"] {
       align-self: center;
       image-rendering: auto;
+      max-width: 100%;
+      height: auto;
     }
   `;
   const container = document.createElement('div');
@@ -311,7 +313,7 @@ export class ChocaCanvasQuestion extends HTMLElement {
         drawArray(ctx, w, h, q.content.operands);
         break;
       case 'fraction_concept':
-        drawFractionVisual(ctx, w, h, q.content.fraction);
+        this._canvas.hidden = !drawFractionVisual(ctx, w, h, q.content.fraction);
         break;
       case 'fraction_models': {
         // Picture data outside the contract costs the picture, never the

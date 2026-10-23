@@ -707,10 +707,13 @@ export function drawCircleGiven(
 }
 
 export function drawFractionVisual(
-  ctx: CanvasRenderingContext2D, w: number, h: number, fraction: [number, number],
-): void {
+  ctx: CanvasRenderingContext2D, w: number, h: number, fraction: [number, number] | undefined,
+): boolean {
   ctx.clearRect(0, 0, w, h);
+  if (!Array.isArray(fraction) || fraction.length !== 2) return false;
   const [numerator, denominator] = fraction;
+  if (!Number.isInteger(numerator) || !Number.isInteger(denominator)
+    || denominator < 1 || numerator < 0) return false;
   const cx = w / 2, cy = h / 2, radius = Math.min(w, h) / 2 - 15;
   if (denominator <= 8) {
     const sliceAngle = (Math.PI * 2) / denominator;
@@ -736,6 +739,7 @@ export function drawFractionVisual(
       ctx.strokeRect(x + i * segW, y, segW, barH);
     }
   }
+  return true;
 }
 
 export function drawAngle(

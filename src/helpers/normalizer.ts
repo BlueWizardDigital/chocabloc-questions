@@ -548,12 +548,13 @@ function normalizeMultiplicationRow(r: Record<string, unknown>): MultiplicationV
 function normalizeFractionConceptRow(r: Record<string, unknown>): FractionConceptQuestion {
   const base = extractBase(r);
   const c = requireContent(r);
+  // A missing or malformed fraction costs the picture, never the question
+  // (Trello 426): the content stays empty and drawFractionVisual draws nothing.
   const fraction = getNumberArray(c, 'fraction');
-  if (!fraction || fraction.length !== 2)
-    throw new NormalizeError('fraction_concept missing fraction [n,d]', r);
+  const valid = fraction !== null && fraction !== undefined && fraction.length === 2;
   return {
     ...base, format: 'fraction_concept', imageType: 'fraction_visual',
-    content: { fraction: fraction as [number, number] },
+    content: valid ? { fraction: fraction as [number, number] } : {},
     answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
   };
 }

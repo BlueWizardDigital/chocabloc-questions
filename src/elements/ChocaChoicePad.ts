@@ -1,4 +1,5 @@
 import type { Choice } from '../types';
+import { orderFixedChoiceSet } from '../helpers/choice-order';
 
 /**
  * v0.2.0 PC-3: choice values may be raw scalars OR `{value, error_type}` objects.
@@ -141,7 +142,15 @@ export class ChocaChoicePad extends HTMLElement {
   }
 
   set choices(value: Choice[]) {
-    this._choices = Array.isArray(value) ? value : [];
+    const list = Array.isArray(value) ? value : [];
+    // Fixed orders (A, B, C, D; less/equal/greater; 0, 1/2, 1) are applied here
+    // so picking, the keyboard and review all read one array. Values keep their
+    // original type.
+    const keys = list.map((c) => choiceValue(c.value));
+    const ordered = orderFixedChoiceSet(keys);
+    this._choices = ordered
+      ? [...list].sort((a, b) => ordered.indexOf(choiceValue(a.value)) - ordered.indexOf(choiceValue(b.value)))
+      : list;
     this._activeIndex = 0;
     this._pickedValueKey = null;
     this._render();
