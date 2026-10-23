@@ -9,6 +9,8 @@ import {
   drawLabeled3D, drawFaceHighlight, drawClassifyTriangle,
   type Base10Colors,
 } from './canvas-draws';
+import { drawFractionModels, FRACTION_COLOURS, type FractionColours } from './draw-fraction';
+import { parseFractionModels } from '../helpers/fraction-content';
 import './ChocaChoicePad';
 
 const CANVAS_W = 300;
@@ -176,6 +178,7 @@ export class ChocaCanvasQuestion extends HTMLElement {
       else if (q.format === 'geometry_surface_area') text = 'Find the surface area.';
       else if (q.format === 'geometry_circle_convert') text = `Find the ${q.content.find_type}.`;
       else if (q.format === 'fraction_concept') text = 'What fraction is shaded?';
+      else if (q.format === 'fraction_models') text = 'Look at the shapes.';
       else if (q.format === 'time') text = 'What time is shown?';
       else if (q.format === 'coordinate_distance') text = 'What is the distance between the points?';
       else if (q.format === 'multiplication') text = `What is ${q.content.operands[0]} × ${q.content.operands[1]}?`;
@@ -308,6 +311,19 @@ export class ChocaCanvasQuestion extends HTMLElement {
       case 'fraction_concept':
         drawFractionVisual(ctx, w, h, q.content.fraction);
         break;
+      case 'fraction_models': {
+        // Picture data outside the contract costs the picture, never the
+        // question: the canvas is hidden and the choices still show.
+        const spec = parseFractionModels(q.content);
+        if (spec) {
+          drawFractionModels(ctx, w, h, spec, this._fractionColours());
+        } else {
+          ctx.clearRect(0, 0, w, h);
+          console.warn(`[chocabloc-questions] fraction_models question ${q.id} has picture content it can't draw; showing no picture`);
+        }
+        this._canvas.hidden = !spec;
+        break;
+      }
       case 'time':
         drawAnalogClock(ctx, w, h, q.content.hour, q.content.minute);
         break;
@@ -330,6 +346,19 @@ export class ChocaCanvasQuestion extends HTMLElement {
     const thou = rv('--cq-b10-thousands'); if (thou) b10Colors.fillThousands = thou;
     const strk = rv('--cq-b10-stroke');    if (strk) b10Colors.stroke = strk;
     return b10Colors;
+  }
+
+  /** The page's --cq-frac-* colours, each one its default where unset. */
+  private _fractionColours(): FractionColours {
+    const cs = getComputedStyle(this);
+    const rv = (name: string, fallback: string) => cs.getPropertyValue(name).trim() || fallback;
+    return {
+      fill: rv('--cq-frac-fill', FRACTION_COLOURS.fill),
+      empty: rv('--cq-frac-empty', FRACTION_COLOURS.empty),
+      stroke: rv('--cq-frac-stroke', FRACTION_COLOURS.stroke),
+      guide: rv('--cq-frac-guide', FRACTION_COLOURS.guide),
+      text: rv('--cq-frac-text', FRACTION_COLOURS.text),
+    };
   }
 
   private _renderChoices(): void {
