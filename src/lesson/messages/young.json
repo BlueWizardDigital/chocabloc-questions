@@ -1,0 +1,13 @@
+{
+  "animals": {
+    "cat": { "one": "cat", "other": "cats" },
+    "crab": { "one": "crab", "other": "crabs" },
+    "dog": { "one": "dog", "other": "dogs" },
+    "duck": { "one": "duck", "other": "ducks" },
+    "fish": { "one": "fish", "other": "fish" },
+    "frog": { "one": "frog", "other": "frogs" },
+    "pig": { "one": "pig", "other": "pigs" },
+    "zebra": { "one": "zebra", "other": "zebras" }
+  },
+  "young": { "allAnimals": "animals" }
+}

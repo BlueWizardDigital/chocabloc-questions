@@ -4,7 +4,7 @@ import { speakableText } from '../speak-text';
 import type { Msg } from '../messages';
 import type { IdeaCard, Lesson, LessonPicture, LessonStep } from '../types';
 import type { NormalizedQuestion, ValidateAnswer } from '../../types';
-import type { h, renderPicture } from './pictures';
+import type { h, PictureLook, renderPicture } from './pictures';
 
 export type GetQuestions = (skillId: string, count: number, excludeIds: string[]) => Promise<NormalizedQuestion[]>;
 
@@ -61,6 +61,8 @@ export interface LessonShell {
   readonly msg: Msg;
   readonly lang: string;
   readonly kit: Kit;
+  /** The kid's look, and the young chunk once it has loaded. */
+  readonly look: PictureLook;
   /** Draws the screen and returns its action buttons, in order ([] for a run that was replaced or ended). */
   show(screen: Screen): HTMLButtonElement[];
   /** Writes the polite live region. */
@@ -144,14 +146,17 @@ export function walkSteps(
   const show = (i: number): void => {
     const s = steps[i]!;
     const prev = i > 0 ? () => show(i - 1) : back;
+    // The young line needs the chunk: until it has loaded, the normal words show.
+    const { y, young, skillId } = shell.look;
+    const line = young && y && s.young != null ? y.line(skillId, s, msg) : undefined;
     shell.show({
       step,
       chips,
-      heading: s.heading,
-      text: s.text,
+      heading: line ?? s.heading,
+      text: line == null ? s.text : undefined,
       picture: s.picture,
       result: s.result,
-      say: s.say ?? spoken(msg, s.heading, s.text, s.result),
+      say: line == null ? (s.say ?? spoken(msg, s.heading, s.text, s.result)) : spoken(msg, line, s.result),
       actions: [
         ...(prev ? [{ label: msg('back'), run: prev }] : []),
         i === steps.length - 1 ? end : { label: msg('next'), primary: true, run: () => show(i + 1) },

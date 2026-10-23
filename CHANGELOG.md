@@ -32,13 +32,31 @@ public-API rule a new entry point is minor, so the line moves from 0.6 to 0.7.
 - **Base-ten pictures:** every number in one picture is drawn with the same block size, so the
   larger number never has smaller blocks.
 
+- **Young look (K to 3):** new `grade` property (`'K'`, `'1'` to `'6'`, or null; anything else is
+  treated as null with one warning) and `pictureBase` (where the animal drawings live, such as
+  `/images/animals/`; a missing trailing slash is added). K to 3 get animals in the counting
+  lessons and the lesson's `young` words; grade 4 to 6 get ones blocks and the normal words.
+  With no grade, the lesson's `skillGrade` decides. With no `pictureBase`, or if any animal
+  fails to load, the whole picture draws as blocks.
+- **Format v1 grows** (nothing was served yet, so no version bump): a `count` picture (1 to 3
+  groups of 0 to 20, at most 20 together, with optional `takeAway`, `empty` or `apart`; and
+  `{ "kind": "count", "from": "operands" }` for `afterWrong`), an optional `young` line on a
+  `count` or `array` step (1 to 60 characters, placeholders `{a}`, `{b}`, `{c}` only, each
+  needing its group), and a required `skillGrade` (`K` or `1` to `8`) on every lesson.
+- **Lazy young chunk:** the `count` pictures, animal arrays, `young` text and the eight animal
+  names load from their own chunk, started when a lesson has a count picture or the kid is
+  young. Until it arrives a count draws as an empty box of its final height; if it fails to
+  load, the picture is left out and the normal words show, with one warning. It has its own
+  size line (3 KB gz).
+
 ### Changed
 
 - The base-ten and array drawings moved into their own files (`draw-base10`, `draw-array`),
   unchanged, so the lesson player can share them. `canvas-question` grew by about 50 B gz
   from the new module order; no runtime code changed.
 - **Size:** the lesson entry has its own size line, `lesson Help` (`dist/lesson.mjs`), limit
-  12 KB gz. Question code loads lazily from a separate chunk and is not in that line.
+  13.5 KB gz (raised from 12 KB for the young look). Question code and the young look load
+  lazily from separate chunks and are not in that line.
 
 ### Fixed
 

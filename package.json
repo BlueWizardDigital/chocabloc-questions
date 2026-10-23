@@ -74,6 +74,7 @@
     "./dist/chunks/ChocaWhiteboard.*.mjs",
     "./dist/lesson.mjs",
     "./dist/chunks/practice.*.mjs",
+    "./dist/chunks/young.*.mjs",
     "./dist/bridge.mjs",
     "./dist/bridge.cjs",
     "./dist/host.mjs",

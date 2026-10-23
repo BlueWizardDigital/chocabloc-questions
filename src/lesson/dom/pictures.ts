@@ -142,15 +142,58 @@ function columns(pic: Pic<'columns'>): HTMLElement {
   return grid;
 }
 
-/** A lesson picture: base-ten and arrays on canvas, number lines in SVG, column sums as a grid. */
-export function renderPicture(pic: LessonPicture, msg: Msg, lang: string): HTMLElement {
+/** The lazy young chunk (count pictures, animals, young text). */
+export type Young = typeof import('./young');
+
+/**
+ * How pictures are drawn for this kid. `y` is the young chunk once it has
+ * loaded, `false` if it failed, null while it loads; pictures that need it wait
+ * in `wait` and are called with true when it arrives, false if it failed.
+ */
+export interface PictureLook {
+  young: boolean;
+  base: string | null;
+  skillId: string;
+  y: Young | false | null;
+  wait: ((ok: boolean) => void)[];
+}
+
+/** Draws with the young chunk: now if it is here, else an empty box of the same height until it arrives. A failed chunk leaves the picture out. */
+function viaYoung(box: HTMLElement, look: PictureLook | undefined, height: number, build: (y: Young) => HTMLElement): void {
+  if (!look || look.y === false) return;
+  if (look.y) {
+    box.append(build(look.y));
+    return;
+  }
+  const hold = h('div');
+  hold.style.minHeight = `${height}px`;
+  box.append(hold);
+  look.wait.push((ok) => (ok ? hold.replaceWith(build(look.y as Young)) : hold.remove()));
+}
+
+/** Frame rows a count takes: each ten frame stands on its own row (cell 42 px, 30 px when apart), 10 px apart. */
+function countHeight(pic: Extract<LessonPicture, { kind: 'count' }>): number {
+  const frames = (n: number): number => Math.max(1, Math.ceil(n / 10));
+  const rows = pic.apart ? pic.groups.reduce((t, n) => t + frames(n), 0) : frames(pic.groups.reduce((t, n) => t + n, 0) + (pic.empty ?? 0));
+  return rows * ((pic.apart ? 60 : 84) + 15) + (rows - 1) * 10;
+}
+
+/** A lesson picture: base-ten and arrays on canvas, number lines in SVG, column sums as a grid, counts and animal arrays from the young chunk. */
+export function renderPicture(pic: LessonPicture, msg: Msg, lang: string, look?: PictureLook): HTMLElement {
   const box = h('div', 'picture');
   switch (pic.kind) {
     case 'base10':
       box.append(base10(pic, msg, lang));
       break;
-    case 'array':
-      box.append(canvasDrawing((ctx, w, ht) => drawArray(ctx, w, ht, [pic.rows, pic.cols])));
+    case 'array': {
+      const squares = (): HTMLElement => canvasDrawing((ctx, w, ht) => drawArray(ctx, w, ht, [pic.rows, pic.cols]));
+      if (look?.young && look.base != null && pic.rows * pic.cols <= 30) {
+        viaYoung(box, look, pic.rows * Math.min(46, 280 / pic.cols), (y) => y.array(pic, look, squares));
+      } else box.append(squares());
+      break;
+    }
+    case 'count':
+      viaYoung(box, look, countHeight(pic), (y) => y.count(pic, look!));
       break;
     case 'numberLine':
       box.append(numberLine(pic));

@@ -23,6 +23,13 @@ function fromOperands(kind: LessonPicture['kind'], c: Record<string, unknown>): 
         ? { kind, rows, cols }
         : null;
     }
+    case 'count': {
+      const [a, b] = ops;
+      if (ops.length !== 2 || a == null || b == null || !ops.every((n) => isInt(n, 0, 20))) return null;
+      if (c.operation === 'addition') return a + b >= 1 && a + b <= 20 ? { kind, groups: [a, b] } : null;
+      if (c.operation === 'subtraction') return b >= 1 && b <= a ? { kind, groups: [a], takeAway: b } : null;
+      return c.operation === 'comparison' ? { kind, groups: [a, b], apart: true } : null;
+    }
     case 'numberLine': {
       const [a, b] = ops;
       const jumps: { from: number; to: number }[] = [];

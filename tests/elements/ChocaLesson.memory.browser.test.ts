@@ -1,5 +1,6 @@
 import { expect } from '@esm-bundle/chai';
 import { ChocaLesson } from '../../src/lesson/index';
+import { youngChunk } from '../../src/lesson/dom/ChocaLesson';
 import type { Lesson } from '../../src/lesson/index';
 
 // wtr starts Chromium with --expose-gc and --enable-precise-memory-info (web-test-runner.config.mjs).
@@ -173,6 +174,10 @@ describe('<chocabloc-lesson> leaves nothing behind', () => {
     await gc();
     const first = heap();
     for (let i = 0; i < LONG_RUN; i++) cycle();
+    // Each young-look mount (this lesson is young by skillGrade) has a chunk import in flight. Awaiting
+    // the same import, queued after all of them, lets those finish; then the heap shows what is kept.
+    await youngChunk.load();
+    await new Promise((r) => setTimeout(r, 0));
     await gc();
     await gc();
     const grownKb = Math.round((heap() - first) / 1024);

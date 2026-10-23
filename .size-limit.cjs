@@ -1,3 +1,13 @@
+const fs = require('fs');
+
+// The build writes the young chunk twice (es and cjs, both .mjs); the es one has the export.
+const youngChunk = () =>
+  fs
+    .readdirSync('dist/chunks')
+    .filter((f) => /^young\..+\.mjs$/.test(f))
+    .map((f) => `dist/chunks/${f}`)
+    .find((f) => /\bexport\s*\{/.test(fs.readFileSync(f, 'utf8')));
+
 module.exports = [
   {
     name: 'helpers-only (Tier 1)',
@@ -50,11 +60,18 @@ module.exports = [
   {
     name: 'lesson Help (player + pictures, no practice chunk)',
     path: 'dist/lesson.mjs',
-    limit: '12 KB',
+    // David, 2026-10-23: raised from 12 KB for the young look. The count and young code is a lazy chunk (below).
+    limit: '13.5 KB',
     gzip: true,
     modifyEsbuildConfig(config) {
-      config.external = [...(config.external ?? []), './chunks/practice.*'];
+      config.external = [...(config.external ?? []), './chunks/practice.*', './chunks/young.*'];
       return config;
     },
+  },
+  {
+    name: 'lesson young look and count pictures (lazy)',
+    path: youngChunk(),
+    limit: '3 KB',
+    gzip: true,
   },
 ];

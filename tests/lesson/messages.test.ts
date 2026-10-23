@@ -10,6 +10,11 @@ import {
   safeLang,
 } from '../../src/lesson/messages';
 import en from '../../src/lesson/messages/en.json';
+import young from '../../src/lesson/messages/young.json';
+import { LESSON_ANIMALS } from '../../src/lesson/animals';
+
+/** The player's English words: en.json, plus the young chunk's file, which it adds when it loads. */
+const all: Record<string, unknown> = { ...en, ...young };
 
 const EN = new Intl.PluralRules('en');
 
@@ -172,6 +177,8 @@ const COMPUTED: { template: string; keys: string[] }[] = [
   // layout/base10.ts: msg(`base10.${p}`) for each place
   { template: '`base10.${', keys: ['base10.thousands', 'base10.hundreds', 'base10.tens', 'base10.ones'] },
   // dom/screens.ts introChips: msg(`steps.${s}`) for each Intro step
+  // animals.ts pool, through young-text.ts: msg(`animals.${name}`) for each pool animal
+  { template: '`animals.${', keys: LESSON_ANIMALS.map((a) => `animals.${a}`) },
   {
     template: '`steps.${',
     keys: ['steps.idea', 'steps.quickCheck', 'steps.watch', 'steps.yourTurn', 'steps.moreExamples', 'steps.tryAgain'],
@@ -186,7 +193,7 @@ function leafKeys(table: unknown, prefix = ''): string[] {
 
 describe('message keys', () => {
   test('every msg(\'…\') key used in src/lesson exists in en.json', () => {
-    const missing = [...literalKeys()].filter((k) => lookup(en, k) === undefined);
+    const missing = [...literalKeys()].filter((k) => lookup(all, k) === undefined);
     expect(missing).toEqual([]);
   });
 
@@ -196,12 +203,18 @@ describe('message keys', () => {
       .join('\n');
     for (const { template, keys } of COMPUTED) {
       expect(source.includes(`msg(${template}`), template).toBe(true);
-      expect(keys.filter((k) => lookup(en, k) === undefined)).toEqual([]);
+      expect(keys.filter((k) => lookup(all, k) === undefined)).toEqual([]);
     }
   });
 
   test('every key in en.json is used', () => {
     const used = new Set([...literalKeys(), ...COMPUTED.flatMap((c) => c.keys)]);
-    expect(leafKeys(en).filter((k) => !used.has(k))).toEqual([]);
+    expect(leafKeys(all).filter((k) => !used.has(k))).toEqual([]);
+  });
+
+  test('the animal messages are exactly the pool, in both directions', () => {
+    const named = Object.keys(young.animals).sort();
+    expect(named).toEqual([...LESSON_ANIMALS].sort());
+    for (const a of LESSON_ANIMALS) expect(isPluralForms((young.animals as Record<string, unknown>)[a]), a).toBe(true);
   });
 });

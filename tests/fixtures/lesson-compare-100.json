@@ -2,6 +2,7 @@
   "formatVersion": 1,
   "lang": "en",
   "skillId": "COMPARE-NUMBERS-WITHIN-100",
+  "skillGrade": "2",
   "title": "Compare numbers to 100",
   "idea": {
     "heading": "Meet the signs",

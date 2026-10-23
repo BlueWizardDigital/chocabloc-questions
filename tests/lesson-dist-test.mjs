@@ -54,6 +54,13 @@ try {
   const lessonCode = readFileSync(resolve(dist, 'lesson.mjs'), 'utf8');
   const lazy = lessonCode.match(/\bimport\(\s*["'](\.\/chunks\/practice\.[^"']+\.mjs)["']\s*\)/);
   if (!lazy) fail('dist/lesson.mjs has no dynamic import("./chunks/practice.…")');
+  // The young look is a second lazy chunk: one dynamic import, never a static one.
+  if (!/\bimport\(\s*["']\.\/chunks\/young\.[^"']+\.mjs["']\s*\)/.test(lessonCode)) {
+    fail('dist/lesson.mjs has no dynamic import("./chunks/young.…")');
+  }
+  if (staticClosure(resolve(dist, 'lesson.mjs')).some((f) => /[/\\]young\.[^/\\]+\.mjs$/.test(f))) {
+    fail('dist/lesson.mjs reaches the young chunk through a static import');
+  }
   const helpFiles = staticClosure(resolve(dist, 'lesson.mjs'));
   if (helpFiles.some((f) => /[/\\]practice\.[^/\\]+\.mjs$/.test(f))) {
     fail('dist/lesson.mjs reaches the practice chunk through a static import');

@@ -11,6 +11,7 @@ const CAP_cardWords = 40;
 const CAP_cardExample = 20;
 const CAP_result = 40;
 const CAP_say = 300;
+const CAP_young = 60;
 const CAP_cards = { min: 0, max: 4 };
 const CAP_exampleSteps = { min: 2, max: 6 };
 const CAP_moreHelpExamples = { min: 1, max: 3 };
@@ -27,10 +28,12 @@ const CAP_columnsCarry = 12;
 const CAP_columnsResult = 16;
 
 const SKILL_ID = /^[A-Z0-9]+(-[A-Z0-9]+)*$/;
+const SKILL_GRADE = /^(K|[1-8])$/;
 const LANG = /^[a-z]{2}(-[a-z]{2})?$/;
 const DECIMAL = /^\d+(\.\d+)?$/;
 const PLACES = ['ones', 'tens', 'hundreds', 'thousands'];
-const KINDS = ['base10', 'array', 'numberLine', 'columns'];
+const KINDS = ['base10', 'array', 'count', 'numberLine', 'columns'];
+const PLACEHOLDERS = /\{[abc]\}/g;
 const OPS = ['+', '−', '×', 'compare'];
 
 type Obj = Record<string, unknown>;
@@ -90,6 +93,20 @@ function picture(v: unknown): void {
     const o = obj(v, ['kind', 'rows', 'cols'], ['kind', 'rows', 'cols']);
     int(o.rows, CAP_arrayDim.min, CAP_arrayDim.max);
     int(o.cols, CAP_arrayDim.min, CAP_arrayDim.max);
+  } else if (kind === 'count') {
+    const o = obj(v, ['kind', 'groups', 'takeAway', 'empty', 'apart'], ['kind', 'groups']);
+    const groups = arr(o.groups, 1, 3);
+    const sum = groups.reduce<number>((t, n) => t + int(n, 0, 20), 0);
+    if ('apart' in o) {
+      if (o.apart !== true || groups.length !== 2 || 'takeAway' in o || 'empty' in o) fail();
+    } else {
+      if ('takeAway' in o) {
+        if ('empty' in o) fail();
+        int(o.takeAway, 1, sum);
+      }
+      const total = sum + ('empty' in o ? int(o.empty, 1, 20) : 0);
+      if (total < 1 || total > 20) fail();
+    }
   } else if (kind === 'numberLine') {
     const o = obj(v, ['kind', 'from', 'to', 'marks', 'jumps'], ['kind', 'from', 'to']);
     num(o.from);
@@ -120,11 +137,21 @@ function picture(v: unknown): void {
 }
 
 function step(v: unknown): void {
-  const o = obj(v, ['heading', 'text', 'picture', 'result', 'say'], ['heading', 'text']);
+  const o = obj(v, ['heading', 'text', 'picture', 'result', 'say', 'young'], ['heading', 'text']);
   str(o.heading, CAP_heading);
   str(o.text, CAP_text);
   if ('picture' in o && 'result' in o) fail();
   if ('picture' in o) picture(o.picture);
+  if ('young' in o) {
+    // Only {a}, {b} and {c}, and only on a picture of animals: a count, or an array (whose one animal is {a}).
+    const kind = (o.picture as Obj | undefined)?.kind;
+    const young = str(o.young, CAP_young);
+    if (young.trim() === '') fail();
+    if ((kind !== 'count' && kind !== 'array') || /[{}]/.test(young.replace(PLACEHOLDERS, ''))) fail();
+    // A placeholder needs its group: {b} a second group, {c} a third, and an array has only {a}.
+    const groups = kind === 'count' ? ((o.picture as Obj).groups as unknown[]).length : 1;
+    for (const m of young.match(PLACEHOLDERS) ?? []) if (m.charCodeAt(1) - 97 >= groups) fail();
+  }
   optStr(o, 'result', CAP_result);
   optStr(o, 'say', CAP_say);
 }
@@ -146,11 +173,12 @@ function card(v: unknown): void {
 function checkLesson(v: unknown): void {
   const o = obj(
     v,
-    ['formatVersion', 'lang', 'skillId', 'title', 'idea', 'example', 'afterWrong', 'moreHelp', 'pass', 'quickCheck'],
-    ['formatVersion', 'lang', 'skillId', 'title', 'idea', 'example', 'afterWrong', 'moreHelp', 'pass', 'quickCheck'],
+    ['formatVersion', 'lang', 'skillId', 'skillGrade', 'title', 'idea', 'example', 'afterWrong', 'moreHelp', 'pass', 'quickCheck'],
+    ['formatVersion', 'lang', 'skillId', 'skillGrade', 'title', 'idea', 'example', 'afterWrong', 'moreHelp', 'pass', 'quickCheck'],
   );
   if (typeof o.lang !== 'string' || !LANG.test(o.lang)) fail();
   if (typeof o.skillId !== 'string' || !SKILL_ID.test(o.skillId)) fail();
+  if (typeof o.skillGrade !== 'string' || !SKILL_GRADE.test(o.skillGrade)) fail();
   str(o.title, CAP_title);
 
   const idea = obj(o.idea, ['heading', 'text', 'cards', 'tip', 'picture', 'say'], ['heading', 'text']);

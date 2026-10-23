@@ -5,6 +5,7 @@ export type Place = 'ones' | 'tens' | 'hundreds' | 'thousands';
 export type LessonPicture =
   | { kind: 'base10'; numbers: number[]; focus?: Place }
   | { kind: 'array'; rows: number; cols: number }
+  | { kind: 'count'; groups: number[]; takeAway?: number; empty?: number; apart?: true }
   | {
       kind: 'numberLine';
       from: number;
@@ -29,6 +30,8 @@ export interface LessonStep {
   picture?: LessonPicture;
   result?: string;
   say?: string;
+  /** Young kids' words for a `count` or `array` step, with {a} {b} {c} for the animals. */
+  young?: string;
 }
 
 export interface WorkedExample {
@@ -47,6 +50,8 @@ export interface Lesson {
   formatVersion: 1;
   lang: string;
   skillId: string;
+  /** The skill's own grade, `K` or `1` to `8`. Never shown; it picks the look when the kid's grade is unknown. */
+  skillGrade: string;
   title: string;
   idea: {
     heading: string;

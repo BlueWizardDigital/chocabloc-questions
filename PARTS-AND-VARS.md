@@ -181,6 +181,10 @@ The practice question inside Intro and Check is a `<chocabloc-question>`, so its
 | `button` | Every button. The pale ones also have class `secondary` |
 | `read-to-me` | The Read to me button (also a `button`). Absent where the browser has no speech |
 
+The young look's counting pictures (ten frames of animals or coloured blocks, and animal arrays) are plain
+elements inside `picture`. They add no parts: lines and the crossed-out mark use `--cl-ink`, and the block
+colours are fixed.
+
 | Var | Default | Purpose |
 |-----|---------|---------|
 | `--cl-font-display` | `var(--cl-font-body, var(--cq-font, system-ui))` | Headings, buttons, big numbers |

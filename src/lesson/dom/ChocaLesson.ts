@@ -1,9 +1,11 @@
 import { parseLesson } from '../parse';
-import { createMessages, safeLang } from '../messages';
+import { createMessages, lessonMessagesEn, safeLang } from '../messages';
 import type { Msg, Translator } from '../messages';
 import type { IdeaCard, Lesson } from '../types';
 import type { NormalizedQuestion, ValidateAnswer } from '../../types';
 import { h, svg, renderPicture } from './pictures';
+import type { PictureLook } from './pictures';
+import { lookFor } from '../look';
 import { createSpeaker } from './speaker';
 import type { Speaker } from './speaker';
 import { LESSON_CSS } from './styles';
@@ -17,17 +19,21 @@ interface Run {
   lang: string;
   msg: Msg;
   speaker: Speaker;
+  look: PictureLook;
   controller: ModeController | null;
   /** Closed by the kid, or done: the run reports nothing more. */
   ended: boolean;
 }
 
 const MODES: readonly LessonMode[] = ['help', 'intro', 'check'];
-const PROPS = ['lesson', 'mode', 'getQuestions', 'questions', 'validateAnswer', 'translator'] as const;
+const PROPS = ['lesson', 'mode', 'getQuestions', 'questions', 'validateAnswer', 'translator', 'grade', 'pictureBase'] as const;
 const KIT: Kit = { h, renderPicture, spoken, walkSteps, introChips };
 
 /** How the element loads the practice chunk. Not public; a test swaps `load` to see a chunk that fails to load. */
 export const practiceChunk = { load: (): Promise<typeof import('./practice')> => import('./practice') };
+
+/** How the element loads the young chunk. Not public; a test swaps `load` to see it fail or to count requests. */
+export const youngChunk = { load: (): Promise<typeof import('./young')> => import('./young') };
 
 /** Help: the idea, then each worked-example step with Next and Back, then Back to the game. */
 function startHelp(shell: LessonShell, lesson: Lesson): ModeController {
@@ -91,6 +97,8 @@ export class ChocaLesson extends HTMLElement {
   private _questions: NormalizedQuestion[] = [];
   private _validateAnswer: ValidateAnswer | undefined = undefined;
   private _translator: Translator | undefined = undefined;
+  private _grade: string | null = null;
+  private _pictureBase: string | null = null;
   private _mode: LessonMode = 'help';
   private _lesson: Lesson | null = null;
   private _run: Run | null = null;
@@ -177,6 +185,26 @@ export class ChocaLesson extends HTMLElement {
     this._translator = fn;
   }
 
+  /** The kid's grade, `'K'` or `'1'` to `'6'`, or null. K to 3 get the young look; with none, the lesson's `skillGrade` decides. */
+  get grade(): string | null {
+    return this._grade;
+  }
+
+  set grade(g: string | null) {
+    this._grade = g;
+    this._start();
+  }
+
+  /** Where the animal drawings live, such as `/images/animals/`. With null, pictures draw blocks. */
+  get pictureBase(): string | null {
+    return this._pictureBase;
+  }
+
+  set pictureBase(b: string | null) {
+    this._pictureBase = typeof b === 'string' && b !== '' ? (b.endsWith('/') ? b : `${b}/`) : null;
+    this._start();
+  }
+
   get mode(): LessonMode {
     return this._mode;
   }
@@ -222,10 +250,18 @@ export class ChocaLesson extends HTMLElement {
       lang,
       msg: createMessages({ lang, translator: (k, v) => this.translator?.(k, v) }),
       speaker: createSpeaker(lang),
+      look: {
+        young: lookFor(this._grade, this._lesson?.skillGrade) === 'young',
+        base: this._pictureBase,
+        skillId: this._lesson?.skillId ?? '',
+        y: null,
+        wait: [],
+      },
       controller: null,
       ended: false,
     };
     this._run = run;
+    this._loadYoung(run);
     const shell = this._shell(run);
     if (this._mode === 'check') {
       this._practice(run, shell, null);
@@ -241,6 +277,32 @@ export class ChocaLesson extends HTMLElement {
     }
     if (this._mode === 'help') run.controller = startHelp(shell, parsed.lesson);
     else this._practice(run, shell, parsed.lesson);
+  }
+
+  /**
+   * Starts the young chunk at once, without waiting, when the lesson has a count
+   * picture anywhere or the kid is young. Screens that need it before it arrives
+   * wait in `look.wait`; if it fails, they are left out and the normal words show.
+   */
+  private _loadYoung(run: Run): void {
+    const { look } = run;
+    if (this._mode === 'check' || !this._lesson || !(look.young || JSON.stringify(this._lesson).includes('"kind":"count"'))) return;
+    youngChunk.load().then(
+      (y) => {
+        if (run !== this._run) return;
+        y.register(lessonMessagesEn);
+        const css = document.createElement('style');
+        css.textContent = y.CSS;
+        this._root.append(css);
+        look.y = y;
+        look.wait.splice(0).forEach((f) => f(true));
+      },
+      (err: unknown) => {
+        console.warn('[chocabloc-lesson] could not load the young look:', err);
+        look.y = false;
+        look.wait.splice(0).forEach((f) => f(false));
+      },
+    );
   }
 
   /**
@@ -306,7 +368,8 @@ export class ChocaLesson extends HTMLElement {
     return {
       msg: run.msg,
       lang: run.lang,
-      kit: KIT,
+      kit: { ...KIT, renderPicture: (pic, msg, lang) => renderPicture(pic, msg, lang, run.look) },
+      look: run.look,
       active,
       show: (screen) => this._show(run, screen),
       feedback: (text) => {
@@ -358,7 +421,7 @@ export class ChocaLesson extends HTMLElement {
     step.append(heading);
     if (screen.text != null) step.append(h('p', 'text', undefined, screen.text));
     if (screen.cards?.length) step.append(cardsOf(screen.cards));
-    if (screen.picture) step.append(renderPicture(screen.picture, msg, run.lang));
+    if (screen.picture) step.append(renderPicture(screen.picture, msg, run.lang, run.look));
     if (screen.result != null) step.append(h('p', 'result', undefined, screen.result));
     if (screen.body) step.append(screen.body);
     if (screen.tip != null) step.append(h('p', 'tip', undefined, screen.tip));
