@@ -32,12 +32,13 @@ public-API rule a new entry point is minor, so the line moves from 0.6 to 0.7.
 - **Base-ten pictures:** every number in one picture is drawn with the same block size, so the
   larger number never has smaller blocks.
 
-- **Young look (K to 3):** new `grade` property (`'K'`, `'1'` to `'6'`, or null; anything else is
-  treated as null with one warning) and `pictureBase` (where the animal drawings live, such as
+- **Young look (K to 3):** new `grade` property (`'K'` or `'1'` to `'12'`, or null; anything else is
+  treated as null with one warning; old accounts carry 7 to 12) and `pictureBase` (where the animal drawings live, such as
   `/images/animals/`; a missing trailing slash is added). K to 3 get animals in the counting
-  lessons and the lesson's `young` words; grade 4 to 6 get ones blocks and the normal words.
+  lessons and the lesson's `young` words; grade 4 and up get ones blocks and the normal words, never animals.
   With no grade, the lesson's `skillGrade` decides. With no `pictureBase`, or if any animal
-  fails to load, the whole picture draws as blocks.
+  fails to load, the whole picture draws as blocks, the step's words go back to the normal ones
+  (and are spoken again), and every later screen in that run starts with blocks.
 - **Voice for young kids:** a K to 3 kid hears every screen as it appears (the same words as
   Read to me, and the young words where a step has them), each question's text, and the short
   feedback ("Yes!"). Moving on cancels the last speech, so each screen speaks once. Browsers refuse
@@ -51,8 +52,11 @@ public-API rule a new entry point is minor, so the line moves from 0.6 to 0.7.
   `count` or `array` step (1 to 60 characters, placeholders `{a}`, `{b}`, `{c}` only, each
   needing its group), and a required `skillGrade` (`K` or `1` to `8`) on every lesson.
 - **Lazy young chunk:** the `count` pictures, animal arrays, `young` text and the eight animal
-  names load from their own chunk, started when a lesson has a count picture or the kid is
-  young. Until it arrives a count draws as an empty box of its final height; if it fails to
+  names load from their own chunk. It is requested when the parsed lesson has a `count` picture
+  anywhere, or the kid is young, `pictureBase` is set and the lesson has an `array` picture;
+  never otherwise. A screen drawn before the chunk arrives keeps its normal words and gets the
+  standard picture (blocks or squares); only screens drawn after it get animals and the young
+  words. Until it arrives a count draws as an empty box of its final height; if it fails to
   load, the picture is left out and the normal words show, with one warning. It has its own
   size line (3 KB gz).
 

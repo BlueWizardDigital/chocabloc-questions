@@ -163,7 +163,13 @@ export interface PictureLook {
  * height (`height`, the largest it can be) until the chunk settles. A failed
  * chunk leaves the picture out and the box empty.
  */
-function viaYoung(box: HTMLElement, look: PictureLook | undefined, height: number, build: (y: Young) => HTMLElement): void {
+function viaYoung(
+  box: HTMLElement,
+  look: PictureLook | undefined,
+  height: number,
+  build: (y: Young) => HTMLElement,
+  late: (y: Young) => HTMLElement = build,
+): void {
   if (!look || look.y === false) return;
   if (look.y) {
     box.append(build(look.y));
@@ -171,7 +177,8 @@ function viaYoung(box: HTMLElement, look: PictureLook | undefined, height: numbe
   }
   box.style.minHeight = `${height}px`;
   look.wait.push((ok) => {
-    if (ok) box.append(build(look.y as Young));
+    // This screen was drawn with its normal words, so a chunk that arrives now draws it the standard way (`late`).
+    if (ok) box.append(late(look.y as Young));
     // Held height only keeps the page still while waiting: after, the box is as tall as what it holds.
     box.style.minHeight = '';
   });
@@ -184,12 +191,6 @@ function countHeight(pic: Extract<LessonPicture, { kind: 'count' }>): number {
   return rows * (pic.apart ? 75 : 99) + (rows - 1) * 10;
 }
 
-/** Height of a young array at full width: the box is at most 560 px, and a cell at most 46, with 3 px gaps. */
-function arrayHeight(rows: number, cols: number): number {
-  const cell = (Math.min(560, cols * 46) - (cols - 1) * 3) / cols;
-  return rows * cell + (rows - 1) * 3;
-}
-
 /** A lesson picture: base-ten and arrays on canvas, number lines in SVG, column sums as a grid, counts and animal arrays from the young chunk. */
 export function renderPicture(pic: LessonPicture, msg: Msg, lang: string, look?: PictureLook): HTMLElement {
   const box = h('div', 'picture');
@@ -200,12 +201,13 @@ export function renderPicture(pic: LessonPicture, msg: Msg, lang: string, look?:
     case 'array': {
       const squares = (): HTMLElement => canvasDrawing((ctx, w, ht) => drawArray(ctx, w, ht, [pic.rows, pic.cols]));
       if (look?.young && look.base != null && pic.rows * pic.cols <= 30) {
-        viaYoung(box, look, arrayHeight(pic.rows, pic.cols), (y) => y.array(pic, look, squares));
+        // Before the chunk lands the screen has its normal words, so the picture that follows is the squares: the canvas height.
+        viaYoung(box, look, CANVAS_H, (y) => y.array(pic, look, squares), squares);
       } else box.append(squares());
       break;
     }
     case 'count':
-      viaYoung(box, look, countHeight(pic), (y) => y.count(pic, look!));
+      viaYoung(box, look, countHeight(pic), (y) => y.count(pic, look!), (y) => y.count(pic, { ...look!, base: null }));
       break;
     case 'numberLine':
       box.append(numberLine(pic));

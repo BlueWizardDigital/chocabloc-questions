@@ -188,7 +188,7 @@ export class ChocaLesson extends HTMLElement {
     this._translator = fn;
   }
 
-  /** The kid's grade, `'K'` or `'1'` to `'6'`, or null. K to 3 get the young look; with none, the lesson's `skillGrade` decides. */
+  /** The kid's grade, `'K'` or `'1'` to `'12'`, or null. K to 3 get the young look, 4 and up the standard one; with none, the lesson's `skillGrade` decides. */
   get grade(): string | null {
     return this._grade;
   }
@@ -286,14 +286,15 @@ export class ChocaLesson extends HTMLElement {
 
   /**
    * Starts the young chunk at once, without waiting, when the parsed lesson has a
-   * count picture anywhere, or the kid is young and it has an array picture:
+   * count picture anywhere, or the kid is young, animals can be fetched and it has an
+   * array picture:
    * young lines exist only on those steps. Screens that need it before it arrives
    * wait in `look.wait`; if it fails, they are left out and the normal words show.
    */
   private _loadYoung(run: Run, lesson: Lesson): void {
     const { look } = run;
     const kinds = [lesson.idea.picture, lesson.afterWrong.picture, ...[lesson.example, ...lesson.moreHelp.examples].flatMap((e) => e.steps.map((s) => s.picture))].map((p) => p?.kind);
-    if (!(kinds.includes('count') || (look.young && kinds.includes('array')))) return;
+    if (!(kinds.includes('count') || (look.young && look.base != null && kinds.includes('array')))) return;
     youngChunk.load().then(
       (y) => {
         if (run !== this._run) return;
@@ -458,7 +459,15 @@ export class ChocaLesson extends HTMLElement {
         screen.say = on ? young.say : normal;
       };
       words(true);
-      step.addEventListener('error', () => words(false), { once: true, capture: true });
+      step.addEventListener(
+        'error',
+        () => {
+          words(false);
+          // The swap happens as the picture falls back: say the words that now match, if this is still the screen.
+          if (this._step === step) this._voice(run, screen.say);
+        },
+        { once: true, capture: true },
+      );
     }
     if (screen.result != null) step.append(h('p', 'result', undefined, screen.result));
     if (screen.body) step.append(screen.body);

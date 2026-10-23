@@ -186,6 +186,7 @@ describe('<chocabloc-lesson> voice for young kids', () => {
           ],
         },
       }) as Lesson;
+    const BASE = new URL('../fixtures/animals/', import.meta.url).pathname;
     const open = async (base: string | null): Promise<ChocaLesson> => {
       const el = mount();
       el.grade = 'K';
@@ -199,9 +200,18 @@ describe('<chocabloc-lesson> voice for young kids', () => {
 
     it('with animals drawn, the young line is shown and spoken', async () => {
       const s = stubSpeech();
-      const el = await open('/images/animals/');
+      const el = await open(BASE);
       expect(heading(el)).to.not.equal('Count them');
       expect(s.spoken[s.spoken.length - 1]).to.include(heading(el)!.replace(/\.$/, ''));
+    });
+
+    it('when an image fails and the words swap back, the normal words are spoken again', async () => {
+      const s = stubSpeech();
+      const el = await open('/no-such-folder/');
+      await until(() => el.shadowRoot!.querySelectorAll('[part~="picture"] img').length === 0, 'the picture to fall back to blocks');
+      expect(heading(el)).to.equal('Count them');
+      await until(() => s.spoken[s.spoken.length - 1]!.includes('Count the animals'), 'the normal words spoken');
+      expect(s.log[s.log.length - 2]).to.equal('cancel');
     });
 
     it('with no pictureBase the normal words are shown and spoken', async () => {

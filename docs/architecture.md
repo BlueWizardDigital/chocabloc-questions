@@ -148,7 +148,7 @@ and `docs/shared-kit-findings.md` ("lift into a `game-kit` entrypoint"): **both,
 
 ## 6b. The lesson player (`chocabloc-questions/lesson`)
 
-`<chocabloc-lesson>` plays a skill lesson (a JSON file written elsewhere) in the iframe or on the host page. It sits beside the bridge, not on it: the host passes it `getQuestions`, `questions` and `validateAnswer` as properties, so the player never posts a message and never holds an answer. Help loads only the player and its pictures (capped at 13.5 KB gz). There are two lazy chunks: `practice`, everything that needs `<chocabloc-question>`, loaded for Intro and Check; and `young`, the `count` pictures, animal drawings and young-kid words, loaded when a lesson has a count picture or the kid is in K to 3 (3 KB gz line). It adds no listener to `window` or `document`, and the host records results from its `lesson-answer` and `lesson-done` events.
+`<chocabloc-lesson>` plays a skill lesson (a JSON file written elsewhere) in the iframe or on the host page. It sits beside the bridge, not on it: the host passes it `getQuestions`, `questions` and `validateAnswer` as properties, so the player never posts a message and never holds an answer. Help loads only the player and its pictures (capped at 13.5 KB gz). There are two lazy chunks: `practice`, everything that needs `<chocabloc-question>`, loaded for Intro and Check; and `young`, the `count` pictures, animal drawings and young-kid words, loaded when the parsed lesson has a count picture anywhere, or the kid is young (K to 3), `pictureBase` is set and the lesson has an array picture (3 KB gz line). It adds no listener to `window` or `document`, and the host records results from its `lesson-answer` and `lesson-done` events.
 
 ---
 

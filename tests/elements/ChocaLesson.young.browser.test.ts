@@ -268,12 +268,75 @@ describe('<chocabloc-lesson> young look', () => {
     oldArray.lesson = lessonWith(rows);
     await tick();
     expect(asked).to.equal(1);
+    // A young array with no animals to draw has no young line to show either.
+    const noBase = mount();
+    noBase.grade = 'K';
+    noBase.mode = 'help';
+    noBase.lesson = lessonWith(rows);
+    await tick();
+    expect(asked).to.equal(1);
     const youngArray = mount();
     youngArray.grade = 'K';
+    youngArray.pictureBase = BASE;
     youngArray.mode = 'help';
     youngArray.lesson = lessonWith(rows);
     await tick();
     expect(asked).to.equal(2);
+  });
+
+  it('a failed image is remembered for the run: the next screen draws blocks and the normal words from the start', async () => {
+    const two = {
+      ...fixture,
+      skillGrade: '2',
+      example: {
+        ...fixture.example,
+        steps: [
+          { heading: 'First', text: 'First text.', picture: { kind: 'count', groups: [3, 2] }, young: '{a} one.' },
+          { heading: 'Second', text: 'Second text.', picture: { kind: 'count', groups: [4, 1] }, young: '{a} two.' },
+          ...fixture.example.steps.slice(2),
+        ],
+      },
+    } as Lesson;
+    const el = await open(two, 'K', '/no-such-folder/');
+    for (let i = 0; i < 60 && imgs(el).length > 0; i++) await new Promise((r) => setTimeout(r, 25));
+    expect(heading(el)).to.equal('First');
+    button(el, 'Next').click();
+    expect(imgs(el)).to.have.length(0);
+    expect(cells(el)).to.have.length(5);
+    expect(heading(el)).to.equal('Second');
+    expect(part(el, 'text')!.hidden).to.equal(false);
+  });
+
+  it('a screen drawn before the chunk arrives stays blocks with the normal words; the next screen gets animals', async () => {
+    let arrive!: (m: Awaited<ReturnType<typeof realLoad>>) => void;
+    youngChunk.load = () => new Promise((r) => (arrive = r));
+    const two = {
+      ...fixture,
+      skillGrade: '2',
+      example: {
+        ...fixture.example,
+        steps: [
+          { heading: 'First', text: 'First text.', picture: { kind: 'count', groups: [3, 2] }, young: '{a} one.' },
+          { heading: 'Second', text: 'Second text.', picture: { kind: 'count', groups: [4, 1] }, young: '{a} two.' },
+          ...fixture.example.steps.slice(2),
+        ],
+      },
+    } as Lesson;
+    const el = mount();
+    el.grade = 'K';
+    el.pictureBase = BASE;
+    el.mode = 'help';
+    el.lesson = two;
+    button(el, 'Next').click();
+    arrive(await realLoad());
+    await tick();
+    expect(imgs(el)).to.have.length(0);
+    expect(cells(el)).to.have.length(5);
+    expect(heading(el)).to.equal('First');
+    expect(part(el, 'text')!.hidden).to.equal(false);
+    button(el, 'Next').click();
+    expect(imgs(el)).to.have.length(5);
+    expect(heading(el)).to.not.equal('Second');
   });
 
   it('two groups apart each sit in their own frames', async () => {
@@ -488,7 +551,7 @@ describe('<chocabloc-lesson> young look', () => {
     });
 
     for (const [rows, cols] of [[3, 10], [2, 15]] as const) {
-      it(`a young ${rows} x ${cols} array holds its final height before the chunk arrives`, async () => {
+      it(`a young ${rows} x ${cols} array draws squares in the held height when the chunk arrives late`, async () => {
         let arrive!: (m: Awaited<ReturnType<typeof realLoad>>) => void;
         youngChunk.load = () => new Promise((r) => (arrive = r));
         const el = mount();
@@ -503,7 +566,8 @@ describe('<chocabloc-lesson> young look', () => {
         const before = box.getBoundingClientRect().height;
         arrive(await realLoad());
         await tick();
-        expect(root(el).querySelectorAll('.arr .cell').length).to.equal(rows * cols);
+        expect(root(el).querySelectorAll('.arr .cell')).to.have.length(0);
+        expect(box.querySelector('canvas') !== null).to.equal(true);
         expect(Math.abs(box.getBoundingClientRect().height - before)).to.be.below(2);
       });
     }

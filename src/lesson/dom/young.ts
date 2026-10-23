@@ -108,12 +108,22 @@ function frames(pic: Count, names: string[] | null, base: string | null): HTMLEl
   return root;
 }
 
-/** Animals in a box that turns to `blocks` as a whole if any one fails to load: never a mix. */
-function withAnimals(animals: () => HTMLElement, blocks: () => HTMLElement): HTMLElement {
+/**
+ * Animals in a box that turns to `blocks` as a whole if any one fails to load: never a mix. The failure
+ * is remembered for the run (`look.base` goes null), so later screens start with blocks.
+ */
+function withAnimals(look: YoungLook, animals: () => HTMLElement, blocks: () => HTMLElement): HTMLElement {
   const box = el('animals');
   box.style.display = 'contents';
   box.append(animals());
-  box.addEventListener('error', () => box.replaceChildren(blocks()), { once: true, capture: true });
+  box.addEventListener(
+    'error',
+    () => {
+      look.base = null;
+      box.replaceChildren(blocks());
+    },
+    { once: true, capture: true },
+  );
   return box;
 }
 
@@ -122,13 +132,13 @@ export function count(pic: Count, look: YoungLook): HTMLElement {
   if (!look.young || look.base == null) return frames(pic, null, null);
   const { base } = look;
   const names = pickAnimals(look.skillId, pic.groups.length as 1 | 2 | 3);
-  return withAnimals(() => frames(pic, names, base), () => frames(pic, null, null));
+  return withAnimals(look, () => frames(pic, names, base), () => frames(pic, null, null));
 }
 
 /** A young array of up to 30 places: one animal in each. `squares` is Help's canvas drawing, the fallback. */
 export function array(pic: Array2, look: YoungLook, squares: () => HTMLElement): HTMLElement {
   const src = `${look.base}${pickAnimals(look.skillId, 1)[0]}.webp`;
-  return withAnimals(() => {
+  return withAnimals(look, () => {
     const grid = el('arr');
     grid.style.setProperty('--c', String(pic.cols));
     for (let i = 0; i < pic.rows * pic.cols; i++) grid.append(cellOf('', src));
