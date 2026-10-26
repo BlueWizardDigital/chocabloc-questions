@@ -66,7 +66,7 @@ Most formats **ignore** whatever the bank sent and set `imageType` themselves. F
 
 | Formats | `imageType` becomes |
 |---|---|
-| `geometry_attributes` · `geometry_symmetry` · `geometry_classify_triangle` · `geometry_circle_convert` | `shape_2d`, always |
+| `geometry_attributes` · `geometry_symmetry` · `geometry_classify_triangle` · `geometry_circle_convert` · `geometry_figure` | `shape_2d`, always |
 | `geometry_face_identify` · `geometry_volume` · `geometry_surface_area` | `shape_3d`, always |
 | `money` (and `money_count_mixed`) | `coins` |
 | `pythagorean` | `right_triangle` |
@@ -82,6 +82,11 @@ Most formats **ignore** whatever the bank sent and set `imageType` themselves. F
 | `base10_blocks` (and its aliases) | `base10_blocks` |
 | `geometry_area` · `geometry_angles` · `geometry_perimeter` · `geometry_circumference` | `undefined` — dropped |
 | `text` and every stem format | `undefined` |
+
+`geometry_figure` keeps `content.panels` intact on both paths (an answer-carrying row needs
+`answer` + `distractors`; a choices-only row needs neither). `geometry_identify`,
+`geometry_properties`, `geometry_symmetry` and `geometry_classify` pass an optional
+`content.points` through untouched; the renderer validates it and falls back to the named shape.
 
 Only five formats read the bank's `image_type` / `imageType` at all:
 

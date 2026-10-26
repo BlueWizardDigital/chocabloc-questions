@@ -38,6 +38,15 @@ const row = (format: string, extra: Record<string, unknown>): Record<string, unk
 // shape_2d branch was broken.
 export type Row = Record<string, unknown>;
 
+// Corner points in the −10..10 frame, y up.
+const TURNED_SQUARE = [[0, -7], [7, 0], [0, 7], [-7, 0]];
+const THIN_TRIANGLE = [[-9, -1], [9, -1], [8, 1]];
+const TURNED_KITE = [[0, 8], [4, 2], [0, -6], [-4, 2]];
+const NEW_SOLIDS = [
+  'triangular pyramid', 'square pyramid', 'pentagonal pyramid',
+  'hexagonal pyramid', 'pentagonal prism', 'hexagonal prism',
+];
+
 export const REPRESENTATIVE_ROWS: Record<string, Row | Row[]> = {
   text: row('text', { content: { stem: 'What is 3 + 4?' } }),
 
@@ -97,6 +106,9 @@ export const REPRESENTATIVE_ROWS: Record<string, Row | Row[]> = {
     row('geometry_classify', {
       imageType: 'shape_2d', content: { shape: 'circle', dimension: '2D' }, answer: '2D',
     }),
+    row('geometry_classify', {
+      imageType: 'shape_2d', content: { shape: 'triangle', dimension: '2D', points: THIN_TRIANGLE }, answer: '2D',
+    }),
   ],
   geometry_properties: [
     row('geometry_properties', {
@@ -105,6 +117,12 @@ export const REPRESENTATIVE_ROWS: Record<string, Row | Row[]> = {
     row('geometry_properties', {
       imageType: 'shape_2d', content: { shape: 'circle', property: 'sides' }, answer: '0',
     }),
+    row('geometry_properties', {
+      imageType: 'shape_2d', content: { shape: 'triangle', property: 'sides', points: THIN_TRIANGLE }, answer: '3',
+    }),
+    ...NEW_SOLIDS.map((shape) => row('geometry_properties', {
+      imageType: 'shape_3d', content: { shape, property: 'faces' }, answer: '7',
+    })),
   ],
   geometry_identify: [
     row('geometry_identify', {
@@ -113,25 +131,85 @@ export const REPRESENTATIVE_ROWS: Record<string, Row | Row[]> = {
     row('geometry_identify', {
       imageType: 'shape_3d', content: { shape: 'cube' }, answer: 'cube',
     }),
+    row('geometry_identify', {
+      imageType: 'shape_2d', content: { shape: 'square', points: TURNED_SQUARE }, answer: 'square',
+    }),
   ],
   // A pyramid, not a cube: the cube always showed its face highlighted, and the
   // other shapes printed "face: <answer>" instead.
-  geometry_face_identify: row('geometry_face_identify', {
-    imageType: 'shape_3d', content: { shape: 'pyramid', face_shape: 'triangle' }, answer: 'triangle',
-  }),
-  geometry_symmetry: row('geometry_symmetry', {
-    content: { shape: 'square', lines_of_symmetry: 4 }, answer: 4,
-  }),
-  // Choices-only, as the bank serves it: the lettered answer is never in the row.
-  geometry_figure: row('geometry_figure', {
-    imageType: 'shape_2d',
-    questionText: 'Which dashed line is a line of symmetry?',
-    content: FIGURE_EXAMPLE,
-    answer: undefined,
-    distractors: undefined,
-    choices: ['A', 'B', 'C', 'D'].map((value) => ({ value })),
-    answerToken: 'test-token-not-real',
-  }),
+  geometry_face_identify: [
+    row('geometry_face_identify', {
+      imageType: 'shape_3d', content: { shape: 'pyramid', face_shape: 'triangle' }, answer: 'triangle',
+    }),
+    // One per new solid, on the face the plan names: a pyramid's base, a prism's end.
+    ...[
+      ['triangular pyramid', 'triangle'], ['square pyramid', 'square'],
+      ['pentagonal pyramid', 'pentagon'], ['hexagonal pyramid', 'hexagon'],
+      ['pentagonal prism', 'pentagon'], ['hexagonal prism', 'hexagon'],
+    ].map(([shape, face]) => row('geometry_face_identify', {
+      imageType: 'shape_3d', content: { shape, face_shape: face }, answer: face,
+    })),
+  ],
+  geometry_symmetry: [
+    row('geometry_symmetry', {
+      content: { shape: 'square', lines_of_symmetry: 4 }, answer: 4,
+    }),
+    row('geometry_symmetry', {
+      content: { shape: 'kite', points: TURNED_KITE }, answer: 1,
+    }),
+  ],
+  // The first row is choices-only, as the bank serves it: the lettered answer is
+  // never in the row. The rest are answer-carrying (teacher and parent screens),
+  // and each prints its letter, which is why the format is in PRINTS_ANSWER_BY_DESIGN.
+  geometry_figure: [
+    row('geometry_figure', {
+      imageType: 'shape_2d',
+      questionText: 'Which dashed line is a line of symmetry?',
+      content: FIGURE_EXAMPLE,
+      answer: undefined,
+      distractors: undefined,
+      choices: ['A', 'B', 'C', 'D'].map((value) => ({ value })),
+      answerToken: 'test-token-not-real',
+    }),
+    // 1 unlabelled panel, lettered lines.
+    row('geometry_figure', {
+      imageType: 'shape_2d',
+      questionText: 'Which dashed line is a line of symmetry?',
+      content: FIGURE_EXAMPLE,
+      answer: 'B',
+      distractors: ['A', 'C', 'D'].map((value) => ({ value, errorType: 'wrong-line' })),
+    }),
+    // 1 unlabelled panel, no lines (the answer is words, so nothing is printed).
+    row('geometry_figure', {
+      imageType: 'shape_2d',
+      questionText: 'Which describes this shape?',
+      content: {
+        operation: 'geometry_describe_polygon',
+        panels: [{ polygons: [{ points: [[-7, -4], [7, -4], [7, 4], [-7, 4]] }] }],
+      },
+      answer: undefined,
+      distractors: undefined,
+      choices: ['regular square', 'irregular square', 'regular pentagon', 'irregular pentagon']
+        .map((value) => ({ value })),
+      answerToken: 'test-token-not-real',
+    }),
+    // 4 labelled panels.
+    row('geometry_figure', {
+      imageType: 'shape_2d',
+      questionText: 'Which shape is regular?',
+      content: {
+        operation: 'geometry_pick_regular',
+        panels: [
+          [[-6, -6], [6, -6], [6, 6], [-6, 6]],
+          [[-8, -4], [8, -4], [8, 4], [-8, 4]],
+          [[0, -7], [8, 0], [0, 7], [-8, 0]],
+          [[-6, -5], [6, -5], [0, 6]],
+        ].map((points, i) => ({ label: 'ABCD'[i], polygons: [{ points }] })),
+      },
+      answer: 'A',
+      distractors: ['B', 'C', 'D'].map((value) => ({ value, errorType: 'wrong-shape' })),
+    }),
+  ],
   geometry_classify_triangle: row('geometry_classify_triangle', {
     content: { operands: [3, 3, 3], classify_by: 'sides' }, answer: 'equilateral',
   }),

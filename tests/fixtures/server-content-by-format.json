@@ -1,5 +1,5 @@
 {
-  "_source": "server-new 47f82ae services/renderContent.js",
+  "_source": "server-new e6ce027 services/renderContent.js",
   "CONTENT_BY_FORMAT": {
     "addition": [
       "operands",
@@ -433,6 +433,7 @@
     ],
     "geometry_symmetry": [
       "shape",
+      "points",
       "operation"
     ],
     "geometry_angles": [
@@ -469,6 +470,7 @@
     "geometry_classify": [
       "shape",
       "dimension",
+      "points",
       "operation"
     ],
     "geometry_classify_triangle": [
@@ -484,11 +486,13 @@
     ],
     "geometry_identify": [
       "shape",
+      "points",
       "operation"
     ],
     "geometry_properties": [
       "shape",
       "property",
+      "points",
       "operation"
     ],
     "geometry_attributes": [

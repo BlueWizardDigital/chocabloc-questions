@@ -158,6 +158,7 @@ const PRINTS_ANSWER_BY_DESIGN: Record<string, string> = {
   coordinate_distance: 'the axis numbers label the grid the child counts on; the distance itself is never drawn',
   pattern: 'a repeating pattern shows its own items, so the next item already appears earlier in the sequence',
   fraction_models: 'the letter labels and the captions are the options, and a letter answer is one of them',
+  geometry_figure: 'the letters under the panels, or on the dashed lines, are the options; a letter answer is one of them',
   fraction_number_line: 'the letter labels and the whole-number ticks are the options; the marked fraction is never labelled',
 };
 
@@ -371,6 +372,10 @@ describe('format conformance — every dispatched format renders something', () 
         let q: NormalizedQuestion | null = null;
         try { q = normalizeQuestion(raw); } catch { /* the test above reports a row that won't normalize */ }
         const answer = q?.answer;
+        if (q && answer === undefined && exempt && q.choices !== undefined) {
+          // A choices-only row (the bank's shape) carries no answer to look for.
+          return;
+        }
         if (!q || answer === undefined || typeof answer === 'object') {
           expect(exempt, `${label}: an exempt format needs a row with an answer to check`).to.equal(false);
           return;

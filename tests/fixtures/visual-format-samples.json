@@ -346,5 +346,38 @@
       { "value": 17, "error_type": "gave-same-value" },
       { "value": 35, "error_type": "off-by-1" }
     ]
+  },
+  "geometry_figure": {
+    "id": "GEOM-SYMMETRY-IDENTIFY-line-pick-rectangle",
+    "format": "geometry_figure",
+    "image_type": "shape_2d",
+    "content": { "operation": "geometry_symmetry_line_pick", "panels": [{
+      "polygons": [{ "points": [[-7, -4], [7, -4], [7, 4], [-7, 4]] }],
+      "lines": [
+        { "from": [-8.6, -4.9], "to": [8.6, 4.9], "label": "A" },
+        { "from": [0, -6.5], "to": [0, 6.5], "label": "B" },
+        { "from": [8.6, -4.9], "to": [-8.6, 4.9], "label": "C" },
+        { "from": [3.5, -6.5], "to": [3.5, 6.5], "label": "D" }
+      ]
+    }] },
+    "answer": "B",
+    "skill_ids": ["GEOM-SYMMETRY-IDENTIFY"],
+    "distractors": [
+      { "value": "A", "error_type": "wrong-line" },
+      { "value": "C", "error_type": "wrong-line" },
+      { "value": "D", "error_type": "wrong-line" }
+    ]
+  },
+  "geometry_identify_points": {
+    "id": "GEOM-2D-NAME-BASIC-square-turned",
+    "format": "geometry_identify",
+    "image_type": "shape_2d",
+    "content": { "shape": "square", "points": [[0, -7], [7, 0], [0, 7], [-7, 0]], "operation": "geometry_identify" },
+    "answer": "square",
+    "skill_ids": ["GEOM-2D-NAME-BASIC"],
+    "distractors": [
+      { "value": "rectangle", "error_type": "wrong-classification" },
+      { "value": "triangle", "error_type": "wrong-classification" }
+    ]
   }
 }
