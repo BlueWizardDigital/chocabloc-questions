@@ -28,35 +28,36 @@ const SPOT = 'var(--cl-spot, #c9bda9)';
 /**
  * Counted rows, dots, and the long division. Heights pictures.ts holds while the chunk loads: a share's
  * dots take 13 px a row plus 14 px for the part labels; the long division 28 px a written line and 7 px
- * a rule. Array dots look like the canvas array's.
+ * a rule. Array dots look like the canvas array's. Every rule starts at the picture's root class,
+ * `.crows` or `.share`, because the young chunk's stylesheet shares the shadow root.
  */
 export const CSS = `${ROWS_CSS}
 .crows .dot { box-sizing: border-box; border-radius: 50%; background: #42a5f5; border: 1.5px solid #1976d2; }
 .share { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 16px; max-width: 100%; }
-.sgrid { display: grid; gap: 4px 8px; justify-items: center; }
-.srow { display: contents; }
-.grp { display: flex; gap: 3px; }
+.share .sgrid { display: grid; gap: 4px 8px; justify-items: center; }
+.share .srow { display: contents; }
+.share .sgrp { display: flex; gap: 3px; }
 .share .dot { box-sizing: border-box; flex: none; width: 9px; height: 9px; border-radius: 50%; }
-.dot.p0 { background: ${SHARE_1}; }
-.dot.p1 { background: ${SHARE_2}; }
-.dot.left { background: ${LEFT}; }
-.dot.spot { border: 1.5px dashed ${SPOT}; }
-.lg .dot.spot { border-color: ${LEFT}; }
-.slab { height: 14px; font-size: 11px; line-height: 14px; font-weight: 700; white-space: nowrap; }
-.t0 { color: ${SHARE_1}; }
-.t1 { color: ${SHARE_2}; }
-.tl { color: ${LEFT}; }
-.ld {
+.share .dot.p0 { background: ${SHARE_1}; }
+.share .dot.p1 { background: ${SHARE_2}; }
+.share .dot.left { background: ${LEFT}; }
+.share .dot.spot { border: 1.5px dashed ${SPOT}; }
+.share .lg .dot.spot { border-color: ${LEFT}; }
+.share .slab { height: 14px; font-size: 11px; line-height: 14px; font-weight: 700; white-space: nowrap; }
+.share .t0 { color: ${SHARE_1}; }
+.share .t1 { color: ${SHARE_2}; }
+.share .tl { color: ${LEFT}; }
+.share .ld {
   display: flex; flex-direction: column; color: ${INK};
   font-family: ${DISPLAY}; font-weight: 700; font-size: 22px; line-height: 28px; font-variant-numeric: tabular-nums;
 }
-.ld-line { display: grid; grid-template-columns: 22px 22px 22px 36px auto; height: 28px; }
-.ld-line > span { box-sizing: border-box; text-align: center; border-top: 3px solid transparent; }
-.ld-line.rule { height: 3px; margin: 2px 0; }
-.ld .r { border-top-color: currentColor; }
-.ld .dd { border-top-color: ${INK}; }
-.ld .dd1 { border-left: 3px solid ${INK}; border-top-left-radius: 10px; }
-.ld-line > .ld-note {
+.share .ld-line { display: grid; grid-template-columns: 22px 22px 22px 36px auto; height: 28px; }
+.share .ld-line > span { box-sizing: border-box; text-align: center; border-top: 3px solid transparent; }
+.share .ld-line.rule { height: 3px; margin: 2px 0; }
+.share .ld .r { border-top-color: currentColor; }
+.share .ld .dd { border-top-color: ${INK}; }
+.share .ld .dd1 { border-left: 3px solid ${INK}; border-top-left-radius: 10px; }
+.share .ld-line > .ld-note {
   padding-left: 6px; text-align: left; white-space: nowrap; opacity: 0.75;
   font-family: ${BODY}; font-size: 11px; font-weight: 600;
 }
@@ -98,7 +99,7 @@ export function share(pic: Share, msg: Msg): HTMLElement {
     const row = h('div', 'row', 'srow');
     let k = 0;
     parts.forEach((p, i) => {
-      const grp = h('span', undefined, i === fresh ? 'grp pop' : 'grp');
+      const grp = h('span', undefined, i === fresh ? 'sgrp pop' : 'sgrp');
       for (let j = 0; j < p; j++, k++) {
         const d = dots[k];
         grp.append(h('span', undefined, d === 'spot' ? 'dot spot' : `dot p${d}`));
@@ -106,7 +107,7 @@ export function share(pic: Share, msg: Msg): HTMLElement {
       row.append(grp);
     });
     if (left) {
-      const grp = h('span', undefined, 'grp lg pop');
+      const grp = h('span', undefined, 'sgrp lg pop');
       grp.append(h('span', undefined, r < rem ? 'dot left' : 'dot spot'));
       row.append(grp);
     }

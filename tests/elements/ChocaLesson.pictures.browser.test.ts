@@ -295,6 +295,67 @@ describe('<chocabloc-lesson> pictures chunk loading', () => {
   });
 });
 
+describe('<chocabloc-lesson> pictures with the young chunk loaded too', () => {
+  const BASE = new URL('../fixtures/animals/', import.meta.url).pathname;
+  const styles = (el: ChocaLesson): number => root(el).querySelectorAll('style').length;
+
+  /** A K-3 kid with animals on a 700 px page: the array needs the young chunk, the share the pictures chunk. */
+  function young(): ChocaLesson {
+    const el = mount();
+    el.style.display = 'block';
+    el.style.width = '700px';
+    el.grade = '3';
+    el.pictureBase = BASE;
+    el.mode = 'help';
+    el.lesson = lessonOf([
+      { kind: 'array', rows: 2, cols: 3 },
+      { kind: 'share', total: 59, rows: 4, shown: 2, left: true },
+      { kind: 'count', groups: [8, 5] },
+    ]);
+    return el;
+  }
+
+  it("the young chunk's stylesheet leaves a share row on one line", async () => {
+    const el = young();
+    await until(() => styles(el) === 3, 'both chunks');
+    button(el, 'Next').click();
+    button(el, 'Next').click();
+    // Let the leftovers' pop (a 300 ms scale) finish: mid-pop they are measured smaller and lower.
+    await new Promise((r) => setTimeout(r, 400));
+    expect(rows(el)).to.have.length(4);
+    for (const row of rows(el)) {
+      const tops = Array.from(row.querySelectorAll('.dot')).map((d) => d.getBoundingClientRect().top);
+      expect(tops).to.have.length(15);
+      expect(Math.max(...tops) - Math.min(...tops), `the dots of a share row on one line: ${JSON.stringify(tops)}`).to.be.below(0.5);
+    }
+  });
+
+  it("the pictures chunk's stylesheet leaves a count's ten frames 10 px apart", async () => {
+    const el = young();
+    await until(() => styles(el) === 3, 'both chunks');
+    for (let i = 0; i < 3; i++) button(el, 'Next').click();
+    // The count's two ten frames stand in a column, the young chunk's 10 px apart.
+    const frames = Array.from(picture(el).querySelectorAll('.frame')).map((f) => f.getBoundingClientRect());
+    expect(frames).to.have.length(2);
+    expect(frames[1]!.top - frames[0]!.bottom).to.be.closeTo(10, 0.5);
+  });
+
+  it('a share drawn before the pictures chunk lands still ends at the height it held', async () => {
+    let arrive!: (m: Awaited<ReturnType<typeof realLoad>>) => void;
+    picturesChunk.load = () => new Promise((r) => (arrive = r));
+    const el = young();
+    await until(() => styles(el) === 2, 'the young chunk');
+    button(el, 'Next').click();
+    button(el, 'Next').click();
+    const box = picture(el);
+    const held = box.getBoundingClientRect().height;
+    arrive(await realLoad());
+    await tick();
+    expect(rows(el)).to.have.length(4);
+    expect(Math.abs(box.getBoundingClientRect().height - held)).to.be.below(2);
+  });
+});
+
 describe('<chocabloc-lesson> pictures motion and fit', () => {
   it('Back then Next: row 2 is the newest again, and only one thing pops', async () => {
     const el = await open(counting, 3);

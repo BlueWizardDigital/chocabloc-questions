@@ -64,10 +64,13 @@ export function longDivision(total: number, rows: number, shown: number, left: b
     const isTens = part >= 10;
     const product = part * rows;
     const productCells = Array.from({ length: COLS }, () => ({ text: '', tone }));
-    productCells[0] = { text: '−', tone };
     // A tens product sits under the tens column; a ones product under the ones.
     const productText = String(isTens ? product / 10 : product);
-    put(productCells, productText, isTens ? 1 : 2, tone);
+    const end = isTens ? 1 : 2;
+    put(productCells, productText, end, tone);
+    // The minus sits just left of the product's first digit, so "−8" reads like "−16".
+    const first = end - productText.length + 1;
+    productCells[first - 1] = { text: '−', tone };
     out.push(
       line(
         'product',
@@ -77,7 +80,8 @@ export function longDivision(total: number, rows: number, shown: number, left: b
     );
 
     const rule = blank();
-    for (let c = 1; c < COLS; c++) if (productCells[c]?.text) rule[c] = { text: '─', tone: null };
+    // The rule underlines the product's digits, not its minus.
+    for (let c = first; c <= end; c++) rule[c] = { text: '─', tone: null };
     out.push(line('rule', rule));
 
     running -= product;

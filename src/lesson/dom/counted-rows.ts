@@ -28,24 +28,27 @@ const LEFT = 'var(--cl-left, #E8873A)';
  * 3 px padding and 3 px border on each side) and lines are 6 px apart: pictures.ts holds that height
  * while the chunk loads. Items shrink, keeping their shape, so 15 fit a 320 px phone.
  * The pop starts from the step's own start state, `.step.enter`, which ChocaLesson removes once the
- * step is drawn: so it plays as a step appears, never for a picture drawn later or redrawn.
+ * step is drawn: so it plays as a step appears, never for a picture drawn later or redrawn. It serves
+ * both pictures that pop, counted rows and the share (more-pictures.ts).
+ * Every rule starts at the picture's root class: the young chunk's stylesheet shares the shadow root,
+ * so a bare class here could restyle its pictures, or its rules ours.
  */
 export const CSS = `
 .crows { display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: 100%; }
-.cline { display: flex; align-items: center; gap: 6px; max-width: 100%; }
-[part~="row-label"] { flex: none; width: 4.4em; text-align: right; font-weight: 800; font-size: 13px; white-space: nowrap; opacity: 0.75; }
-[part~="row-total"] { flex: none; width: 2em; font-family: ${DISPLAY}; font-weight: 700; font-size: 20px; color: ${LEFT}; }
-.cline [part~="row"] {
+.crows .cline { display: flex; align-items: center; gap: 6px; max-width: 100%; }
+.crows [part~="row-label"] { flex: none; width: 4.4em; text-align: right; font-weight: 800; font-size: 13px; white-space: nowrap; opacity: 0.75; }
+.crows [part~="row-total"] { flex: none; width: 2em; font-family: ${DISPLAY}; font-weight: 700; font-size: 20px; color: ${LEFT}; }
+.crows [part~="row"] {
   display: flex; align-items: center; gap: 3px; min-width: 0; padding: 3px 6px;
   border: 3px solid transparent; border-radius: 999px;
 }
-.cline [part~="row"] > * { flex: 0 1 auto; width: 20px; min-width: 0; aspect-ratio: 1 / 1; }
-[part~="row"].on { border-color: ${LEFT}; }
-[part~="row"].now { background: rgba(232, 135, 58, 0.18); }
-[part~="row"].faded { opacity: 0.4; }
-.step.enter .pop { opacity: 0; transform: scale(0.6); }
+.crows [part~="row"] > * { flex: 0 1 auto; width: 20px; min-width: 0; aspect-ratio: 1 / 1; }
+.crows [part~="row"].on { border-color: ${LEFT}; }
+.crows [part~="row"].now { background: rgba(232, 135, 58, 0.18); }
+.crows [part~="row"].faded { opacity: 0.4; }
+.step.enter .crows .pop, .step.enter .share .pop { opacity: 0; transform: scale(0.6); }
 @media (prefers-reduced-motion: no-preference) {
-  .pop { transition: opacity 0.3s ease-out, transform 0.3s ease-out; }
+  .crows .pop, .share .pop { transition: opacity 0.3s ease-out, transform 0.3s ease-out; }
 }
 `;
 

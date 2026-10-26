@@ -49,6 +49,16 @@ describe('longDivision', () => {
     expect(txt(ls)).toEqual(['quotient:··7R5', 'dividend:647·', 'product:−42·', 'rule:·──·', 'difference:··5·']);
     expect(ls[2].note).toEqual({ key: 'ldTimes', a: 6, b: 7 });
   });
+  it('puts the minus just left of a one-digit product, and the rule under its digit', () => {
+    const ls = longDivision(51, 4, 2, false);
+    expect(txt(ls)).toEqual([
+      'quotient:·12·', 'dividend:451·', 'product:−4··', 'rule:·─··', 'difference:·11·',
+      'product:·−8·', 'rule:··─·', 'difference:··3·',
+    ]);
+    expect(ls[5].cells[1]).toEqual({ text: '−', tone: 1 });
+    expect(ls[5].note).toEqual({ key: 'ldTimes', a: 4, b: 2 });
+    expect(txt(longDivision(10, 9, 1, true)).slice(2)).toEqual(['product:·−9·', 'rule:··─·', 'difference:··1·']);
+  });
 });
 
 describe('shareRow', () => {
