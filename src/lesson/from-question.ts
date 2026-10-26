@@ -11,7 +11,7 @@ function numbersOf(v: unknown): number[] | null {
   return v.every((n) => typeof n === 'number' && Number.isFinite(n)) ? (v as number[]) : null;
 }
 
-function fromOperands(kind: LessonPicture['kind'], c: Record<string, unknown>): LessonPicture | null {
+function fromOperands(kind: FromQuestionPicture['kind'], c: Record<string, unknown>): LessonPicture | null {
   const ops = numbersOf(c.operands);
   if (!ops) return null;
   switch (kind) {
@@ -54,7 +54,7 @@ function fromOperands(kind: LessonPicture['kind'], c: Record<string, unknown>): 
   }
 }
 
-function fromNumber(kind: LessonPicture['kind'], c: Record<string, unknown>): LessonPicture | null {
+function fromNumber(kind: FromQuestionPicture['kind'], c: Record<string, unknown>): LessonPicture | null {
   const n = c.number;
   if (typeof n !== 'number' || !Number.isFinite(n)) return null;
   if (kind === 'base10') return isInt(n, 0, 9999) ? { kind, numbers: [n] } : null;

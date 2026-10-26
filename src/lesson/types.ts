@@ -4,7 +4,8 @@ export type Place = 'ones' | 'tens' | 'hundreds' | 'thousands';
 
 export type LessonPicture =
   | { kind: 'base10'; numbers: number[]; focus?: Place }
-  | { kind: 'array'; rows: number; cols: number }
+  | { kind: 'array'; rows: number; cols: number; counted?: number }
+  | { kind: 'share'; total: number; rows: number; shown: number; left?: true }
   | { kind: 'count'; groups: number[]; takeAway?: number; empty?: number; apart?: true }
   | {
       kind: 'numberLine';
@@ -22,7 +23,7 @@ export type LessonPicture =
       focus?: Place;
     };
 
-export type FromQuestionPicture = { kind: LessonPicture['kind']; from: 'operands' | 'number' };
+export type FromQuestionPicture = { kind: Exclude<LessonPicture['kind'], 'share'>; from: 'operands' | 'number' };
 
 export interface LessonStep {
   heading: string;

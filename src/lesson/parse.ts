@@ -22,6 +22,8 @@ const CAP_quickCheck = { min: 0, max: 3 };
 const CAP_base10Numbers = { min: 1, max: 2 };
 const CAP_base10Value = { min: 0, max: 9999 };
 const CAP_arrayDim = { min: 1, max: 15 };
+const CAP_shareTotal = { min: 10, max: 99 };
+const CAP_shareRows = { min: 2, max: 9 };
 const CAP_numberLineMarks = 10;
 const CAP_numberLineJumps = 10;
 const CAP_columnsCarry = 12;
@@ -81,6 +83,12 @@ function place(v: unknown): void {
   if (typeof v !== 'string' || !PLACES.includes(v)) fail();
 }
 
+/** The parts of the quotient, one per non-zero digit, biggest place first: 59 / 4 gives [10, 4]. */
+export function shareParts(total: number, rows: number): number[] {
+  const q = Math.floor(total / rows);
+  return [q - (q % 10), q % 10].filter((n) => n > 0);
+}
+
 function picture(v: unknown): void {
   if (v === null || typeof v !== 'object') fail();
   const kind = (v as Obj).kind;
@@ -90,9 +98,19 @@ function picture(v: unknown): void {
       int(n, CAP_base10Value.min, CAP_base10Value.max);
     if ('focus' in o) place(o.focus);
   } else if (kind === 'array') {
-    const o = obj(v, ['kind', 'rows', 'cols']);
-    int(o.rows, CAP_arrayDim.min, CAP_arrayDim.max);
+    const o = obj(v, ['kind', 'rows', 'cols', 'counted'], ['kind', 'rows', 'cols']);
+    const rows = int(o.rows, CAP_arrayDim.min, CAP_arrayDim.max);
     int(o.cols, CAP_arrayDim.min, CAP_arrayDim.max);
+    if ('counted' in o) int(o.counted, 0, rows);
+  } else if (kind === 'share') {
+    const o = obj(v, ['kind', 'total', 'rows', 'shown', 'left'], ['kind', 'total', 'rows', 'shown']);
+    const total = int(o.total, CAP_shareTotal.min, CAP_shareTotal.max);
+    const rows = int(o.rows, CAP_shareRows.min, CAP_shareRows.max);
+    const q = Math.floor(total / rows);
+    if (q < 1 || q > 19 || q % 10 === 0) fail();
+    const parts = shareParts(total, rows).length;
+    const shown = int(o.shown, 0, parts);
+    if ('left' in o && (o.left !== true || shown !== parts || total % rows === 0)) fail();
   } else if (kind === 'count') {
     const o = obj(v, ['kind', 'groups', 'takeAway', 'empty', 'apart'], ['kind', 'groups']);
     const groups = arr(o.groups, 1, 3);

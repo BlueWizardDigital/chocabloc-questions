@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import fixture from '../fixtures/lesson-compare-100.json';
-import { parseLesson, parseLessonIndex } from '../../src/lesson/parse';
+import { parseLesson, parseLessonIndex, shareParts } from '../../src/lesson/parse';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- tests mutate arbitrary paths
 type Loose = Record<string, any>;
@@ -74,6 +74,69 @@ describe('parseLesson', () => {
     expect(parseLesson(l).ok).toBe(true);
     l.idea.picture = { kind: 'nope' };
     expect(parseLesson(l).ok).toBe(false);
+  });
+});
+
+describe('array.counted and the share picture', () => {
+  const withPicture = (picture: unknown, extra: Loose = {}): Loose => {
+    const l = clone();
+    l.example.steps[0] = { heading: 'h', text: 't', picture, ...extra };
+    return l;
+  };
+  const ok = (picture: unknown) => parseLesson(withPicture(picture)).ok;
+  const share = (o: Loose) => ({ kind: 'share', ...o });
+
+  it.each([0, 2, 4])('accepts counted %s on 4 rows', (counted) => {
+    expect(ok({ kind: 'array', rows: 4, cols: 3, counted })).toBe(true);
+  });
+  it.each([-1, 5, 1.5, '2'])('refuses counted %j on 4 rows', (counted) => {
+    expect(ok({ kind: 'array', rows: 4, cols: 3, counted })).toBe(false);
+  });
+
+  it.each([
+    { total: 59, rows: 4, shown: 0 },
+    { total: 59, rows: 4, shown: 2 },
+    { total: 59, rows: 4, shown: 2, left: true },
+    { total: 57, rows: 3, shown: 2 },
+    { total: 47, rows: 6, shown: 1, left: true },
+  ])('accepts share %j', (o) => {
+    expect(ok(share(o))).toBe(true);
+  });
+
+  it.each([
+    { total: 9, rows: 4, shown: 0 },
+    { total: 100, rows: 4, shown: 0 },
+    { total: 59, rows: 1, shown: 0 },
+    { total: 59, rows: 10, shown: 0 },
+    { total: 80, rows: 4, shown: 0 },
+    { total: 40, rows: 4, shown: 0 },
+    { total: 99, rows: 2, shown: 0 },
+    { total: 59, rows: 4, shown: 3 },
+    { total: 59, rows: 4, shown: 1, left: true },
+    { total: 57, rows: 3, shown: 2, left: true },
+    { total: 59, rows: 4, shown: 2, left: false },
+    { total: 59, rows: 4, shown: 0, each: 14 },
+  ])('refuses share %j', (o) => {
+    expect(ok(share(o))).toBe(false);
+  });
+
+  it('refuses share in afterWrong.picture', () => {
+    const l = clone();
+    l.afterWrong.picture = { kind: 'share', from: 'operands' };
+    expect(parseLesson(l)).toEqual({ ok: false, reason: 'invalid' });
+  });
+  it('refuses a young line on a share picture', () => {
+    const l = withPicture(share({ total: 59, rows: 4, shown: 0 }), { young: 'x' });
+    expect(parseLesson(l)).toEqual({ ok: false, reason: 'invalid' });
+  });
+});
+
+describe('shareParts', () => {
+  it('splits the quotient by place', () => {
+    expect(shareParts(59, 4)).toEqual([10, 4]);
+    expect(shareParts(47, 6)).toEqual([7]);
+    expect(shareParts(57, 3)).toEqual([10, 9]);
+    expect(shareParts(23, 2)).toEqual([10, 1]);
   });
 });
 
