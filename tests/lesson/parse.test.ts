@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import fixture from '../fixtures/lesson-compare-100.json';
-import { parseLesson, parseLessonIndex, shareParts } from '../../src/lesson/parse';
+import { parseLesson, parseLessonIndex } from '../../src/lesson/parse';
+import { shareParts } from '../../src/lesson/layout/share';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- tests mutate arbitrary paths
 type Loose = Record<string, any>;
@@ -128,6 +129,20 @@ describe('array.counted and the share picture', () => {
   it('refuses a young line on a share picture', () => {
     const l = withPicture(share({ total: 59, rows: 4, shown: 0 }), { young: 'x' });
     expect(parseLesson(l)).toEqual({ ok: false, reason: 'invalid' });
+  });
+  it('caps shown at the parts the picture draws, for every share the caps allow', () => {
+    let checked = 0;
+    for (let total = 10; total <= 99; total++) {
+      for (let rows = 2; rows <= 9; rows++) {
+        const q = Math.floor(total / rows);
+        if (q < 1 || q > 19 || q % 10 === 0) continue;
+        const parts = shareParts(total, rows).length;
+        expect(ok(share({ total, rows, shown: parts })), `${total} / ${rows}`).toBe(true);
+        expect(ok(share({ total, rows, shown: parts + 1 })), `${total} / ${rows}`).toBe(false);
+        checked++;
+      }
+    }
+    expect(checked).toBeGreaterThan(300);
   });
 });
 

@@ -83,12 +83,6 @@ function place(v: unknown): void {
   if (typeof v !== 'string' || !PLACES.includes(v)) fail();
 }
 
-/** The parts of the quotient, one per non-zero digit, biggest place first: 59 / 4 gives [10, 4]. */
-export function shareParts(total: number, rows: number): number[] {
-  const q = Math.floor(total / rows);
-  return [q - (q % 10), q % 10].filter((n) => n > 0);
-}
-
 function picture(v: unknown): void {
   if (v === null || typeof v !== 'object') fail();
   const kind = (v as Obj).kind;
@@ -108,7 +102,9 @@ function picture(v: unknown): void {
     const rows = int(o.rows, CAP_shareRows.min, CAP_shareRows.max);
     const q = Math.floor(total / rows);
     if (q < 1 || q > 19 || q % 10 === 0) fail();
-    const parts = shareParts(total, rows).length;
+    // One part per non-zero digit of q (shareParts in layout/share.ts, which Help must not import: it
+    // lives in the lazy pictures chunk). With q 1-9 or 11-19 that is 1 or 2.
+    const parts = q > 9 ? 2 : 1;
     const shown = int(o.shown, 0, parts);
     if ('left' in o && (o.left !== true || shown !== parts || total % rows === 0)) fail();
   } else if (kind === 'count') {

@@ -1,4 +1,11 @@
-import { shareParts } from '../parse';
+// The share picture's layout. Only the lazy pictures chunk imports this file, so it imports nothing
+// Help loads: a module both load would make Rollup pull Help into a shared chunk behind a facade.
+
+/** The parts of the quotient, one per non-zero digit, biggest place first: 59 / 4 gives [10, 4]. */
+export function shareParts(total: number, rows: number): number[] {
+  const q = Math.floor(total / rows);
+  return [q - (q % 10), q % 10].filter((n) => n > 0);
+}
 
 export type Tone = 0 | 1 | 'left' | null; // part index, the remainder, or plain ink
 export interface LdCell {
