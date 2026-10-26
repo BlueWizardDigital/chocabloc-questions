@@ -1,4 +1,5 @@
 {
+  "rows": { "one": "{count} row", "other": "{count} rows" },
   "animals": {
     "cat": {
       "one": "cat",

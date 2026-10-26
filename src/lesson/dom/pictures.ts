@@ -212,7 +212,7 @@ export function renderPicture(pic: LessonPicture, msg: Msg, lang: string, look?:
       const squares = (): HTMLElement => canvasDrawing((ctx, w, ht) => drawArray(ctx, w, ht, [pic.rows, pic.cols]));
       if (look?.young && look.base != null && pic.rows * pic.cols <= 30) {
         // Before the chunk lands the screen has its normal words, so the picture that follows is the squares: the canvas height.
-        via(box, look, CANVAS_H, (y) => y.array(pic, look, squares), squares);
+        via(box, look, CANVAS_H, (y) => y.array(pic, look, squares, msg), squares);
       } else if (pic.counted != null) {
         // A line of counted dots is 32 px at most, 6 px apart (counted-rows.ts).
         via(box, look?.pictures, pic.rows * 38 - 6, (p) => p.countedDots(pic, msg));

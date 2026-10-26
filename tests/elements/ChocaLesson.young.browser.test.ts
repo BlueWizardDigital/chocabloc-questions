@@ -2,7 +2,7 @@ import { expect } from '@esm-bundle/chai';
 import '../../src/lesson/index';
 import type { ChocaLesson, Lesson } from '../../src/lesson/index';
 import { pickAnimals } from '../../src/lesson/animals';
-import { youngChunk } from '../../src/lesson/dom/ChocaLesson';
+import { picturesChunk, youngChunk } from '../../src/lesson/dom/ChocaLesson';
 import { renderPicture } from '../../src/lesson/dom/pictures';
 import type { PictureLook } from '../../src/lesson/dom/pictures';
 import { pictureFromQuestion } from '../../src/lesson/from-question';
@@ -571,5 +571,87 @@ describe('<chocabloc-lesson> young look', () => {
         expect(Math.abs(box.getBoundingClientRect().height - before)).to.be.below(2);
       });
     }
+  });
+});
+
+describe('<chocabloc-lesson> young look: counted rows of animals', () => {
+  const countedStep = (rows: number, cols: number, counted: number) => ({
+    heading: 'Rows',
+    text: 'Count the rows.',
+    picture: { kind: 'array', rows, cols, counted },
+    young: '{a} in rows.',
+  });
+  const rowsOf = (el: ChocaLesson): HTMLElement[] => parts(el, 'row');
+  const texts = (els: Element[]): string[] => els.map((e) => (e.textContent ?? '').trim());
+
+  /** Help on the first worked step; waits for the young chunk's stylesheet and the first counted row. */
+  async function openRows(step: Record<string, unknown>): Promise<ChocaLesson> {
+    const el = mount();
+    el.grade = 'K';
+    el.pictureBase = BASE;
+    el.mode = 'help';
+    el.lesson = lessonWith(step);
+    await until(() => root(el).querySelectorAll('style').length >= 2, 'the chunks');
+    button(el, 'Next').click();
+    await until(() => rowsOf(el).length > 0, 'the rows');
+    return el;
+  }
+
+  it('counted 2 of a 4 x 3 array: 12 animals in 4 rows, rows 1 and 2 circled with "1 row", "2 rows" and 3, 6', async () => {
+    const el = await openRows(countedStep(4, 3, 2));
+    expect(rowsOf(el)).to.have.length(4);
+    expect(rowsOf(el).map((r) => r.querySelectorAll('img').length)).to.deep.equal([3, 3, 3, 3]);
+    expect(imgs(el)).to.have.length(12);
+    expect(rowsOf(el).map((r) => r.classList.contains('on'))).to.deep.equal([true, true, false, false]);
+    expect(texts(parts(el, 'row-label'))).to.deep.equal(['1 row', '2 rows', '', '']);
+    expect(texts(parts(el, 'row-total'))).to.deep.equal(['3', '6', '', '']);
+    expect(heading(el)).to.match(/in rows\.$/);
+  });
+
+  it('counted 0: animals with no rings, faded rows or labels', async () => {
+    const el = await openRows(countedStep(4, 3, 0));
+    expect(imgs(el)).to.have.length(12);
+    expect(rowsOf(el).some((r) => r.classList.contains('on') || r.classList.contains('faded'))).to.equal(false);
+    expect(texts(parts(el, 'row-label')).join('')).to.equal('');
+  });
+
+  it('the labels read right when only the young chunk has arrived', async () => {
+    const realPictures = picturesChunk.load;
+    picturesChunk.load = () => new Promise(() => undefined);
+    try {
+      const el = mount();
+      el.grade = 'K';
+      el.pictureBase = BASE;
+      el.mode = 'help';
+      el.lesson = lessonWith(countedStep(4, 3, 2));
+      await until(() => root(el).querySelectorAll('style').length >= 2, 'the young chunk');
+      button(el, 'Next').click();
+      await until(() => rowsOf(el).length > 0, 'the rows');
+      expect(texts(parts(el, 'row-label'))).to.deep.equal(['1 row', '2 rows', '', '']);
+    } finally {
+      picturesChunk.load = realPictures;
+    }
+  });
+
+  it('a 6 x 6 array (36, over 30) draws dots through the pictures chunk, not animals', async () => {
+    const el = mount();
+    el.grade = 'K';
+    el.pictureBase = BASE;
+    el.mode = 'help';
+    el.lesson = lessonWith(countedStep(6, 6, 1));
+    await until(() => root(el).querySelectorAll('style').length >= 3, 'both chunks');
+    button(el, 'Next').click();
+    await until(() => rowsOf(el).length > 0, 'the rows');
+    expect(imgs(el)).to.have.length(0);
+    expect(root(el).querySelectorAll('[part~="row"] .dot')).to.have.length(36);
+  });
+
+  it('one failed image turns the rows to dots and the normal words come back', async () => {
+    const el = await openRows(countedStep(4, 3, 2));
+    expect(heading(el)).to.not.equal('Rows');
+    imgs(el)[0]!.dispatchEvent(new Event('error'));
+    expect(imgs(el)).to.have.length(0);
+    expect(heading(el)).to.equal('Rows');
+    expect(part(el, 'text')!.hidden).to.equal(false);
   });
 });

@@ -4,6 +4,7 @@
 // imports nothing Help loads (Help passes what it shares), or Rollup would pull
 // Help into a shared chunk behind a facade.
 import { pickAnimals } from '../animals';
+import { CSS as ROWS_CSS, countedRows } from './counted-rows';
 import { countCells } from '../layout/count';
 import messages from '../messages/young.json';
 import { fillYoung } from '../young-text';
@@ -25,7 +26,7 @@ export function register(table: Record<string, unknown>): void {
 }
 
 /** Rules for the cells, frames and the dim/cross/dash states. The element adds this once the chunk has loaded. */
-export const CSS = `
+export const CSS = `${ROWS_CSS}
 .cnt { display: flex; flex-direction: column; align-items: center; gap: 10px; --cell: 42px; }
 .probe { position: absolute; top: 0; left: 0; right: 0; height: 0; }
 .cnt.apart { position: relative; flex-direction: row; align-items: flex-start; justify-content: center; gap: 28px; width: 100%; --cell: 30px; }
@@ -49,7 +50,7 @@ export const CSS = `
   background: linear-gradient(to top right, transparent calc(50% - 2px), currentColor calc(50% - 2px), currentColor calc(50% + 2px), transparent calc(50% + 2px));
 }
 .arr { display: grid; grid-template-columns: repeat(var(--c), minmax(0, 1fr)); gap: 3px; width: 100%; max-width: calc(var(--c) * 46px); }
-.arr .cell { position: relative; display: block; aspect-ratio: 1 / 1; }
+.arr .cell, .cell.ani { position: relative; display: block; aspect-ratio: 1 / 1; }
 `;
 
 const el = (cls: string, tag: 'div' | 'span' = 'div'): HTMLElement => {
@@ -135,10 +136,17 @@ export function count(pic: Count, look: YoungLook): HTMLElement {
   return withAnimals(look, () => frames(pic, names, base), () => frames(pic, null, null));
 }
 
-/** A young array of up to 30 places: one animal in each. `squares` is Help's canvas drawing, the fallback. */
-export function array(pic: Array2, look: YoungLook, squares: () => HTMLElement): HTMLElement {
+/**
+ * A young array of up to 30 places: one animal in each, in rows with rings and a running total once
+ * `counted` is set. `squares` is Help's canvas drawing, the fallback.
+ */
+export function array(pic: Array2, look: YoungLook, squares: () => HTMLElement, msg: Msg): HTMLElement {
   const src = `${look.base}${pickAnimals(look.skillId, 1)[0]}.webp`;
   return withAnimals(look, () => {
+    if (pic.counted != null) {
+      const rows = Array.from({ length: pic.rows }, () => Array.from({ length: pic.cols }, () => cellOf('ani', src)));
+      return countedRows(rows, pic.counted, pic.cols, msg);
+    }
     const grid = el('arr');
     grid.style.setProperty('--c', String(pic.cols));
     for (let i = 0; i < pic.rows * pic.cols; i++) grid.append(cellOf('', src));
