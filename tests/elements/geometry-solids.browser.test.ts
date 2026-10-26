@@ -291,6 +291,50 @@ describe('each solid shows its own number of faces', () => {
   }
 });
 
+/** The outline of everything drawn: its convex hull, corners in order (monotone chain). */
+function outline(pts: Pt[]): Pt[] {
+  const sorted = [...pts].sort((a, b) => a.x - b.x || a.y - b.y);
+  const turn = (o: Pt, a: Pt, b: Pt) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const half = (list: Pt[]) => list.reduce<Pt[]>((hull, p) => {
+    while (hull.length >= 2 && turn(hull[hull.length - 2]!, hull[hull.length - 1]!, p) <= 1e-9) hull.pop();
+    hull.push(p);
+    return hull;
+  }, []);
+  const lower = half(sorted);
+  const upper = half([...sorted].reverse());
+  return [...lower.slice(0, -1), ...upper.slice(0, -1)];
+}
+
+/** A 4-corner outline with two pairs of equal neighbouring sides (within 10%): a kite, or a rhombus. */
+function isKite(corners: Pt[]): boolean {
+  if (corners.length !== 4) return false;
+  const s = corners.map((p, i) => Math.hypot(p.x - corners[(i + 1) % 4]!.x, p.y - corners[(i + 1) % 4]!.y));
+  const same = (a: number, b: number) => Math.abs(a - b) <= 0.1 * Math.max(a, b);
+  return (same(s[0]!, s[1]!) && same(s[2]!, s[3]!)) || (same(s[1]!, s[2]!) && same(s[3]!, s[0]!));
+}
+
+/** How far the outline's lowest corner sits below the higher of its two neighbours, in px. */
+function dropBelowNeighbours(corners: Pt[]): number {
+  const i = corners.reduce((low, p, k) => (p.y > corners[low]!.y ? k : low), 0);
+  const n = corners.length;
+  return corners[i]!.y - Math.max(corners[(i + n - 1) % n]!.y, corners[(i + 1) % n]!.y);
+}
+
+describe('the triangular pyramid reads as a solid', () => {
+  const drawnOutline = (shape: string) => outline(solidPaths(render(identify(shape))).flat());
+
+  it('its outline is not a kite', () => {
+    expect(isKite([{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 3 }, { x: -1, y: 1 }]), 'the check can fail').to.equal(true);
+
+    expect(isKite(drawnOutline('triangular pyramid'))).to.equal(false);
+  });
+
+  it('it stands on a corner, unlike the square pyramid\'s level bottom edge', () => {
+    expect(dropBelowNeighbours(drawnOutline('triangular pyramid')), 'px below both neighbours').to.be.at.least(10);
+    expect(dropBelowNeighbours(drawnOutline('square pyramid')), 'the square pyramid sits on a level edge').to.be.below(1);
+  });
+});
+
 describe('a face the solid does not have', () => {
   for (const [shape, face] of [['hexagonal prism', 'circle'], ['pentagonal pyramid', 'rectangle'], ['hexagonal prism', 'pentagon']] as const) {
     it(`${shape}, ${face}: the solid alone, no highlight, no text`, () => {

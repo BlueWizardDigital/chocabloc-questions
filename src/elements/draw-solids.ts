@@ -7,23 +7,26 @@ export type SolidFace = {
 };
 
 type Vec = [number, number, number];
-type Solid = { sides: number; base: SolidFace['kind']; pyramid: boolean; cornerFront: boolean };
+type Solid = { sides: number; base: SolidFace['kind']; pyramid: boolean; yaw: number };
 
 // The solids built here, from a regular base. The square pyramid is today's
 // pyramid drawing, and the cube, rectangular prism and triangular prism keep
 // their own drawings too (canvas-draws.ts).
 //
-// `cornerFront`: a corner of the base faces the viewer, not a side. A prism
-// always shows a side, which draws as a true rectangle. A pyramid's base is
-// hidden from above, so it is turned to show as many sides as it can: side-on,
-// a triangular pyramid shows one face and looks flat, and a hexagonal pyramid
-// shows three, like a pentagonal one; corner-on they show two and four.
+// `yaw`: how far the base is turned, in degrees, from a side facing the viewer.
+// A prism stays side-on, so that side draws as a true rectangle. A pyramid's
+// base is hidden from above, so its sides must show what it is:
+// - hexagonal: side-on it shows three faces, like a pentagonal one; turned a
+//   corner to the viewer (30°) it shows four;
+// - triangular: side-on it shows one face and looks flat, and corner-on (60°)
+//   it is a flat kite. At 45° it shows a wide face, a narrow one and a sloping
+//   base edge, unlike the square pyramid's level one.
 const SOLIDS = new Map<string, Solid>([
-  ['triangular pyramid', { sides: 3, base: 'triangle', pyramid: true, cornerFront: true }],
-  ['pentagonal pyramid', { sides: 5, base: 'pentagon', pyramid: true, cornerFront: false }],
-  ['hexagonal pyramid', { sides: 6, base: 'hexagon', pyramid: true, cornerFront: true }],
-  ['pentagonal prism', { sides: 5, base: 'pentagon', pyramid: false, cornerFront: false }],
-  ['hexagonal prism', { sides: 6, base: 'hexagon', pyramid: false, cornerFront: false }],
+  ['triangular pyramid', { sides: 3, base: 'triangle', pyramid: true, yaw: 45 }],
+  ['pentagonal pyramid', { sides: 5, base: 'pentagon', pyramid: true, yaw: 0 }],
+  ['hexagonal pyramid', { sides: 6, base: 'hexagon', pyramid: true, yaw: 30 }],
+  ['pentagonal prism', { sides: 5, base: 'pentagon', pyramid: false, yaw: 0 }],
+  ['hexagonal prism', { sides: 6, base: 'hexagon', pyramid: false, yaw: 0 }],
 ]);
 
 // The base has radius 1; the apex, or the top, is HEIGHT above it. At 2, a
@@ -44,7 +47,7 @@ const unit = (v: Vec): Vec => {
 // it faces the viewer, and one whose normal points away is hidden.
 const VIEW = unit([1, 1, 1]);
 // Lit from the upper left, like the cube: its top is light, its front-left face
-// mid and its right face dark. The thresholds sit at least 0.05 from every face
+// mid and its right face dark. The thresholds sit at least 0.04 from every face
 // the five solids show, so no face is a rounding error away from another shade.
 const LIGHT = unit([-0.3, 0.8, 0.5]);
 
@@ -54,10 +57,10 @@ function shade(normal: Vec): string {
 }
 
 /** Each face's corners, in 3D: the base on y = 0, then the sides (and a prism's top). */
-function solidFaces({ sides, base, pyramid, cornerFront }: Solid): { kind: SolidFace['kind']; corners: Vec[] }[] {
-  // The viewer looks from 45° round the y axis (VIEW), so a corner there faces
-  // them; half a side further round, a side does.
-  const start = Math.PI / 4 - (cornerFront ? 0 : Math.PI / sides);
+function solidFaces({ sides, base, pyramid, yaw }: Solid): { kind: SolidFace['kind']; corners: Vec[] }[] {
+  // The viewer looks from 45° round the y axis (VIEW). With the first corner
+  // half a side short of that, a side faces the viewer; `yaw` turns it on.
+  const start = Math.PI / 4 - Math.PI / sides + (yaw * Math.PI) / 180;
   const ring = (y: number): Vec[] => Array.from({ length: sides }, (_, k): Vec => {
     const a = start + (2 * Math.PI * k) / sides;
     return [Math.cos(a), y, Math.sin(a)];
