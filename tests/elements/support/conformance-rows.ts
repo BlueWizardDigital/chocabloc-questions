@@ -1,5 +1,7 @@
 // The conformance representatives, shared by format-conformance and
 // server-content-contract.
+import { FIGURE_EXAMPLE } from '../../helpers/figure-fixture';
+
 
 // A format here reaches <choca-canvas-question> but must paint nothing and hide
 // the canvas, because any picture would give the answer away. The reason must
@@ -119,6 +121,16 @@ export const REPRESENTATIVE_ROWS: Record<string, Row | Row[]> = {
   }),
   geometry_symmetry: row('geometry_symmetry', {
     content: { shape: 'square', lines_of_symmetry: 4 }, answer: 4,
+  }),
+  // Choices-only, as the bank serves it: the lettered answer is never in the row.
+  geometry_figure: row('geometry_figure', {
+    imageType: 'shape_2d',
+    questionText: 'Which dashed line is a line of symmetry?',
+    content: FIGURE_EXAMPLE,
+    answer: undefined,
+    distractors: undefined,
+    choices: ['A', 'B', 'C', 'D'].map((value) => ({ value })),
+    answerToken: 'test-token-not-real',
   }),
   geometry_classify_triangle: row('geometry_classify_triangle', {
     content: { operands: [3, 3, 3], classify_by: 'sides' }, answer: 'equilateral',
