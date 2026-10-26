@@ -42,8 +42,22 @@ describe('parseFigure', () => {
   it('accepts unlabelled lines, and 8 polygons and 48 points', () => {
     const unlabelled = lines3.map(({ from, to }) => ({ from, to }));
     expect(parseFigure(fig([panel({ lines: unlabelled })]))!.lettered).toBeNull();
-    const pts = Array.from({ length: 48 }, (_, i) => [Math.cos(i) * 9, Math.sin(i) * 9]);
+    const pts = Array.from({ length: 48 }, (_, i) => [Math.cos((i * Math.PI) / 24) * 9, Math.sin((i * Math.PI) / 24) * 9]);
     expect(parseFigure(fig([{ polygons: Array(8).fill(poly(pts)) }]))).not.toBeNull();
+  });
+
+  it('accepts a concave but simple polygon and a 36-gon circle', () => {
+    const chevron = [[-6, -4], [0, 0], [6, -4], [6, 4], [0, 8], [-6, 4]];
+    expect(parseFigure(fig([{ polygons: [poly(chevron)] }]))).not.toBeNull();
+    const arrow = [[-8, -2], [2, -2], [2, -6], [8, 0], [2, 6], [2, 2], [-8, 2]];
+    expect(parseFigure(fig([{ polygons: [poly(arrow)] }]))).not.toBeNull();
+    const circle = Array.from({ length: 36 }, (_, i) => [8 * Math.cos((i * Math.PI) / 18), 8 * Math.sin((i * Math.PI) / 18)]);
+    expect(parseFigure(fig([{ polygons: [poly(circle)] }]))).not.toBeNull();
+    expect(parsePolygonPoints(circle)).toHaveLength(36);
+  });
+
+  it('accepts a rectangle with a collinear midpoint', () => {
+    expect(parsePolygonPoints([[0, 0], [2, 0], [4, 0], [4, 4], [0, 4]])).not.toBeNull();
   });
 
   it('accepts coordinates on the frame edge', () => {
@@ -84,6 +98,12 @@ describe('parseFigure', () => {
     ['a 3-element point', fig([{ polygons: [poly([[0, 0], [5, 0, 1], [0, 5]])] }])],
     ['panels not an array', fig({})],
     ['a null panel', fig([null])],
+    ['a bowtie polygon', fig([{ polygons: [poly([[-5, -5], [5, 5], [5, -5], [-5, 5]])] }])],
+    ['an all-collinear polygon', fig([{ polygons: [poly([[0, 0], [3, 3], [6, 6]])] }])],
+    ['a polygon of repeated points', fig([{ polygons: [poly([[2, 2], [2, 2], [2, 2]])] }])],
+    ['a polygon with a fold-back edge', fig([{ polygons: [poly([[0, 0], [4, 0], [2, 0], [0, 4]])] }])],
+    ['a polygon touching itself at a vertex', fig([{ polygons: [poly([[0, 0], [4, 0], [4, 4], [2, 0], [0, 4]])] }])],
+    ['a polygon with a repeated closing point', fig([{ polygons: [poly([[0, 0], [4, 0], [0, 4], [0, 0]])] }])],
     ['a polygon without points', fig([{ polygons: [{}] }])],
   ];
   for (const [name, content] of invalid) {
@@ -109,6 +129,8 @@ describe('parsePolygonPoints', () => {
     expect(parsePolygonPoints([[0, 0], [10.5, 0], [0, 5]])).toBeNull();
     expect(parsePolygonPoints([[0, 0], [NaN, 0], [0, 5]])).toBeNull();
     expect(parsePolygonPoints(undefined)).toBeNull();
+    expect(parsePolygonPoints([[-5, -5], [5, 5], [5, -5], [-5, 5]])).toBeNull();
+    expect(parsePolygonPoints([[0, 0], [3, 3], [6, 6]])).toBeNull();
     expect(parsePolygonPoints('abc')).toBeNull();
   });
 });

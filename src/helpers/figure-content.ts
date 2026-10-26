@@ -30,7 +30,59 @@ function parsePoint(p: unknown): FigurePoint | null {
   return [x, y];
 }
 
-/** One polygon's points: 3–48 finite [x, y] pairs in −10..10. */
+type Pt = readonly [number, number];
+
+function cross(o: Pt, a: Pt, b: Pt): number {
+  return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+}
+
+function onSegment(a: Pt, b: Pt, p: Pt): boolean {
+  return (
+    Math.min(a[0], b[0]) <= p[0] && p[0] <= Math.max(a[0], b[0]) &&
+    Math.min(a[1], b[1]) <= p[1] && p[1] <= Math.max(a[1], b[1])
+  );
+}
+
+// Closed segments a-b and c-d share any point (touching and collinear overlap count).
+function segmentsMeet(a: Pt, b: Pt, c: Pt, d: Pt): boolean {
+  const d1 = cross(a, b, c);
+  const d2 = cross(a, b, d);
+  const d3 = cross(c, d, a);
+  const d4 = cross(c, d, b);
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return true;
+  return (
+    (d1 === 0 && onSegment(a, b, c)) || (d2 === 0 && onSegment(a, b, d)) ||
+    (d3 === 0 && onSegment(c, d, a)) || (d4 === 0 && onSegment(c, d, b))
+  );
+}
+
+// Simple = non-zero area, no zero-length edge, no edge folding back on its
+// neighbour, and no two non-adjacent edges meeting. O(n²), n ≤ 48.
+function isSimplePolygon(pts: readonly Pt[]): boolean {
+  const n = pts.length;
+  let area2 = 0;
+  for (let i = 0; i < n; i++) {
+    const a = pts[i]!;
+    const b = pts[(i + 1) % n]!;
+    if (a[0] === b[0] && a[1] === b[1]) return false;
+    area2 += a[0] * b[1] - b[0] * a[1];
+  }
+  if (area2 === 0) return false;
+  for (let i = 0; i < n; i++) {
+    const a = pts[i]!;
+    const b = pts[(i + 1) % n]!;
+    const c = pts[(i + 2) % n]!;
+    // Adjacent edges a-b, b-c: reject a fold-back (collinear, reversing).
+    if (cross(a, b, c) === 0 && (b[0] - a[0]) * (c[0] - b[0]) + (b[1] - a[1]) * (c[1] - b[1]) < 0) return false;
+    for (let j = i + 2; j < n; j++) {
+      if (i === 0 && j === n - 1) continue; // adjacent through the closing edge
+      if (segmentsMeet(a, b, pts[j]!, pts[(j + 1) % n]!)) return false;
+    }
+  }
+  return true;
+}
+
+/** One simple polygon's points: 3–48 finite [x, y] pairs in −10..10, non-zero area, no self-intersection. */
 export function parsePolygonPoints(points: unknown): FigurePoint[] | null {
   if (!Array.isArray(points)) return null;
   if (points.length < 3 || points.length > MAX_POLYGON_POINTS) return null;
@@ -40,7 +92,7 @@ export function parsePolygonPoints(points: unknown): FigurePoint[] | null {
     if (!pt) return null;
     out.push(pt);
   }
-  return out;
+  return isSimplePolygon(out) ? out : null;
 }
 
 function parseLines(raw: unknown): FigureLine[] | null {
