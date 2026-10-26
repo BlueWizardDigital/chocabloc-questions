@@ -218,4 +218,9 @@ describe('message keys', () => {
     expect(named).toEqual([...LESSON_ANIMALS].sort());
     for (const a of LESSON_ANIMALS) expect(isPluralForms((young.animals as Record<string, unknown>)[a]), a).toBe(true);
   });
+
+  test('both lazy chunks carry the same "rows" words: either may draw counted rows, and the later one overwrites', () => {
+    expect(isPluralForms(young.rows)).toBe(true);
+    expect(pictures.rows).toEqual(young.rows);
+  });
 });

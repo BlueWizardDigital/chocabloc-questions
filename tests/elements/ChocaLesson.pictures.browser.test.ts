@@ -180,11 +180,13 @@ describe('<chocabloc-lesson> share pictures', () => {
 
   it('colours each line like its dots, and only cells that hold text', async () => {
     const el = await open(sharing, 4);
-    const [quotient, , product1, , , product2, , last] = lines(el);
+    const [quotient, , product1, rule1, , product2, rule2, last] = lines(el);
     const tone = (cell: Element): string => (cell.className.match(/\bt[01l]\b/) ?? [''])[0];
     expect(Array.from(quotient!.children).map(tone)).to.deep.equal(['', 't0', 't1', 'tl']);
     expect(Array.from(product1!.children).slice(0, 4).map(tone)).to.deep.equal(['t0', 't0', '', '']);
+    expect(Array.from(rule1!.children).map(tone)).to.deep.equal(['', 't0', '', '']);
     expect(Array.from(product2!.children).slice(0, 4).map(tone)).to.deep.equal(['t1', 't1', 't1', '']);
+    expect(Array.from(rule2!.children).map(tone)).to.deep.equal(['', 't1', 't1', '']);
     expect(Array.from(last!.children).slice(0, 4).map(tone)).to.deep.equal(['', '', 'tl', '']);
   });
 });

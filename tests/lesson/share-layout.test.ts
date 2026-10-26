@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { longDivision, shareRow, type LdLine } from '../../src/lesson/layout/share';
+import { longDivision, type LdLine } from '../../src/lesson/layout/share';
 
 const txt = (ls: LdLine[]) => ls.map((l) => l.kind + ':' + l.cells.map((c) => c.text || '·').join(''));
 
@@ -59,12 +59,15 @@ describe('longDivision', () => {
     expect(ls[5].note).toEqual({ key: 'ldTimes', a: 4, b: 2 });
     expect(txt(longDivision(10, 9, 1, true)).slice(2)).toEqual(['product:·−9·', 'rule:··─·', 'difference:··1·']);
   });
-});
-
-describe('shareRow', () => {
-  it('lists given dots then spots', () => {
-    expect(shareRow(59, 4, 1)).toEqual([...Array(10).fill(0), ...Array(4).fill('spot')]);
-    expect(shareRow(59, 4, 2)).toEqual([...Array(10).fill(0), ...Array(4).fill(1)]);
-    expect(shareRow(59, 4, 0)).toEqual(Array(14).fill('spot'));
+  it("gives a rule its part's tone itself, and leaves a product's blank cells plain", () => {
+    const ls = longDivision(51, 4, 2, false);
+    // The rule under "−8" is the second part's colour, though "−8" starts with a blank cell.
+    expect(ls[6].cells[2].tone).toBe(1);
+    expect(ls[3].cells[1].tone).toBe(0);
+    for (const i of [2, 5]) {
+      const blanks = ls[i].cells.filter((c) => !c.text);
+      expect(blanks.length).toBeGreaterThan(0);
+      expect(blanks.every((c) => c.tone === null)).toBe(true);
+    }
   });
 });

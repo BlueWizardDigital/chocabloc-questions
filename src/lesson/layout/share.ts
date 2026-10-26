@@ -63,7 +63,7 @@ export function longDivision(total: number, rows: number, shown: number, left: b
     const tone: Tone = i === 0 ? 0 : 1;
     const isTens = part >= 10;
     const product = part * rows;
-    const productCells = Array.from({ length: COLS }, () => ({ text: '', tone }));
+    const productCells = blank();
     // A tens product sits under the tens column; a ones product under the ones.
     const productText = String(isTens ? product / 10 : product);
     const end = isTens ? 1 : 2;
@@ -80,8 +80,8 @@ export function longDivision(total: number, rows: number, shown: number, left: b
     );
 
     const rule = blank();
-    // The rule underlines the product's digits, not its minus.
-    for (let c = first; c <= end; c++) rule[c] = { text: '─', tone: null };
+    // The rule underlines the product's digits, not its minus, in the part's colour.
+    for (let c = first; c <= end; c++) rule[c] = { text: '─', tone };
     out.push(line('rule', rule));
 
     running -= product;
@@ -92,13 +92,4 @@ export function longDivision(total: number, rows: number, shown: number, left: b
     out.push(line('difference', diff, last ? undefined : { key: 'ldLeft', count: running }));
   }
   return out;
-}
-
-/** Per row, the dots in order: a part index for a given dot, 'spot' for one not given yet. */
-export function shareRow(total: number, rows: number, shown: number): (number | 'spot')[] {
-  const dots: (number | 'spot')[] = [];
-  shareParts(total, rows).forEach((p, i) => {
-    for (let k = 0; k < p; k++) dots.push(i < shown ? i : 'spot');
-  });
-  return dots;
 }

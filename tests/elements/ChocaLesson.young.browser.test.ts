@@ -646,13 +646,32 @@ describe('<chocabloc-lesson> young look: counted rows of animals', () => {
     expect(root(el).querySelectorAll('[part~="row"] .dot')).to.have.length(36);
   });
 
-  it('one failed image turns the rows to dots and the normal words come back', async () => {
-    const el = await openRows(countedStep(4, 3, 2));
-    expect(heading(el)).to.not.equal('Rows');
-    imgs(el)[0]!.dispatchEvent(new Event('error'));
-    expect(imgs(el)).to.have.length(0);
-    expect(heading(el)).to.equal('Rows');
-    expect(part(el, 'text')!.hidden).to.equal(false);
+  it('one failed image turns the rows to dots, still counted, and the normal words come back', async () => {
+    // The pictures chunk never arrives: the young chunk draws the dots, and styles them, itself.
+    const realPictures = picturesChunk.load;
+    picturesChunk.load = () => new Promise(() => undefined);
+    try {
+      const el = mount();
+      el.grade = 'K';
+      el.pictureBase = BASE;
+      el.mode = 'help';
+      el.lesson = lessonWith(countedStep(4, 3, 2));
+      await until(() => root(el).querySelectorAll('style').length >= 2, 'the young chunk');
+      button(el, 'Next').click();
+      await until(() => rowsOf(el).length > 0, 'the rows');
+      expect(heading(el)).to.not.equal('Rows');
+      imgs(el)[0]!.dispatchEvent(new Event('error'));
+      expect(imgs(el)).to.have.length(0);
+      expect(rowsOf(el).map((r) => r.querySelectorAll('.dot').length)).to.deep.equal([3, 3, 3, 3]);
+      expect(rowsOf(el).map((r) => r.classList.contains('on'))).to.deep.equal([true, true, false, false]);
+      expect(texts(parts(el, 'row-label'))).to.deep.equal(['1 row', '2 rows', '', '']);
+      expect(texts(parts(el, 'row-total'))).to.deep.equal(['3', '6', '', '']);
+      expect(getComputedStyle(root(el).querySelector('[part~="row"] .dot')!).borderRadius).to.equal('50%');
+      expect(heading(el)).to.equal('Rows');
+      expect(part(el, 'text')!.hidden).to.equal(false);
+    } finally {
+      picturesChunk.load = realPictures;
+    }
   });
 });
 

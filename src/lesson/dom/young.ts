@@ -4,7 +4,7 @@
 // imports nothing Help loads (Help passes what it shares), or Rollup would pull
 // Help into a shared chunk behind a facade.
 import { pickAnimals } from '../animals';
-import { CSS as ROWS_CSS, countedRows } from './counted-rows';
+import { CSS as ROWS_CSS, countedDots, countedRows } from './counted-rows';
 import { countCells } from '../layout/count';
 import messages from '../messages/young.json';
 import { fillYoung } from '../young-text';
@@ -138,7 +138,8 @@ export function count(pic: Count, look: YoungLook): HTMLElement {
 
 /**
  * A young array of up to 30 places: one animal in each, in rows with rings and a running total once
- * `counted` is set. `squares` is Help's canvas drawing, the fallback.
+ * `counted` is set. If an animal fails, counted rows turn to counted dots, so the normal words that
+ * come back still match the picture; other arrays to `squares`, Help's canvas drawing.
  */
 export function array(pic: Array2, look: YoungLook, squares: () => HTMLElement, msg: Msg): HTMLElement {
   const src = `${look.base}${pickAnimals(look.skillId, 1)[0]}.webp`;
@@ -154,7 +155,7 @@ export function array(pic: Array2, look: YoungLook, squares: () => HTMLElement, 
     grid.style.setProperty('--c', String(pic.cols));
     for (let i = 0; i < pic.rows * pic.cols; i++) grid.append(cellOf('', src));
     return grid;
-  }, squares);
+  }, pic.counted != null ? () => countedDots(pic, msg) : squares);
 }
 
 /** A step's `young` line with its animals filled in. */

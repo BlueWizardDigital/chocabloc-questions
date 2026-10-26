@@ -1,7 +1,9 @@
 // Rows counted one at a time, shared by the lazy chunks: the pictures chunk counts rows of dots, the
-// young chunk rows of animals. Like those chunks it imports nothing Help loads (only types): a module
-// Help also loads would make Rollup pull Help into a shared chunk behind a facade.
+// young chunk rows of animals, or of dots if an animal fails to load. Like those chunks it imports
+// nothing Help loads (only types): a module Help also loads would make Rollup pull Help into a shared
+// chunk behind a facade.
 import type { Msg } from '../messages';
+import type { LessonPicture } from '../types';
 
 /**
  * An element with an optional part, class and text, as `h()` in pictures.ts, which this file can't
@@ -20,13 +22,14 @@ export function h<K extends keyof HTMLElementTagNameMap>(
   return e;
 }
 
-const DISPLAY = 'var(--cl-font-display, var(--cl-font-body, var(--cq-font, system-ui)))';
-const LEFT = 'var(--cl-left, #E8873A)';
+export const DISPLAY = 'var(--cl-font-display, var(--cl-font-body, var(--cq-font, system-ui)))';
+export const LEFT = 'var(--cl-left, #E8873A)';
 
 /**
  * Counted rows, and the pop both chunks use. A line is 32 px tall at most (the ring: 20 px items,
  * 3 px padding and 3 px border on each side) and lines are 6 px apart: pictures.ts holds that height
- * while the chunk loads. Items shrink, keeping their shape, so 15 fit a 320 px phone.
+ * while the chunk loads. Items shrink, keeping their shape, so 15 fit a 320 px phone. Array dots look
+ * like the canvas array's.
  * The pop starts from the step's own start state, `.step.enter`, which ChocaLesson removes once the
  * step is drawn: so it plays as a step appears, never for a picture drawn later or redrawn. It serves
  * both pictures that pop, counted rows and the share (more-pictures.ts).
@@ -46,6 +49,7 @@ export const CSS = `
 .crows [part~="row"].on { border-color: ${LEFT}; }
 .crows [part~="row"].now { background: rgba(232, 135, 58, 0.18); }
 .crows [part~="row"].faded { opacity: 0.4; }
+.crows .dot { box-sizing: border-box; border-radius: 50%; background: #42a5f5; border: 1.5px solid #1976d2; }
 .step.enter .crows .pop, .step.enter .share .pop { opacity: 0; transform: scale(0.6); }
 @media (prefers-reduced-motion: no-preference) {
   .crows .pop, .share .pop { transition: opacity 0.3s ease-out, transform 0.3s ease-out; }
@@ -76,4 +80,13 @@ export function countedRows(items: HTMLElement[][], counted: number, cols: numbe
     box.append(line);
   });
   return box;
+}
+
+/**
+ * A counted array: `rows` rows of `cols` dots, with rows 1 to `counted` circled. The pictures chunk
+ * draws it, and the young chunk when an animal fails to load, so the words still match the picture.
+ */
+export function countedDots(pic: Extract<LessonPicture, { kind: 'array' }>, msg: Msg): HTMLElement {
+  const items = Array.from({ length: pic.rows }, () => Array.from({ length: pic.cols }, () => h('span', undefined, 'dot')));
+  return countedRows(items, pic.counted ?? 0, pic.cols, msg);
 }

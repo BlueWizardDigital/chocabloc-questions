@@ -2,8 +2,8 @@
 // counted arrays drawn as rows of dots. Help loads it with one dynamic import when a lesson has a
 // share or a counted array. Like the young chunk it imports nothing Help loads (only types), or Rollup
 // would pull Help into a shared chunk behind a facade.
-import { CSS as ROWS_CSS, countedRows, h } from './counted-rows';
-import { longDivision, shareParts, shareRow } from '../layout/share';
+import { CSS as ROWS_CSS, DISPLAY, LEFT, h } from './counted-rows';
+import { longDivision, shareParts } from '../layout/share';
 import type { LdNote, Tone } from '../layout/share';
 import messages from '../messages/pictures.json';
 import type { Msg } from '../messages';
@@ -15,24 +15,23 @@ export function register(table: Record<string, unknown>): void {
 }
 
 type Share = Extract<LessonPicture, { kind: 'share' }>;
-type Counted = Extract<LessonPicture, { kind: 'array' }>;
 
-const DISPLAY = 'var(--cl-font-display, var(--cl-font-body, var(--cq-font, system-ui)))';
 const BODY = 'var(--cl-font-body, var(--cq-font, system-ui))';
 const INK = 'var(--cl-ink, #2b2118)';
 const SHARE_1 = 'var(--cl-share-1, #1C2B45)';
 const SHARE_2 = 'var(--cl-share-2, #1f8a7a)';
-const LEFT = 'var(--cl-left, #E8873A)';
 const SPOT = 'var(--cl-spot, #c9bda9)';
 
+/** A counted array of dots: it lives with the counted rows, since the young chunk draws it too. */
+export { countedDots } from './counted-rows';
+
 /**
- * Counted rows, dots, and the long division. Heights pictures.ts holds while the chunk loads: a share's
- * dots take 13 px a row plus 14 px for the part labels; the long division 28 px a written line and 7 px
- * a rule. Array dots look like the canvas array's. Every rule starts at the picture's root class,
- * `.crows` or `.share`, because the young chunk's stylesheet shares the shadow root.
+ * Counted rows and their dots (counted-rows.ts), then the share's dots and long division. Heights
+ * pictures.ts holds while the chunk loads: a share's dots take 13 px a row plus 14 px for the part
+ * labels; the long division 28 px a written line and 7 px a rule. Every rule starts at the picture's
+ * root class, `.crows` or `.share`, because the young chunk's stylesheet shares the shadow root.
  */
 export const CSS = `${ROWS_CSS}
-.crows .dot { box-sizing: border-box; border-radius: 50%; background: #42a5f5; border: 1.5px solid #1976d2; }
 .share { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 16px; max-width: 100%; }
 .share .sgrid { display: grid; gap: 4px 8px; justify-items: center; }
 .share .srow { display: contents; }
@@ -63,12 +62,6 @@ export const CSS = `${ROWS_CSS}
 }
 `;
 
-/** A counted array: `rows` rows of `cols` dots, with rows 1 to `counted` circled. */
-export function countedDots(pic: Counted, msg: Msg): HTMLElement {
-  const items = Array.from({ length: pic.rows }, () => Array.from({ length: pic.cols }, () => h('span', undefined, 'dot')));
-  return countedRows(items, pic.counted ?? 0, pic.cols, msg);
-}
-
 const toneClass = (t: Tone): string => (t === 'left' ? 'tl' : t == null ? '' : `t${t}`);
 
 function noteText(n: LdNote, msg: Msg): string {
@@ -88,7 +81,6 @@ export function share(pic: Share, msg: Msg): HTMLElement {
   const left = pic.left === true;
   const parts = shareParts(total, rows);
   const rem = total % rows;
-  const dots = shareRow(total, rows, shown);
   // What this step gives: the leftovers, or the newest part.
   const fresh: Tone | undefined = left ? 'left' : shown > 0 ? ((shown - 1) as 0 | 1) : undefined;
 
@@ -97,13 +89,11 @@ export function share(pic: Share, msg: Msg): HTMLElement {
   for (let r = 0; r < rows; r++) {
     // The row has no box of its own: its groups sit in the grid's columns, lined up with the labels.
     const row = h('div', 'row', 'srow');
-    let k = 0;
     parts.forEach((p, i) => {
       const grp = h('span', undefined, i === fresh ? 'sgrp pop' : 'sgrp');
-      for (let j = 0; j < p; j++, k++) {
-        const d = dots[k];
-        grp.append(h('span', undefined, d === 'spot' ? 'dot spot' : `dot p${d}`));
-      }
+      // Every dot of a part given so far has the part's colour; a part not given yet is spots.
+      const cls = i < shown ? `dot p${i}` : 'dot spot';
+      for (let j = 0; j < p; j++) grp.append(h('span', undefined, cls));
       row.append(grp);
     });
     if (left) {
@@ -126,12 +116,10 @@ export function share(pic: Share, msg: Msg): HTMLElement {
     // A part's three lines pop in with its dots; the leftovers add only R.
     const fresher = !left && fresh != null && i >= lines.length - 3;
     const row = h('div', undefined, `ld-line${rule ? ' rule' : ''}${fresher ? ' pop' : ''}`);
-    // A rule is the colour of the product it underlines.
-    const ruleTone = rule ? lines[i - 1]!.cells[0]!.tone : null;
     line.cells.forEach((c, col) => {
       const cls: string[] = [];
-      // Blank cells carry their line's tone too; only a cell with text is coloured.
-      if (c.text) cls.push(toneClass(rule ? ruleTone : c.tone));
+      // Only a cell with text is coloured; a rule's cells carry the colour of the product they underline.
+      if (c.text) cls.push(toneClass(c.tone));
       if (rule && c.text) cls.push('r');
       if (line.kind === 'dividend' && col > 0 && col < 3) cls.push(col === 1 ? 'dd dd1' : 'dd');
       if (line.kind === 'quotient' && c.text && c.tone === fresh) cls.push('pop');
