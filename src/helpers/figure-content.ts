@@ -13,7 +13,7 @@ export const MAX_LINES = 4;
 export type FigurePoint = readonly [number, number];
 export interface FigureLine { from: FigurePoint; to: FigurePoint; label?: string }
 export interface FigurePanel { label?: string; polygons: FigurePoint[][]; lines: FigureLine[] }
-export interface FigureSpec { panels: FigurePanel[]; lettered: 'panels' | 'lines' | null }
+export interface FigureSpec { panels: FigurePanel[] }
 
 const LETTERS = ['A', 'B', 'C', 'D'] as const;
 
@@ -144,7 +144,9 @@ function parsePanel(raw: unknown): FigurePanel | null {
 export function parseFigure(content: unknown): FigureSpec | null {
   if (!isRecord(content)) return null;
   const rawPanels = content['panels'];
+  // Refuse a wrong panel count before parsing any panel (1, or 3–4).
   if (!Array.isArray(rawPanels)) return null;
+  if (rawPanels.length !== 1 && (rawPanels.length < 3 || rawPanels.length > 4)) return null;
   const panels: FigurePanel[] = [];
   for (const rp of rawPanels) {
     const panel = parsePanel(rp);
@@ -155,11 +157,10 @@ export function parseFigure(content: unknown): FigureSpec | null {
     // One unlabelled panel; it alone may carry lettered lines.
     const only = panels[0]!;
     if (only.label !== undefined) return null;
-    return { panels, lettered: only.lines.some((l) => l.label !== undefined) ? 'lines' : null };
+    return { panels };
   }
   // 3–4 panels, every one labelled A, B, C(, D) in order; lines never lettered.
-  if (panels.length < 3 || panels.length > 4) return null;
   if (!panels.every((p, i) => p.label === LETTERS[i])) return null;
   if (panels.some((p) => p.lines.some((l) => l.label !== undefined))) return null;
-  return { panels, lettered: 'panels' };
+  return { panels };
 }

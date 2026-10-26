@@ -16,7 +16,6 @@ describe('parseFigure', () => {
   it('parses FIGURE_EXAMPLE with lettered lines', () => {
     const f = parseFigure(FIGURE_EXAMPLE)!;
     expect(f).not.toBeNull();
-    expect(f.lettered).toBe('lines');
     expect(f.panels).toHaveLength(1);
     expect(f.panels[0]!.lines.map((l) => l.label)).toEqual(['A', 'B', 'C', 'D']);
     expect(f.panels[0]!.polygons[0]).toHaveLength(4);
@@ -24,8 +23,16 @@ describe('parseFigure', () => {
 
   it('parses a single unlabelled panel with no lines', () => {
     const f = parseFigure(fig([panel()]))!;
-    expect(f.lettered).toBeNull();
     expect(f.panels[0]!.lines).toEqual([]);
+  });
+
+  it('refuses a panel count outside 1, 3 or 4 without parsing any panel', () => {
+    let reads = 0;
+    const counted = () => ({ get polygons() { reads++; return [poly()]; }, lines: [] });
+    for (const n of [0, 2, 5, 5000]) {
+      expect(parseFigure(fig(Array.from({ length: n }, counted)))).toBeNull();
+    }
+    expect(reads).toBe(0);
   });
 
   it('treats a missing lines key as no lines', () => {
@@ -34,14 +41,14 @@ describe('parseFigure', () => {
 
   it('parses 3 and 4 lettered panels', () => {
     const three = fig(['A', 'B', 'C'].map((label) => panel({ label })));
-    expect(parseFigure(three)!.lettered).toBe('panels');
+    expect(parseFigure(three)!.panels.map((p) => p.label)).toEqual(['A', 'B', 'C']);
     const four = fig(['A', 'B', 'C', 'D'].map((label) => panel({ label })));
     expect(parseFigure(four)!.panels.map((p) => p.label)).toEqual(['A', 'B', 'C', 'D']);
   });
 
   it('accepts unlabelled lines, and 8 polygons and 48 points', () => {
     const unlabelled = lines3.map(({ from, to }) => ({ from, to }));
-    expect(parseFigure(fig([panel({ lines: unlabelled })]))!.lettered).toBeNull();
+    expect(parseFigure(fig([panel({ lines: unlabelled })]))!.panels[0]!.lines).toHaveLength(3);
     const pts = Array.from({ length: 48 }, (_, i) => [Math.cos((i * Math.PI) / 24) * 9, Math.sin((i * Math.PI) / 24) * 9]);
     expect(parseFigure(fig([{ polygons: Array(8).fill(poly(pts)) }]))).not.toBeNull();
   });
