@@ -151,9 +151,10 @@ function record(q: NormalizedQuestion, spy: { calls: string[] }): string {
 // assignment-only shapes. A format outside this list and outside the map fails.
 const NOT_ON_THE_BANK = new Set(['text', 'money', 'base10_blocks']);
 
-// Trello 427 formats with a server entry but no bank row yet. Task D3 adds the
-// real rows, bumps the counts below, and empties this set.
-const AWAITING_BANK_ROWS = new Set(['fraction_models', 'fraction_number_line', 'fraction_text']);
+// Formats with a server entry but no bank row yet. Task D3 adds the Trello 427
+// rows, bumps the counts below, and empties this set; the geometry shape
+// questions (geometry_figure) join the same list until their rows are loaded.
+const AWAITING_BANK_ROWS = new Set(['fraction_models', 'fraction_number_line', 'fraction_text', 'geometry_figure']);
 
 type ContractRow = { source: string; label: string; format: string; skill: string; imageType: string | null;
   content: Obj; answer: unknown; questionText: string };

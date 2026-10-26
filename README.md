@@ -358,6 +358,14 @@ geometry, time, patterns, and base-10 fall back to their normal stem by design. 
 | `geometry_attributes` | `shape_2d` | `ChocaCanvasQuestion` |
 | `geometry_classify` | `shape_2d` / `shape_3d` | `ChocaCanvasQuestion` |
 | `geometry_properties` | `shape_2d` / `shape_3d` | `ChocaCanvasQuestion` |
+| `geometry_identify` | `shape_2d` / `shape_3d` | `ChocaCanvasQuestion` (the named shape; a 2D one is drawn from optional `points` when they are valid) |
+| `geometry_symmetry` | `shape_2d` | `ChocaCanvasQuestion` (the shape, from its name or from optional `points`; never its lines of symmetry) |
+| `geometry_classify_triangle` | `shape_2d` | `ChocaCanvasQuestion` (a triangle with its side lengths or angles marked) |
+| `geometry_face_identify` | `shape_3d` | `ChocaCanvasQuestion` (a solid with one face highlighted; includes the six pyramids and prisms below) |
+| `geometry_volume` | `shape_3d` | `ChocaCanvasQuestion` (a solid with its measurements labelled) |
+| `geometry_surface_area` | `shape_3d` | `ChocaCanvasQuestion` (a solid with its measurements labelled) |
+| `geometry_circle_convert` | `shape_2d` | `ChocaCanvasQuestion` (a circle with the given radius or diameter) |
+| `geometry_figure` | `shape_2d` | `ChocaCanvasQuestion` (one panel, or 3 to 4 lettered panels, of polygons, with optional dashed lines; the answer is the panel or line letter) |
 | `pythagorean` | `right_triangle` | `ChocaCanvasQuestion` |
 | `geometry_area` | `compound_shape` | `ChocaCanvasQuestion` |
 | `geometry_angles` | — | `ChocaCanvasQuestion` |

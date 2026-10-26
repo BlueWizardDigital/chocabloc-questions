@@ -3,6 +3,26 @@
 All notable changes to chocabloc-questions are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+**Minor** (geometry shape questions): a new format, a new optional field and six new solid
+names; nothing renamed or removed.
+
+### Added
+
+- **`geometry_figure` format.** Draws 1 unlabelled panel, or 3 to 4 panels lettered `A`, `B`, `C`
+  (, `D`), each with 1 to 8 polygons (3 to 48 points each, coordinates in -10..10, y up), plus
+  up to 4 dashed lines per panel, lettered only in a single unlabelled panel. The letters are
+  the choices. Malformed content paints nothing and hides the canvas.
+- **Optional `points`** on `geometry_identify`, `geometry_properties` (2D), `geometry_classify`
+  (2D) and `geometry_symmetry`: one simple polygon of 3 to 48 points in the same -10..10 frame,
+  drawn at one uniform scale so a small shape stays small. Invalid `points` fall back to the
+  named shape.
+- **Six solid names** for `geometry_identify`, `geometry_properties`, `geometry_volume` and
+  `geometry_face_identify`: `triangular pyramid`, `square pyramid` (draws as `pyramid`),
+  `pentagonal pyramid`, `hexagonal pyramid`, `pentagonal prism` and `hexagonal prism`, with
+  face highlights.
+
 ## [0.7.0-beta.0] — 2026-10-23
 
 **Minor** (Trello 427, fraction skills for grades 3-6): new formats and CSS variables;

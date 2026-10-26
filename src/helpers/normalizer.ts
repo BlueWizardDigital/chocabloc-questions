@@ -22,6 +22,7 @@ import type {
   GeometryFaceIdentifyQuestion,
   GeometryIdentifyQuestion,
   GeometrySymmetryQuestion,
+  GeometryFigureQuestion,
   GeometryClassifyTriangleQuestion,
   GeometryVolumeQuestion,
   GeometrySurfaceAreaQuestion,
@@ -270,6 +271,12 @@ function normalizeGeometryAttributesRow(r: Record<string, unknown>): GeometryAtt
   };
 }
 
+// `points` rides along untouched: a malformed polygon costs the picture at
+// draw time (parsePolygonPoints), never the question.
+function withPoints(c: Record<string, unknown>): { points?: unknown } {
+  return c['points'] === undefined ? {} : { points: c['points'] };
+}
+
 function normalizeGeometryClassifyRow(r: Record<string, unknown>): GeometryClassifyQuestion {
   const base = extractBase(r);
   const c = requireContent(r);
@@ -279,7 +286,7 @@ function normalizeGeometryClassifyRow(r: Record<string, unknown>): GeometryClass
   const imageType = resolveImageType(r, ['shape_2d', 'shape_3d']) as 'shape_2d' | 'shape_3d';
   return {
     ...base, format: 'geometry_classify', imageType: imageType ?? 'shape_3d',
-    content: { shape, dimension }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+    content: { shape, dimension, ...withPoints(c) }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
   };
 }
 
@@ -292,7 +299,7 @@ function normalizeGeometryPropertiesRow(r: Record<string, unknown>): GeometryPro
   const imageType = resolveImageType(r, ['shape_2d', 'shape_3d']) as 'shape_2d' | 'shape_3d';
   return {
     ...base, format: 'geometry_properties', imageType: imageType ?? 'shape_3d',
-    content: { shape, property }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+    content: { shape, property, ...withPoints(c) }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
   };
 }
 
@@ -432,7 +439,7 @@ function normalizeGeometryIdentifyRow(r: Record<string, unknown>): GeometryIdent
   const imageType = resolveImageType(r, ['shape_2d', 'shape_3d']) as 'shape_2d' | 'shape_3d';
   return {
     ...base, format: 'geometry_identify', imageType: imageType ?? 'shape_2d',
-    content: { shape }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+    content: { shape, ...withPoints(c) }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
   };
 }
 
@@ -444,7 +451,16 @@ function normalizeGeometrySymmetryRow(r: Record<string, unknown>): GeometrySymme
   const lines_of_symmetry = getNumber(c, 'lines_of_symmetry') ?? 0;
   return {
     ...base, format: 'geometry_symmetry', imageType: 'shape_2d',
-    content: { shape, lines_of_symmetry }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+    content: { shape, lines_of_symmetry, ...withPoints(c) }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+  };
+}
+
+function normalizeGeometryFigureRow(r: Record<string, unknown>): GeometryFigureQuestion {
+  const base = extractBase(r);
+  const c = requireContent(r);
+  return {
+    ...base, format: 'geometry_figure', imageType: 'shape_2d',
+    content: c, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
   };
 }
 
@@ -1010,6 +1026,7 @@ const FORMAT_NORMALIZERS: Record<string, (r: Record<string, unknown>) => Normali
   geometry_face_identify: normalizeGeometryFaceIdentifyRow,
   geometry_identify: normalizeGeometryIdentifyRow,
   geometry_symmetry: normalizeGeometrySymmetryRow,
+  geometry_figure: normalizeGeometryFigureRow,
   geometry_classify_triangle: normalizeGeometryClassifyTriangleRow,
   geometry_volume: normalizeGeometryVolumeRow,
   geometry_surface_area: normalizeGeometrySurfaceAreaRow,

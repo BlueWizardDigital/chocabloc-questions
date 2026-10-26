@@ -86,6 +86,31 @@
       "difficulty": "easy",
       "kidLevel": 10,
       "answerToken": "eyJxaWQiOiJGUkFDLUZJWFRVUkUiLCJ1aWQiOjQyLCJleHAiOjE3MTkzMjQ4MDB9.fakehexsig0123456789abcdef0123456789abcdef0123456789abcdef0123"
+    },
+    {
+      "id": "GEOM-SYMMETRY-IDENTIFY-Q-001",
+      "format": "geometry_figure",
+      "imageType": "shape_2d",
+      "skillIds": ["GEOM-SYMMETRY-IDENTIFY"],
+      "questionText": "Which dashed line is a line of symmetry?",
+      "content": { "operation": "geometry_symmetry_line_pick", "panels": [{
+        "polygons": [{ "points": [[-7, -4], [7, -4], [7, 4], [-7, 4]] }],
+        "lines": [
+          { "from": [-8.6, -4.9], "to": [8.6, 4.9], "label": "A" },
+          { "from": [0, -6.5], "to": [0, 6.5], "label": "B" },
+          { "from": [8.6, -4.9], "to": [-8.6, 4.9], "label": "C" },
+          { "from": [3.5, -6.5], "to": [3.5, 6.5], "label": "D" }
+        ]
+      }] },
+      "choices": [
+        { "value": "A" },
+        { "value": "B" },
+        { "value": "C" },
+        { "value": "D" }
+      ],
+      "difficulty": "easy",
+      "kidLevel": 10,
+      "answerToken": "eyJxaWQiOiJHRU9NLVNZTS1RIiwidWlkIjo0MiwiZXhwIjoxNzE5MzI0ODAwfQ.fakehexsig0123456789abcdef0123456789abcdef0123456789abcdef0123"
     }
   ]
 }

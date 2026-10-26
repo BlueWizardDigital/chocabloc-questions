@@ -11,7 +11,9 @@ import {
 } from './canvas-draws';
 import { drawFractionModels, FRACTION_COLOURS, type FractionColours } from './draw-fraction';
 import { drawFractionNumberLine } from './draw-fraction-line';
+import { drawFigure, drawPolygonInFrame, figureCanvasHeight } from './draw-figure';
 import { parseFractionModels, parseFractionNumberLine } from '../helpers/fraction-content';
+import { parseFigure, parsePolygonPoints } from '../helpers/figure-content';
 import './ChocaChoicePad';
 
 const CANVAS_W = 300;
@@ -107,6 +109,14 @@ function buildShell(): {
   return { fragment, promptEl, canvas, pad, container };
 }
 
+/** Draws a row's `points` when they are a valid simple polygon; false means "draw the named shape as before". */
+function drawCornerPoints(ctx: CanvasRenderingContext2D, w: number, h: number, points: unknown): boolean {
+  const pts = parsePolygonPoints(points);
+  if (!pts) return false;
+  drawPolygonInFrame(ctx, w, h, pts);
+  return true;
+}
+
 export class ChocaCanvasQuestion extends HTMLElement {
   private _shadow: ShadowRoot;
   private _question: NormalizedQuestion | null = null;
@@ -181,7 +191,7 @@ export class ChocaCanvasQuestion extends HTMLElement {
       else if (q.format === 'geometry_surface_area') text = 'Find the surface area.';
       else if (q.format === 'geometry_circle_convert') text = `Find the ${q.content.find_type}.`;
       else if (q.format === 'fraction_concept') text = 'What fraction is shaded?';
-      else if (q.format === 'fraction_models') text = 'Look at the shapes.';
+      else if (q.format === 'fraction_models' || q.format === 'geometry_figure') text = 'Look at the shapes.';
       else if (q.format === 'fraction_number_line') text = 'Look at the number line.';
       else if (q.format === 'time') text = 'What time is shown?';
       else if (q.format === 'coordinate_distance') text = 'What is the distance between the points?';
@@ -221,6 +231,11 @@ export class ChocaCanvasQuestion extends HTMLElement {
       console.warn(`[chocabloc-questions] base-10 question ${q.id} has no blocks to draw; showing no picture`);
     }
     this._canvas.hidden = noPicture || nothingToDraw;
+    // The height is set before anything is drawn or `h` is read: assigning it
+    // clears the canvas. A 3–4 panel figure is taller; every other format, and
+    // a malformed figure, gets the usual height back.
+    const figure = q.format === 'geometry_figure' ? parseFigure(q.content) : null;
+    this._canvas.height = figure ? figureCanvasHeight(figure) : CANVAS_H;
     const ctx = this._canvas.getContext('2d');
     if (!ctx) return;
     const w = this._canvas.width;
@@ -237,11 +252,12 @@ export class ChocaCanvasQuestion extends HTMLElement {
     switch (q.format) {
       case 'geometry_classify':
         if (q.content.dimension === '3D') drawShape3D(ctx, w, h, q.content.shape);
-        else drawShape2D(ctx, w, h, q.content.shape);
+        else if (!drawCornerPoints(ctx, w, h, q.content.points)) drawShape2D(ctx, w, h, q.content.shape);
         break;
       case 'geometry_properties':
-        if (q.imageType === 'shape_2d') drawShape2D(ctx, w, h, q.content.shape);
-        else drawShape3D(ctx, w, h, q.content.shape);
+        if (q.imageType === 'shape_2d') {
+          if (!drawCornerPoints(ctx, w, h, q.content.points)) drawShape2D(ctx, w, h, q.content.shape);
+        } else drawShape3D(ctx, w, h, q.content.shape);
         break;
       case 'pythagorean':
         drawRightTriangle(ctx, w, h, q.content.operands, q.content.known_leg);
@@ -280,14 +296,16 @@ export class ChocaCanvasQuestion extends HTMLElement {
         break;
       case 'geometry_identify':
         if (q.imageType === 'shape_3d') drawShape3D(ctx, w, h, q.content.shape);
-        else drawShape2D(ctx, w, h, q.content.shape);
+        else if (!drawCornerPoints(ctx, w, h, q.content.points)) drawShape2D(ctx, w, h, q.content.shape);
         break;
       case 'geometry_symmetry':
         // The shape only: the child finds the lines. Drawing them (as before
         // beta.19) let the child count the answer off the picture. The bank's
         // trapezoid rows have 0 lines, but the usual trapezoid is drawn
         // isosceles (1 line), so these questions get a right trapezoid.
-        drawShape2D(ctx, w, h, q.content.shape.toLowerCase() === 'trapezoid' ? 'right trapezoid' : q.content.shape);
+        if (!drawCornerPoints(ctx, w, h, q.content.points)) {
+          drawShape2D(ctx, w, h, q.content.shape.toLowerCase() === 'trapezoid' ? 'right trapezoid' : q.content.shape);
+        }
         break;
       case 'geometry_classify_triangle':
         // The triangle its sides or angles describe. Measures that make no
@@ -337,6 +355,16 @@ export class ChocaCanvasQuestion extends HTMLElement {
           console.warn(`[chocabloc-questions] fraction_number_line question ${q.id} has picture content it can't draw; showing no picture`);
         }
         this._canvas.hidden = !spec;
+        break;
+      }
+      case 'geometry_figure': {
+        if (figure) {
+          drawFigure(ctx, w, h, figure);
+        } else {
+          ctx.clearRect(0, 0, w, h);
+          console.warn(`[chocabloc-questions] geometry_figure question ${q.id} has picture content it can't draw; showing no picture`);
+        }
+        this._canvas.hidden = !figure;
         break;
       }
       case 'time':

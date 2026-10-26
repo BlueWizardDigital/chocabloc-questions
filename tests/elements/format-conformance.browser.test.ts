@@ -158,6 +158,7 @@ const PRINTS_ANSWER_BY_DESIGN: Record<string, string> = {
   coordinate_distance: 'the axis numbers label the grid the child counts on; the distance itself is never drawn',
   pattern: 'a repeating pattern shows its own items, so the next item already appears earlier in the sequence',
   fraction_models: 'the letter labels and the captions are the options, and a letter answer is one of them',
+  geometry_figure: 'the letters under the panels, or on the dashed lines, are the options; a letter answer is one of them',
   fraction_number_line: 'the letter labels and the whole-number ticks are the options; the marked fraction is never labelled',
 };
 
@@ -371,6 +372,10 @@ describe('format conformance — every dispatched format renders something', () 
         let q: NormalizedQuestion | null = null;
         try { q = normalizeQuestion(raw); } catch { /* the test above reports a row that won't normalize */ }
         const answer = q?.answer;
+        if (q && answer === undefined && exempt && q.choices !== undefined) {
+          // A choices-only row (the bank's shape) carries no answer to look for.
+          return;
+        }
         if (!q || answer === undefined || typeof answer === 'object') {
           expect(exempt, `${label}: an exempt format needs a row with an answer to check`).to.equal(false);
           return;
@@ -416,6 +421,24 @@ describe('the allowlist itself', () => {
     expect([...new Set(excused)].sort()).to.deep.equal([...COMPUTED_ANSWER_OPERATIONS].sort());
     expect(isComputedAnswerRow({ format: 'data_graph', content: { operation: 'fraction_line_equivalent' } })).to.equal(false);
     expect(isComputedAnswerRow({ format: 'fraction_models', content: { operation: 'fraction_pick' } })).to.equal(false);
+  });
+
+  it('every answer-printing exemption keeps an answer-carrying row that must print its answer', () => {
+    // The per-row check skips choices-only rows, so without this an exemption whose rows
+    // all became choices-only would go unchecked. Each such row prints its answer in the
+    // sweep above (computed-answer rows excepted, and they cannot satisfy this).
+    const unchecked = Object.keys(PRINTS_ANSWER_BY_DESIGN).filter((format) => {
+      const entry = REPRESENTATIVE_ROWS[format];
+      const rows = Array.isArray(entry) ? entry : entry ? [entry] : [];
+      return !rows.some((raw) => {
+        if (isComputedAnswerRow(raw)) return false;
+        let q: NormalizedQuestion | null = null;
+        try { q = normalizeQuestion(raw); } catch { return false; }
+        return q !== null && q.answer !== undefined && typeof q.answer !== 'object';
+      });
+    });
+    expect(unchecked, `exempt formats with no answer-carrying row to check: ${unchecked.join(', ')}`)
+      .to.have.lengthOf(0);
   });
 
   it('every allowlisted format is still a dispatched format', () => {
