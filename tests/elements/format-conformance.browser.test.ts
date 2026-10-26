@@ -423,6 +423,24 @@ describe('the allowlist itself', () => {
     expect(isComputedAnswerRow({ format: 'fraction_models', content: { operation: 'fraction_pick' } })).to.equal(false);
   });
 
+  it('every answer-printing exemption keeps an answer-carrying row that must print its answer', () => {
+    // The per-row check skips choices-only rows, so without this an exemption whose rows
+    // all became choices-only would go unchecked. Each such row prints its answer in the
+    // sweep above (computed-answer rows excepted, and they cannot satisfy this).
+    const unchecked = Object.keys(PRINTS_ANSWER_BY_DESIGN).filter((format) => {
+      const entry = REPRESENTATIVE_ROWS[format];
+      const rows = Array.isArray(entry) ? entry : entry ? [entry] : [];
+      return !rows.some((raw) => {
+        if (isComputedAnswerRow(raw)) return false;
+        let q: NormalizedQuestion | null = null;
+        try { q = normalizeQuestion(raw); } catch { return false; }
+        return q !== null && q.answer !== undefined && typeof q.answer !== 'object';
+      });
+    });
+    expect(unchecked, `exempt formats with no answer-carrying row to check: ${unchecked.join(', ')}`)
+      .to.have.lengthOf(0);
+  });
+
   it('every allowlisted format is still a dispatched format', () => {
     const dispatched = new Set(DISPATCH_FORMATS);
     const stale = Object.keys(allowlisted).filter((f) => !dispatched.has(f));
