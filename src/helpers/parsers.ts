@@ -103,6 +103,7 @@ const VISUAL_FORMAT_STRINGS: ReadonlySet<string> = new Set([
   'geometry_face_identify',
   'geometry_identify',
   'geometry_symmetry',
+  'geometry_figure',
   'geometry_classify_triangle',
   'geometry_volume',
   'geometry_surface_area',
