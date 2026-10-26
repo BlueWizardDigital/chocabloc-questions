@@ -1,0 +1,9 @@
+{
+  "rows": { "one": "{count} row", "other": "{count} rows" },
+  "share": { "each": "{count} each", "more": "{count} more", "left": "{count} left" },
+  "longDivision": {
+    "tens": { "one": "{count} ten = {value}", "other": "{count} tens = {value}" },
+    "left": "{count} left",
+    "times": "{a} × {b}"
+  }
+}

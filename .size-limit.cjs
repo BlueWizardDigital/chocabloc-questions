@@ -1,10 +1,11 @@
 const fs = require('fs');
 
-// The build writes the young chunk twice (es and cjs, both .mjs); the es one has the export.
-const youngChunk = () =>
+// The build writes each lazy chunk twice (es and cjs, both .mjs); the es one has the export.
+// size-limit bundles a chunk with what it imports, so a chunk split off from it is counted in its line.
+const lazyChunk = (name) =>
   fs
     .readdirSync('dist/chunks')
-    .filter((f) => /^young\..+\.mjs$/.test(f))
+    .filter((f) => f.startsWith(`${name}.`) && f.endsWith('.mjs'))
     .map((f) => `dist/chunks/${f}`)
     .find((f) => /\bexport\s*\{/.test(fs.readFileSync(f, 'utf8')));
 
@@ -64,13 +65,19 @@ module.exports = [
     limit: '13.5 KB',
     gzip: true,
     modifyEsbuildConfig(config) {
-      config.external = [...(config.external ?? []), './chunks/practice.*', './chunks/young.*'];
+      config.external = [...(config.external ?? []), './chunks/practice.*', './chunks/young.*', './chunks/more-pictures.*'];
       return config;
     },
   },
   {
     name: 'lesson young look and count pictures (lazy)',
-    path: youngChunk(),
+    path: lazyChunk('young'),
+    limit: '3 KB',
+    gzip: true,
+  },
+  {
+    name: 'lesson share pictures and counted rows of dots (lazy)',
+    path: lazyChunk('more-pictures'),
     limit: '3 KB',
     gzip: true,
   },

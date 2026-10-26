@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { LESSON_CSS } from '../../src/lesson/dom/styles';
 import { CSS as YOUNG_CSS } from '../../src/lesson/dom/young';
+import { CSS as PICTURES_CSS } from '../../src/lesson/dom/more-pictures';
 
 // Old Chromebooks run Chrome 103. Every API and CSS feature below arrived after it
 // (source: MDN browser compatibility data). structuredClone (98) and findLast (97) are fine.
@@ -47,6 +48,7 @@ describe('Chrome 103 scan of src/lesson', () => {
   test.each([
     ['the player stylesheet', LESSON_CSS],
     ["the young chunk's stylesheet", YOUNG_CSS],
+    ["the pictures chunk's stylesheet, counted rows included", PICTURES_CSS],
   ])('%s has no CSS nesting (a rule inside a rule, or a leading &) and nothing newer than Chrome 103', (_name, css) => {
     for (const bad of CSS_TOO_NEW) expect(css, bad).not.toContain(bad);
     expect(css).not.toMatch(/&/);

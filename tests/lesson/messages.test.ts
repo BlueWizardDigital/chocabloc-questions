@@ -11,10 +11,11 @@ import {
 } from '../../src/lesson/messages';
 import en from '../../src/lesson/messages/en.json';
 import young from '../../src/lesson/messages/young.json';
+import pictures from '../../src/lesson/messages/pictures.json';
 import { LESSON_ANIMALS } from '../../src/lesson/animals';
 
-/** The player's English words: en.json, plus the young chunk's file, which it adds when it loads. */
-const all: Record<string, unknown> = { ...en, ...young };
+/** The player's English words: en.json, plus the young and pictures chunks' files, which each adds when it loads. */
+const all: Record<string, unknown> = { ...en, ...young, ...pictures };
 
 const EN = new Intl.PluralRules('en');
 

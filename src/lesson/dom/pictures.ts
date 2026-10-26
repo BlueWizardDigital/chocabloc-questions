@@ -144,41 +144,48 @@ function columns(pic: Pic<'columns'>): HTMLElement {
 
 /** The lazy young chunk (count pictures, animals, young text). */
 export type Young = typeof import('./young');
+/** The lazy pictures chunk (share pictures, counted rows of dots). */
+export type Pictures = typeof import('./more-pictures');
 
 /**
- * How pictures are drawn for this kid. `y` is the young chunk once it has
- * loaded, `false` if it failed, null while it loads; pictures that need it wait
- * in `wait` and are called with true when it arrives, false if it failed.
+ * A lazy chunk: `y` is the chunk once it has loaded, `false` if it failed, null
+ * while it loads; pictures that need it wait in `wait` and are called with true
+ * when it arrives, false if it failed.
  */
-export interface PictureLook {
-  young: boolean;
-  base: string | null;
-  skillId: string;
-  y: Young | false | null;
+export interface Chunk<X> {
+  y: X | false | null;
   wait: ((ok: boolean) => void)[];
 }
 
+/** How pictures are drawn for this kid, with the young chunk (`y`, `wait`) and the pictures chunk. */
+export interface PictureLook extends Chunk<Young> {
+  young: boolean;
+  base: string | null;
+  skillId: string;
+  pictures: Chunk<Pictures>;
+}
+
 /**
- * Draws with the young chunk: now if it is here, else the box holds its final
+ * Draws with a lazy chunk: now if it is here, else the box holds its final
  * height (`height`, the largest it can be) until the chunk settles. A failed
  * chunk leaves the picture out and the box empty.
  */
-function viaYoung(
+function via<X>(
   box: HTMLElement,
-  look: PictureLook | undefined,
+  chunk: Chunk<X> | undefined,
   height: number,
-  build: (y: Young) => HTMLElement,
-  late: (y: Young) => HTMLElement = build,
+  build: (x: X) => HTMLElement,
+  late: (x: X) => HTMLElement = build,
 ): void {
-  if (!look || look.y === false) return;
-  if (look.y) {
-    box.append(build(look.y));
+  if (!chunk || chunk.y === false) return;
+  if (chunk.y) {
+    box.append(build(chunk.y));
     return;
   }
   box.style.minHeight = `${height}px`;
-  look.wait.push((ok) => {
+  chunk.wait.push((ok) => {
     // This screen was drawn with its normal words, so a chunk that arrives now draws it the standard way (`late`).
-    if (ok) box.append(late(look.y as Young));
+    if (ok) box.append(late(chunk.y as X));
     // Held height only keeps the page still while waiting: after, the box is as tall as what it holds.
     box.style.minHeight = '';
   });
@@ -191,7 +198,10 @@ function countHeight(pic: Extract<LessonPicture, { kind: 'count' }>): number {
   return rows * (pic.apart ? 75 : 99) + (rows - 1) * 10;
 }
 
-/** A lesson picture: base-ten and arrays on canvas, number lines in SVG, column sums as a grid, counts and animal arrays from the young chunk. */
+/**
+ * A lesson picture: base-ten and arrays on canvas, number lines in SVG, column sums as a grid, counts
+ * and animal arrays from the young chunk, shares and counted arrays of dots from the pictures chunk.
+ */
 export function renderPicture(pic: LessonPicture, msg: Msg, lang: string, look?: PictureLook): HTMLElement {
   const box = h('div', 'picture');
   switch (pic.kind) {
@@ -202,12 +212,20 @@ export function renderPicture(pic: LessonPicture, msg: Msg, lang: string, look?:
       const squares = (): HTMLElement => canvasDrawing((ctx, w, ht) => drawArray(ctx, w, ht, [pic.rows, pic.cols]));
       if (look?.young && look.base != null && pic.rows * pic.cols <= 30) {
         // Before the chunk lands the screen has its normal words, so the picture that follows is the squares: the canvas height.
-        viaYoung(box, look, CANVAS_H, (y) => y.array(pic, look, squares), squares);
+        via(box, look, CANVAS_H, (y) => y.array(pic, look, squares), squares);
+      } else if (pic.counted != null) {
+        // A line of counted dots is 32 px at most, 6 px apart (counted-rows.ts).
+        via(box, look?.pictures, pic.rows * 38 - 6, (p) => p.countedDots(pic, msg));
       } else box.append(squares());
       break;
     }
+    case 'share':
+      // Dots and long division side by side, the taller sets it (more-pictures.ts): 13 px a row of dots
+      // plus their labels, or 2 written lines plus 3 (63 px) for each part given.
+      via(box, look?.pictures, Math.max(pic.rows * 13 + 14, 56 + pic.shown * 63), (p) => p.share(pic, msg));
+      break;
     case 'count':
-      viaYoung(box, look, countHeight(pic), (y) => y.count(pic, look!), (y) => y.count(pic, { ...look!, base: null }));
+      via(box, look, countHeight(pic), (y) => y.count(pic, look!), (y) => y.count(pic, { ...look!, base: null }));
       break;
     case 'numberLine':
       box.append(numberLine(pic));

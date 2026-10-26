@@ -59,6 +59,27 @@ public-API rule a new entry point is minor, so the line moves from 0.6 to 0.7.
   words. Until it arrives a count draws as an empty box of its final height; if it fails to
   load, the picture is left out and the normal words show, with one warning. It has its own
   size line (3 KB gz).
+- **Rows counted one at a time, and division as sharing** (format v1 grows again; nothing was
+  served yet, so no version bump):
+  - `array` takes an optional `counted` (0 to `rows`). With it the array draws as rows of dots:
+    rows 1 to `counted` are circled, each with "n rows" on its left and its running total on its
+    right, the newest has a light fill, and later rows are faded. At 0 nothing is circled. Without
+    it the array draws on the canvas as before.
+  - A new `share` picture, `{ kind, total, rows, shown, left? }` (`total` 10 to 99, `rows` 2 to 9,
+    quotient 1 to 9 or 11 to 19): `total` dealt into `rows` rows of dots, one part per non-zero
+    digit of the quotient (10, then the rest), with the long division beside it, one written step
+    per part and a grey note beside each line. `left: true` (only with every part shown and a
+    remainder) adds the leftovers, a dashed spot for each row that misses out, and R. It can't be
+    an `afterWrong` picture or carry a `young` line. On a narrow screen the long division wraps
+    below the dots.
+  - New parts `row`, `row-label`, `row-total` and `long-division`, and vars `--cl-share-1`,
+    `--cl-share-2`, `--cl-left` and `--cl-spot`. See `PARTS-AND-VARS.md`.
+  - What a step adds (the newest row, or the newest part's dots, label and lines) pops in with
+    opacity and scale for 300 ms as the step appears. Under reduced motion nothing moves.
+  - **Lazy pictures chunk:** both pictures, and their words, load from their own chunk, requested
+    when the parsed lesson has a `share` or a counted `array`. Until it arrives the picture's box
+    holds its height; if it fails to load, the picture is left out and the step's words show, with
+    one warning. It has its own size line (3 KB gz). Help's line stays at 13.5 KB gz.
 
 ### Changed
 
@@ -66,8 +87,8 @@ public-API rule a new entry point is minor, so the line moves from 0.6 to 0.7.
   unchanged, so the lesson player can share them. `canvas-question` grew by about 50 B gz
   from the new module order; no runtime code changed.
 - **Size:** the lesson entry has its own size line, `lesson Help` (`dist/lesson.mjs`), limit
-  13.5 KB gz (raised from 12 KB for the young look). Question code and the young look load
-  lazily from separate chunks and are not in that line.
+  13.5 KB gz (raised from 12 KB for the young look). Question code, the young look and the
+  share and counted pictures load lazily from separate chunks and are not in that line.
 
 ### Fixed
 

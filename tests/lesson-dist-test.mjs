@@ -62,6 +62,13 @@ try {
     fail('dist/lesson.mjs reaches the young chunk through a static import');
   }
   const helpFiles = staticClosure(resolve(dist, 'lesson.mjs'));
+  // The pictures chunk (shares, counted rows of dots) is a third: one dynamic import, never a static one.
+  if (!/\bimport\(\s*["']\.\/chunks\/more-pictures\.[^"']+\.mjs["']\s*\)/.test(lessonCode)) {
+    fail('dist/lesson.mjs has no dynamic import("./chunks/more-pictures.…")');
+  }
+  if (helpFiles.some((f) => /[/\\]more-pictures\.[^/\\]+\.mjs$/.test(f))) {
+    fail('dist/lesson.mjs reaches the pictures chunk through a static import');
+  }
   if (helpFiles.some((f) => /[/\\]practice\.[^/\\]+\.mjs$/.test(f))) {
     fail('dist/lesson.mjs reaches the practice chunk through a static import');
   }

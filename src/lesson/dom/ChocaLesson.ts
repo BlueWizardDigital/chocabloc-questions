@@ -4,7 +4,7 @@ import type { Msg, Translator } from '../messages';
 import type { IdeaCard, Lesson } from '../types';
 import type { NormalizedQuestion, ValidateAnswer } from '../../types';
 import { h, svg, renderPicture } from './pictures';
-import type { PictureLook } from './pictures';
+import type { Chunk, PictureLook } from './pictures';
 import { lookFor, normalizeGrade } from '../look';
 import { createSpeaker } from './speaker';
 import type { Speaker } from './speaker';
@@ -36,6 +36,15 @@ export const practiceChunk = { load: (): Promise<typeof import('./practice')> =>
 
 /** How the element loads the young chunk. Not public; a test swaps `load` to see it fail or to count requests. */
 export const youngChunk = { load: (): Promise<typeof import('./young')> => import('./young') };
+
+/** What the young and pictures chunks both have: their own words and their stylesheet. */
+interface LazyChunk {
+  register(table: Record<string, unknown>): void;
+  CSS: string;
+}
+
+/** How the element loads the pictures chunk. Not public; a test swaps `load` to see it fail, arrive late or to count requests. */
+export const picturesChunk = { load: (): Promise<typeof import('./more-pictures')> => import('./more-pictures') };
 
 /** Help: the idea, then each worked-example step with Next and Back, then Back to the game. */
 function startHelp(shell: LessonShell, lesson: Lesson): ModeController {
@@ -102,7 +111,8 @@ export class ChocaLesson extends HTMLElement {
   private _validateAnswer: ValidateAnswer | undefined = undefined;
   private _translator: Translator | undefined = undefined;
   private _grade: string | null = null;
-  private _youngCss: HTMLStyleElement | null = null;
+  /** The lazy chunks' stylesheets this element has added, each once. */
+  private readonly _chunkCss = new Set<string>();
   private _pictureBase: string | null = null;
   private _mode: LessonMode = 'help';
   private _lesson: Lesson | null = null;
@@ -262,6 +272,7 @@ export class ChocaLesson extends HTMLElement {
         skillId: this._lesson?.skillId ?? '',
         y: null,
         wait: [],
+        pictures: { y: null, wait: [] },
       },
       tapped: false,
       controller: null,
@@ -281,39 +292,51 @@ export class ChocaLesson extends HTMLElement {
       this._show(run, { step: 'error', heading: sorry, say: sorry, actions: [] });
       return;
     }
-    this._loadYoung(run, parsed.lesson);
+    this._loadChunks(run, parsed.lesson);
     if (this._mode === 'help') run.controller = startHelp(shell, parsed.lesson);
     else this._practice(run, shell, parsed.lesson);
   }
 
   /**
-   * Starts the young chunk at once, without waiting, when the parsed lesson has a
-   * count picture anywhere, or the kid is young, animals can be fetched and it has an
-   * array picture:
-   * young lines exist only on those steps. Screens that need it before it arrives
-   * wait in `look.wait`; if it fails, they are left out and the normal words show.
+   * Starts the lazy chunks at once, without waiting. The young chunk when the parsed
+   * lesson has a count picture anywhere, or the kid is young, animals can be fetched
+   * and it has an array picture: young lines exist only on those steps. The pictures
+   * chunk when it has a share picture or a counted array, even one a young kid may
+   * see as animals, since a failed animal turns later screens to dots. Screens that
+   * need a chunk before it arrives wait for it; if it fails, their picture is left
+   * out and the normal words show.
    */
-  private _loadYoung(run: Run, lesson: Lesson): void {
+  private _loadChunks(run: Run, lesson: Lesson): void {
     const { look } = run;
-    const kinds = [lesson.idea.picture, lesson.afterWrong.picture, ...[lesson.example, ...lesson.moreHelp.examples].flatMap((e) => e.steps.map((s) => s.picture))].map((p) => p?.kind);
-    if (!(kinds.includes('count') || (look.young && look.base != null && kinds.includes('array')))) return;
-    youngChunk.load().then(
-      (y) => {
+    const pics = [lesson.idea.picture, lesson.afterWrong.picture, ...[lesson.example, ...lesson.moreHelp.examples].flatMap((e) => e.steps.map((s) => s.picture))];
+    const kinds = pics.map((p) => p?.kind);
+    if (kinds.includes('count') || (look.young && look.base != null && kinds.includes('array'))) {
+      this._loadChunk(run, look, youngChunk.load(), 'young look');
+    }
+    // `counted` is only ever on an array.
+    if (kinds.includes('share') || pics.some((p) => (p as { counted?: number } | undefined)?.counted != null)) {
+      this._loadChunk(run, look.pictures, picturesChunk.load(), 'picture code');
+    }
+  }
+
+  /** Settles one chunk for this run: adds its words, and its stylesheet once per element, then draws what waits for it. */
+  private _loadChunk<X extends LazyChunk>(run: Run, chunk: Chunk<X>, loading: Promise<X>, what: string): void {
+    loading.then(
+      (x) => {
         if (run !== this._run) return;
-        y.register(lessonMessagesEn);
-        if (!this._youngCss) {
-          this._youngCss = document.createElement('style');
-          this._youngCss.textContent = y.CSS;
-          this._root.append(this._youngCss);
+        x.register(lessonMessagesEn);
+        if (!this._chunkCss.has(x.CSS)) {
+          this._chunkCss.add(x.CSS);
+          this._root.append(h('style', undefined, undefined, x.CSS));
         }
-        look.y = y;
-        look.wait.splice(0).forEach((f) => f(true));
+        chunk.y = x;
+        chunk.wait.splice(0).forEach((f) => f(true));
       },
       (err: unknown) => {
         if (run !== this._run) return;
-        console.warn('[chocabloc-lesson] could not load the young look:', err);
-        look.y = false;
-        look.wait.splice(0).forEach((f) => f(false));
+        console.warn(`[chocabloc-lesson] could not load the ${what}:`, err);
+        chunk.y = false;
+        chunk.wait.splice(0).forEach((f) => f(false));
       },
     );
   }

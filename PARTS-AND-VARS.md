@@ -181,10 +181,25 @@ The practice question inside Intro and Check is a `<chocabloc-question>`, so its
 | `button` | Every button. The pale ones also have class `secondary` |
 | `read-to-me` | The Read to me button (also a `button`). Absent where the browser has no speech |
 | `tap-to-hear` | The big Tap to hear button (also a `button`), shown to a young kid until the page has been tapped, because browsers refuse speech before that. Its tap starts the voice. Absent where the browser has no speech |
+| `row` | One row of dots in a counted array (`counted`) or a share picture. In a counted array it has class `on` once counted (a pill-shaped ring), `now` on the newest counted row (a light fill), and `faded` after the counted rows. A share picture's rows have no box of their own (`display: contents`) |
+| `row-label` | The words left of a counted array's row, such as "2 rows". Empty until the row is counted |
+| `row-total` | The running total right of a counted array's row, such as "6". Empty until the row is counted |
+| `long-division` | The written long division beside a share picture's dots. It wraps below them on a narrow screen |
 
 The young look's counting pictures (ten frames of animals or coloured blocks, and animal arrays) are plain
 elements inside `picture`. They add no parts: lines and the crossed-out mark use `--cl-ink`, and the block
 colours and the faint outline round each of a frame's ten places (a fixed `rgba`) are fixed.
+
+The share pictures and the counted arrays of dots come from a lazy chunk. A counted array's dots keep the
+canvas array's fixed blues, and the newest row's light fill is a fixed `rgba` of the default `--cl-left`.
+The long division's text and lines use `--cl-ink`, and each part's digits and lines take that part's colour.
+
+| Var | Default | Purpose |
+|-----|---------|---------|
+| `--cl-share-1` | `#1C2B45` | A share picture's first part: its dots, label and long-division lines |
+| `--cl-share-2` | `#1f8a7a` | A share picture's second part |
+| `--cl-left` | `#E8873A` | The leftovers, their label, R and the remainder, the rings round counted rows, and their running totals |
+| `--cl-spot` | `#c9bda9` | The dashed spots of a share's dots not given yet |
 
 | Var | Default | Purpose |
 |-----|---------|---------|
