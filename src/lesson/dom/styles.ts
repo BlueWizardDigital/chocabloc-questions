@@ -98,7 +98,8 @@ export const LESSON_CSS = `
 [part~="button"]:active { transform: translateY(2px); box-shadow: 0 2px 0 0 ${BORDER}; }
 [part~="button"]:focus-visible { outline: 3px solid ${INK}; outline-offset: 3px; }
 [part~="button"]:disabled { opacity: 0.45; cursor: default; }
-[part~="tap-to-hear"] { width: 100%; font-size: 22px; padding: 16px; }[part~="button"].secondary, [part~="close"], [part~="read-to-me"] { background: ${PAPER}; }
+[part~="tap-to-hear"] { width: 100%; font-size: 22px; padding: 16px; }
+[part~="button"].secondary, [part~="close"], [part~="read-to-me"] { background: ${PAPER}; }
 [part~="close"], [part~="read-to-me"] {
   font-family: ${BODY}; font-weight: 800; font-size: 15px; padding: 6px 14px;
   border-width: 2px; box-shadow: none;
