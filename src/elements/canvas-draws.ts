@@ -1,4 +1,5 @@
 import { frame3D, isoProjection, tracePath, fillFaces, type Pt, type IsoFn } from './canvas-primitives';
+import { solidGeometry, drawSolid, solidFaceOutline } from './draw-solids';
 
 export function drawRegularPolygon(
   ctx: CanvasRenderingContext2D,
@@ -263,12 +264,16 @@ export function drawShape3D(
     case 'sphere': drawSphere(ctx, cx, cy, s); break;
     case 'cylinder': drawCylinder(ctx, cx, cy, s); break;
     case 'cone': drawCone(ctx, cx, cy, s); break;
-    case 'pyramid': drawPyramid(ctx, cx, cy, s); break;
+    case 'pyramid':
+    case 'square pyramid': drawPyramid(ctx, cx, cy, s); break;
     case 'triangular prism': drawTriangularPrism(ctx, cx, cy, s); break;
-    default:
+    default: {
+      const faces = solidGeometry(shapeName, w, h);
+      if (faces) { drawSolid(ctx, faces); break; }
       ctx.font = '40px Arial'; ctx.fillStyle = '#999';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('?', cx, cy);
+    }
   }
 }
 
@@ -1191,9 +1196,9 @@ type FaceOutline = { corners: Pt[] } | { ellipse: { x: number; y: number; rx: nu
 /**
  * The face a geometry_face_identify question points at, on the shape that
  * drawShape3D drew. A shape with one kind of flat face (cube, rectangular
- * prism, cylinder, cone) shows that face whatever `faceShape` says. A pyramid
- * and a triangular prism have two kinds, so `faceShape` picks the face. Null
- * when the shape has no such face.
+ * prism, cylinder, cone) shows that face whatever `faceShape` says. A pyramid,
+ * a triangular prism and the solids from draw-solids.ts have two kinds, so
+ * `faceShape` picks the face. Null when the shape has no such face.
  */
 function faceOutline(shape: string, faceShape: string, w: number, h: number): FaceOutline | null {
   const { cx, cy, s } = frame3D(w, h);
@@ -1203,7 +1208,8 @@ function faceOutline(shape: string, faceShape: string, w: number, h: number): Fa
       const v = boxFor(shape, w, h);
       return { corners: [v[6]!, v[7]!, v[4]!, v[5]!] }; // the top face
     }
-    case 'pyramid': {
+    case 'pyramid':
+    case 'square pyramid': {
       const { apex, base } = pyramidPoints(cx, cy, s);
       if (faceShape === 'square') return { corners: base };
       if (faceShape === 'triangle') return { corners: [apex, base[3]!, base[2]!] }; // the front face
@@ -1223,8 +1229,11 @@ function faceOutline(shape: string, faceShape: string, w: number, h: number): Fa
       const g = coneGeom(cy, s);
       return { ellipse: { x: cx, y: g.bot, rx: g.rx, ry: g.ry } };
     }
-    default:
-      return null;
+    default: {
+      const faces = solidGeometry(shape, w, h);
+      const corners = faces && solidFaceOutline(faces, faceShape);
+      return corners ? { corners } : null;
+    }
   }
 }
 
