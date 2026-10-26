@@ -58,8 +58,10 @@ function drawLine(ctx: CanvasRenderingContext2D, map: (p: FigurePoint) => [numbe
   if (line.label === undefined) return;
   // The letter sits in a small white circle just beyond the line's end.
   const len = Math.hypot(x2 - x1, y2 - y1) || 1;
-  const bx = x2 + ((x2 - x1) / len) * (BADGE_R + 3);
-  const by = y2 + ((y2 - y1) / len) * (BADGE_R + 3);
+  // Clamped so a line ending at the frame edge keeps its badge on the canvas.
+  const lo = BADGE_R + 1;
+  const bx = Math.min(Math.max(x2 + ((x2 - x1) / len) * (BADGE_R + 3), lo), ctx.canvas.width - lo);
+  const by = Math.min(Math.max(y2 + ((y2 - y1) / len) * (BADGE_R + 3), lo), ctx.canvas.height - lo);
   ctx.save();
   ctx.fillStyle = '#fff';
   ctx.strokeStyle = LINE_COLOUR;

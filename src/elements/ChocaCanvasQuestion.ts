@@ -11,9 +11,9 @@ import {
 } from './canvas-draws';
 import { drawFractionModels, FRACTION_COLOURS, type FractionColours } from './draw-fraction';
 import { drawFractionNumberLine } from './draw-fraction-line';
-import { drawFigure, figureCanvasHeight } from './draw-figure';
+import { drawFigure, drawPolygonInFrame, figureCanvasHeight } from './draw-figure';
 import { parseFractionModels, parseFractionNumberLine } from '../helpers/fraction-content';
-import { parseFigure } from '../helpers/figure-content';
+import { parseFigure, parsePolygonPoints } from '../helpers/figure-content';
 import './ChocaChoicePad';
 
 const CANVAS_W = 300;
@@ -107,6 +107,14 @@ function buildShell(): {
   container.append(promptEl, canvas, pad);
   fragment.append(style, container);
   return { fragment, promptEl, canvas, pad, container };
+}
+
+/** Draws a row's `points` when they are a valid simple polygon; false means "draw the named shape as before". */
+function drawCornerPoints(ctx: CanvasRenderingContext2D, w: number, h: number, points: unknown): boolean {
+  const pts = parsePolygonPoints(points);
+  if (!pts) return false;
+  drawPolygonInFrame(ctx, w, h, pts);
+  return true;
 }
 
 export class ChocaCanvasQuestion extends HTMLElement {
@@ -244,11 +252,12 @@ export class ChocaCanvasQuestion extends HTMLElement {
     switch (q.format) {
       case 'geometry_classify':
         if (q.content.dimension === '3D') drawShape3D(ctx, w, h, q.content.shape);
-        else drawShape2D(ctx, w, h, q.content.shape);
+        else if (!drawCornerPoints(ctx, w, h, q.content.points)) drawShape2D(ctx, w, h, q.content.shape);
         break;
       case 'geometry_properties':
-        if (q.imageType === 'shape_2d') drawShape2D(ctx, w, h, q.content.shape);
-        else drawShape3D(ctx, w, h, q.content.shape);
+        if (q.imageType === 'shape_2d') {
+          if (!drawCornerPoints(ctx, w, h, q.content.points)) drawShape2D(ctx, w, h, q.content.shape);
+        } else drawShape3D(ctx, w, h, q.content.shape);
         break;
       case 'pythagorean':
         drawRightTriangle(ctx, w, h, q.content.operands, q.content.known_leg);
@@ -287,14 +296,16 @@ export class ChocaCanvasQuestion extends HTMLElement {
         break;
       case 'geometry_identify':
         if (q.imageType === 'shape_3d') drawShape3D(ctx, w, h, q.content.shape);
-        else drawShape2D(ctx, w, h, q.content.shape);
+        else if (!drawCornerPoints(ctx, w, h, q.content.points)) drawShape2D(ctx, w, h, q.content.shape);
         break;
       case 'geometry_symmetry':
         // The shape only: the child finds the lines. Drawing them (as before
         // beta.19) let the child count the answer off the picture. The bank's
         // trapezoid rows have 0 lines, but the usual trapezoid is drawn
         // isosceles (1 line), so these questions get a right trapezoid.
-        drawShape2D(ctx, w, h, q.content.shape.toLowerCase() === 'trapezoid' ? 'right trapezoid' : q.content.shape);
+        if (!drawCornerPoints(ctx, w, h, q.content.points)) {
+          drawShape2D(ctx, w, h, q.content.shape.toLowerCase() === 'trapezoid' ? 'right trapezoid' : q.content.shape);
+        }
         break;
       case 'geometry_classify_triangle':
         // The triangle its sides or angles describe. Measures that make no

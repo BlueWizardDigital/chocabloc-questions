@@ -173,3 +173,22 @@ describe('geometry_figure at a 320 px viewport (Review Focus 5)', () => {
     }
   });
 });
+
+describe('geometry_figure lettered-line badge stays on the canvas', () => {
+  for (const y of [10, -10]) {
+    it(`a line ending at y = ${y} keeps its badge circle fully inside`, () => {
+      const lines = ['A', 'B', 'C'].map((label, i) => ({ from: [0, 0], to: i === 0 ? [0, y] : [3 * i, 2], label }));
+      const { calls, el } = render({ panels: [{ polygons: [square(4)], lines }] });
+      const cv = canvasOf(el);
+      const arcs = calls.filter((c) => c.fn === 'arc');
+      expect(arcs).to.have.lengthOf(3);
+      for (const a of arcs) {
+        const [x, ay, r] = a.args as [number, number, number];
+        expect(x - r).to.be.at.least(0);
+        expect(ay - r).to.be.at.least(0);
+        expect(x + r).to.be.at.most(cv.width);
+        expect(ay + r).to.be.at.most(cv.height);
+      }
+    });
+  }
+});
