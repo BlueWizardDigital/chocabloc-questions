@@ -655,3 +655,38 @@ describe('<chocabloc-lesson> young look: counted rows of animals', () => {
     expect(part(el, 'text')!.hidden).to.equal(false);
   });
 });
+
+describe('<chocabloc-lesson> young look: counted rows animal size', () => {
+  const open = async (rows: number, cols: number, width: number): Promise<ChocaLesson> => {
+    const el = mount();
+    el.style.display = 'block';
+    el.style.width = `${width}px`;
+    el.grade = 'K';
+    el.pictureBase = BASE;
+    el.mode = 'help';
+    el.lesson = lessonWith({ heading: 'Rows', text: 'Rows.', picture: { kind: 'array', rows, cols, counted: 1 }, young: '{a} in rows.' });
+    await until(() => root(el).querySelectorAll('style').length >= 2, 'the chunks');
+    button(el, 'Next').click();
+    await until(() => parts(el, 'row').length > 0, 'the rows');
+    return el;
+  };
+
+  it('at a normal width a 4 x 3 counted row of animals draws each at 36 px or more', async () => {
+    const el = await open(4, 3, 600);
+    // offsetWidth, not the bounding box: a step's pop-in scales it while it enters.
+    const widths = Array.from(root(el).querySelectorAll<HTMLElement>('[part~="picture"] img')).map((i) => i.offsetWidth);
+    expect(widths).to.have.length(12);
+    for (const w of widths) expect(w).to.be.at.least(36);
+  });
+
+  for (const [rows, cols] of [[2, 15], [3, 10]] as const) {
+    it(`at 320 px a ${rows} x ${cols} counted array has no horizontal overflow`, async () => {
+      const el = await open(rows, cols, 320);
+      const pic = parts(el, 'picture')[0]!;
+      expect(pic.scrollWidth).to.be.at.most(pic.clientWidth);
+      expect(document.documentElement.scrollWidth).to.be.at.most(document.documentElement.clientWidth);
+      const img = root(el).querySelector<HTMLElement>('[part~="picture"] img')!;
+      expect(img.offsetWidth).to.be.greaterThan(5);
+    });
+  }
+});

@@ -42,7 +42,7 @@ export const CSS = `
   display: flex; align-items: center; gap: 3px; min-width: 0; padding: 3px 6px;
   border: 3px solid transparent; border-radius: 999px;
 }
-.crows [part~="row"] > * { flex: 0 1 auto; width: 20px; min-width: 0; aspect-ratio: 1 / 1; }
+.crows [part~="row"] > * { flex: 0 1 auto; width: var(--crow-item, 20px); min-width: 0; aspect-ratio: 1 / 1; }
 .crows [part~="row"].on { border-color: ${LEFT}; }
 .crows [part~="row"].now { background: rgba(232, 135, 58, 0.18); }
 .crows [part~="row"].faded { opacity: 0.4; }

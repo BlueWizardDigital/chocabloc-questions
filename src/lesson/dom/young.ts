@@ -145,7 +145,10 @@ export function array(pic: Array2, look: YoungLook, squares: () => HTMLElement, 
   return withAnimals(look, () => {
     if (pic.counted != null) {
       const rows = Array.from({ length: pic.rows }, () => Array.from({ length: pic.cols }, () => cellOf('ani', src)));
-      return countedRows(rows, pic.counted, pic.cols, msg);
+      const box = countedRows(rows, pic.counted, pic.cols, msg);
+      // Animals are drawn bigger than the dots the rows were sized for; they still shrink to fit.
+      box.style.setProperty('--crow-item', '40px');
+      return box;
     }
     const grid = el('arr');
     grid.style.setProperty('--c', String(pic.cols));
