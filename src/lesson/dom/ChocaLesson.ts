@@ -65,6 +65,8 @@ function cardsOf(cards: IdeaCard[]): HTMLElement {
 function speakerIcon(): SVGSVGElement {
   const icon = svg('svg', {
     viewBox: '0 0 24 24',
+    width: 20,
+    height: 20,
     'aria-hidden': 'true',
     fill: 'none',
     stroke: 'currentColor',

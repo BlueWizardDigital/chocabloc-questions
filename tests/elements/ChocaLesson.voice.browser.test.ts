@@ -158,6 +158,17 @@ describe('<chocabloc-lesson> voice for young kids', () => {
     expect(anyButton(el, 'Tap to hear')).to.equal(undefined);
   });
 
+  it('Tap to hear keeps its speaker icon small, beside the label, in a button no taller than 80px', () => {
+    stubSpeech(true, false);
+    const el = help('K');
+    const tap = part(el, 'tap-to-hear') as HTMLElement;
+    const icon = tap.querySelector('svg') as SVGSVGElement;
+    const box = icon.getBoundingClientRect();
+    expect(box.width, 'icon width').to.be.at.most(32);
+    expect(box.height, 'icon height').to.be.at.most(32);
+    expect(tap.getBoundingClientRect().height, 'button height').to.be.at.most(80);
+  });
+
   it('a standard kid never sees Tap to hear', () => {
     stubSpeech(true, false);
     const el = help('5');

@@ -98,13 +98,14 @@ export const LESSON_CSS = `
 [part~="button"]:active { transform: translateY(2px); box-shadow: 0 2px 0 0 ${BORDER}; }
 [part~="button"]:focus-visible { outline: 3px solid ${INK}; outline-offset: 3px; }
 [part~="button"]:disabled { opacity: 0.45; cursor: default; }
-[part~="tap-to-hear"] { width: 100%; font-size: 22px; padding: 16px; }
-[part~="button"].secondary, [part~="close"], [part~="read-to-me"] { background: ${PAPER}; }
+[part~="tap-to-hear"] { width: 100%; font-size: 22px; padding: 16px; }[part~="button"].secondary, [part~="close"], [part~="read-to-me"] { background: ${PAPER}; }
 [part~="close"], [part~="read-to-me"] {
   font-family: ${BODY}; font-weight: 800; font-size: 15px; padding: 6px 14px;
   border-width: 2px; box-shadow: none;
 }
 [part~="close"] { flex: none; }
-[part~="read-to-me"] { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; }
-[part~="read-to-me"] svg { width: 20px; height: 20px; flex: none; }
+[part~="read-to-me"], [part~="tap-to-hear"] { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+[part~="read-to-me"] { border-radius: 999px; }
+[part~="read-to-me"] svg, [part~="tap-to-hear"] svg { width: 20px; height: 20px; flex: none; }
+[part~="tap-to-hear"] svg { width: 28px; height: 28px; }
 `;
