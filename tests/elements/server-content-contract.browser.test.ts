@@ -151,9 +151,14 @@ function record(q: NormalizedQuestion, spy: { calls: string[] }): string {
 // assignment-only shapes. A format outside this list and outside the map fails.
 const NOT_ON_THE_BANK = new Set(['text', 'money', 'base10_blocks']);
 
-// Formats with a server entry but no bank row yet. Task D3 adds the Trello 427
-// rows, bumps the counts below, and empties this set.
-const AWAITING_BANK_ROWS = new Set(['fraction_models', 'fraction_number_line', 'fraction_text']);
+// Formats with a server entry but no bank row yet. Empty: every format in the
+// server map has real rows in the bank fixture. When a new format lands on the
+// server before its rows reach the bank, list it here until the fixture is
+// refreshed; the "has expired" test below fails once its rows arrive.
+const AWAITING_BANK_ROWS = new Set<string>();
+
+// Server sends these stems from question_texts, the fixture is content only, and the lib refuses an empty one (normalizer.ts:941-943).
+const NEEDS_SERVER_STEM = new Set(['fraction_text']);
 
 type ContractRow = { source: string; label: string; format: string; skill: string; imageType: string | null;
   content: Obj; answer: unknown; questionText: string };
@@ -211,7 +216,7 @@ describe('server content map contract: whole and trimmed rows render identically
     for (const b of await load<BankRow[]>('bank-content-sample.json')) {
       rows.push({
         source: 'bank', label: b.question_id, format: b.format, skill: b.skill_id, imageType: null,
-        content: b.content, answer: b.answer, questionText: '',
+        content: b.content, answer: b.answer, questionText: NEEDS_SERVER_STEM.has(b.format) ? 'bank stem' : '',
       });
     }
     for (const r of rows) counts[r.source] = (counts[r.source] ?? 0) + 1;
@@ -219,9 +224,9 @@ describe('server content map contract: whole and trimmed rows render identically
 
   it('the three sources are loaded (guards against an empty run)', () => {
     expect(counts['sweep']).to.equal(3161);
-    expect(counts['bank']).to.equal(995);
+    expect(counts['bank']).to.equal(1120);
     expect(counts['conformance']).to.be.greaterThan(90);
-    expect(new Set(rows.filter((r) => r.source === 'bank').map((r) => r.format)).size).to.equal(100);
+    expect(new Set(rows.filter((r) => r.source === 'bank').map((r) => r.format)).size).to.equal(103);
   });
 
   it('every format a row uses has an entry in the server map', () => {
