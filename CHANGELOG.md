@@ -3,6 +3,26 @@
 All notable changes to chocabloc-questions are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.7.0-beta.2] — 2026-10-27
+
+**Minor** (choice-pad theming, for Shape Factory's lunch card): seven additive CSS variables;
+nothing renamed or removed, and with none of them set every choice pad looks as it did in
+beta.1. Only Shape Factory moves to this release now. The choice-pad lines for the first six
+variables are the same as the lessons branch's (`skill-lessons`, 67f1786), so that branch merges
+develop without a conflict there; the lessons work takes the next number after this one.
+
+### Added
+
+- **`<choca-choice-pad>` layout vars:** `--cq-choices-justify` (the row's `justify-content`,
+  default `normal`; `center` centres a wrapping row) and `--cq-choice-min-height` (default
+  `auto`).
+- **Picked-choice vars** for the `aria-checked="true"` choice: `--cq-choice-selected-bg`,
+  `--cq-choice-selected-text` and `--cq-choice-selected-border` (each defaults to the choice's
+  own value) and `--cq-choice-selected-shadow` (default `none`).
+- **`--cq-choice-selected-opacity`:** the picked choice's opacity once the pad locks after an
+  answer. The default `0.6` is the locked-pad dim every choice already gets; set `1` to keep the
+  picked one at full strength while the rest stay dimmed.
+
 ## [0.7.0-beta.1] — 2026-10-27
 
 **Minor** (geometry shape questions): a new format, a new optional field and six new solid
