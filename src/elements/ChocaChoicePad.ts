@@ -44,6 +44,7 @@ const TEMPLATE = `
       flex-wrap: wrap;
       gap: var(--cq-choice-gap, 8px);
       padding: var(--cq-choices-padding, 0);
+      justify-content: var(--cq-choices-justify, normal);
     }
     [part~="choice"] {
       font: inherit;
@@ -53,8 +54,16 @@ const TEMPLATE = `
       color: var(--cq-choice-text, inherit);
       border: var(--cq-choice-border, 1px solid #ccc);
       border-radius: var(--cq-choice-radius, 8px);
+      min-height: var(--cq-choice-min-height, auto);
       outline: 2px solid transparent;
       outline-offset: 2px;
+    }
+    /* The picked choice. Each default is the choice's own value, so it looks like any other until a host sets these. */
+    [part~="choice"][aria-checked="true"] {
+      background: var(--cq-choice-selected-bg, var(--cq-choice-bg, #f0f0f0));
+      color: var(--cq-choice-selected-text, var(--cq-choice-text, inherit));
+      border: var(--cq-choice-selected-border, var(--cq-choice-border, 1px solid #ccc));
+      box-shadow: var(--cq-choice-selected-shadow, none);
     }
     @media (prefers-reduced-motion: no-preference) {
       [part~="choice"] {
@@ -71,6 +80,10 @@ const TEMPLATE = `
     [part~="choice"][aria-disabled="true"] {
       cursor: not-allowed;
       opacity: 0.6;
+    }
+    /* v0.7.0-beta.2: the picked choice once the pad locks. Defaults to the 0.6 above; three attributes outrank its two. */
+    [part~="choice"][aria-checked="true"][aria-disabled="true"] {
+      opacity: var(--cq-choice-selected-opacity, 0.6);
     }
     /* v0.2.0 review mode: read-only display with correct/wrong/other marks */
     :host([mode="review"]) [part~="choice-correct"] {

@@ -118,6 +118,15 @@ element via `getComputedStyle`, like the base-10 vars.
 | `--cq-choice-disabled-opacity` | `0.5` | Opacity for non-marked choices in review mode |
 | `--cq-choice-coin-size` | `32px` | Coin size inside a coin-list choice — v0.6.0-beta.14+ |
 | `--cq-choice-coin-gap` | `4px` | Gap between those coins — v0.6.0-beta.14+ |
+| `--cq-choices-justify` | `normal` | `justify-content` of the choice row; `center` centres a wrapping row — v0.7.0-beta.2+ |
+| `--cq-choice-min-height` | `auto` | Minimum height of each choice button — v0.7.0-beta.2+ |
+| `--cq-choice-selected-bg` | `--cq-choice-bg` | Background of the picked choice (`aria-checked="true"`) — v0.7.0-beta.2+ |
+| `--cq-choice-selected-text` | `--cq-choice-text` | Text color of the picked choice — v0.7.0-beta.2+ |
+| `--cq-choice-selected-border` | `--cq-choice-border` | Border of the picked choice — v0.7.0-beta.2+ |
+| `--cq-choice-selected-shadow` | `none` | Box shadow on the picked choice — v0.7.0-beta.2+ |
+| `--cq-choice-selected-opacity` | `0.6` | Opacity of the picked choice once the pad locks after an answer; the other locked choices stay at `0.6`. `1` keeps it at full strength — v0.7.0-beta.2+ |
+
+With none of the `--cq-choice-selected-*` vars set, the picked choice looks like the others.
 
 ### Coin-list choices (`coin-choices`) — v0.6.0-beta.14+
 
