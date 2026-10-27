@@ -3,10 +3,11 @@
 All notable changes to chocabloc-questions are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.7.0-beta.1] — 2026-10-27
 
 **Minor** (geometry shape questions): a new format, a new optional field and six new solid
-names; nothing renamed or removed.
+names; nothing renamed or removed. Only the ChocaBLOC host app moves to this release now. The
+lessons work (`skill-lessons`) takes the next number.
 
 ### Added
 
