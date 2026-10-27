@@ -152,9 +152,8 @@ function record(q: NormalizedQuestion, spy: { calls: string[] }): string {
 const NOT_ON_THE_BANK = new Set(['text', 'money', 'base10_blocks']);
 
 // Formats with a server entry but no bank row yet. Task D3 adds the Trello 427
-// rows, bumps the counts below, and empties this set; the geometry shape
-// questions (geometry_figure) join the same list until their rows are loaded.
-const AWAITING_BANK_ROWS = new Set(['fraction_models', 'fraction_number_line', 'fraction_text', 'geometry_figure']);
+// rows, bumps the counts below, and empties this set.
+const AWAITING_BANK_ROWS = new Set(['fraction_models', 'fraction_number_line', 'fraction_text']);
 
 type ContractRow = { source: string; label: string; format: string; skill: string; imageType: string | null;
   content: Obj; answer: unknown; questionText: string };
@@ -220,9 +219,9 @@ describe('server content map contract: whole and trimmed rows render identically
 
   it('the three sources are loaded (guards against an empty run)', () => {
     expect(counts['sweep']).to.equal(3161);
-    expect(counts['bank']).to.equal(962);
+    expect(counts['bank']).to.equal(995);
     expect(counts['conformance']).to.be.greaterThan(90);
-    expect(new Set(rows.filter((r) => r.source === 'bank').map((r) => r.format)).size).to.equal(99);
+    expect(new Set(rows.filter((r) => r.source === 'bank').map((r) => r.format)).size).to.equal(100);
   });
 
   it('every format a row uses has an entry in the server map', () => {
