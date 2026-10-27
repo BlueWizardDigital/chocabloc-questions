@@ -10,6 +10,7 @@ import { createAnswerGuard } from '../guard';
 import type { GuardState } from '../guard';
 import { pictureFromQuestion } from '../from-question';
 import type { Lesson } from '../types';
+import { QUESTION_LOOK_CSS } from './question-look';
 import type { Chip, LessonShell, Screen } from './screens';
 
 /** The pause on "Yes!" or "Thanks!" before the next screen. Tests set it to 0. */
@@ -115,6 +116,11 @@ export function ask(o: AskOptions): Asking {
 
   const el = document.createElement('chocabloc-question') as QuestionElement;
   el.style.alignSelf = 'stretch';
+  // A <style> child of the element is not drawn (it has no slot) but styles the
+  // lesson's own tree, which is where ::part(prompt) is matched.
+  const look = document.createElement('style');
+  look.textContent = QUESTION_LOOK_CSS;
+  el.append(look);
   for (const type of INNER_EVENTS) el.addEventListener(type, stop);
   const screen: Screen = {
     step,
