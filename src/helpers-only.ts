@@ -13,6 +13,15 @@ export {
 } from './helpers/normalizer';
 
 export {
+  parseFigure,
+  parsePolygonPoints,
+  type FigurePoint,
+  type FigureLine,
+  type FigurePanel,
+  type FigureSpec,
+} from './helpers/figure-content';
+
+export {
   validateAnswer,
   matchesDistractor,
 } from './helpers/validators';
@@ -84,6 +93,7 @@ export type {
   GeometryIdentifyContent,
   GeometrySymmetryQuestion,
   GeometrySymmetryContent,
+  GeometryFigureQuestion,
   GeometryClassifyTriangleQuestion,
   GeometryClassifyTriangleContent,
   GeometryVolumeQuestion,
@@ -98,6 +108,8 @@ export type {
   MultiplicationVisualContent,
   FractionConceptQuestion,
   FractionConceptContent,
+  FractionModelsQuestion,
+  FractionNumberLineQuestion,
   TimeQuestion,
   TimeContent,
   PatternQuestion,

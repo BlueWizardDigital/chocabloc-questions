@@ -1,5 +1,7 @@
 // The conformance representatives, shared by format-conformance and
 // server-content-contract.
+import { FIGURE_EXAMPLE } from '../../helpers/figure-fixture';
+
 
 // A format here reaches <choca-canvas-question> but must paint nothing and hide
 // the canvas, because any picture would give the answer away. The reason must
@@ -35,6 +37,15 @@ const row = (format: string, extra: Record<string, unknown>): Record<string, unk
 // file exists for: geometry_properties with a cube renders fine, and only the
 // shape_2d branch was broken.
 export type Row = Record<string, unknown>;
+
+// Corner points in the −10..10 frame, y up.
+const TURNED_SQUARE = [[0, -7], [7, 0], [0, 7], [-7, 0]];
+const THIN_TRIANGLE = [[-9, -1], [9, -1], [8, 1]];
+const TURNED_KITE = [[0, 8], [4, 2], [0, -6], [-4, 2]];
+const NEW_SOLIDS = [
+  'triangular pyramid', 'square pyramid', 'pentagonal pyramid',
+  'hexagonal pyramid', 'pentagonal prism', 'hexagonal prism',
+];
 
 export const REPRESENTATIVE_ROWS: Record<string, Row | Row[]> = {
   text: row('text', { content: { stem: 'What is 3 + 4?' } }),
@@ -95,6 +106,9 @@ export const REPRESENTATIVE_ROWS: Record<string, Row | Row[]> = {
     row('geometry_classify', {
       imageType: 'shape_2d', content: { shape: 'circle', dimension: '2D' }, answer: '2D',
     }),
+    row('geometry_classify', {
+      imageType: 'shape_2d', content: { shape: 'triangle', dimension: '2D', points: THIN_TRIANGLE }, answer: '2D',
+    }),
   ],
   geometry_properties: [
     row('geometry_properties', {
@@ -103,6 +117,12 @@ export const REPRESENTATIVE_ROWS: Record<string, Row | Row[]> = {
     row('geometry_properties', {
       imageType: 'shape_2d', content: { shape: 'circle', property: 'sides' }, answer: '0',
     }),
+    row('geometry_properties', {
+      imageType: 'shape_2d', content: { shape: 'triangle', property: 'sides', points: THIN_TRIANGLE }, answer: '3',
+    }),
+    ...NEW_SOLIDS.map((shape) => row('geometry_properties', {
+      imageType: 'shape_3d', content: { shape, property: 'faces' }, answer: '7',
+    })),
   ],
   geometry_identify: [
     row('geometry_identify', {
@@ -111,15 +131,85 @@ export const REPRESENTATIVE_ROWS: Record<string, Row | Row[]> = {
     row('geometry_identify', {
       imageType: 'shape_3d', content: { shape: 'cube' }, answer: 'cube',
     }),
+    row('geometry_identify', {
+      imageType: 'shape_2d', content: { shape: 'square', points: TURNED_SQUARE }, answer: 'square',
+    }),
   ],
   // A pyramid, not a cube: the cube always showed its face highlighted, and the
   // other shapes printed "face: <answer>" instead.
-  geometry_face_identify: row('geometry_face_identify', {
-    imageType: 'shape_3d', content: { shape: 'pyramid', face_shape: 'triangle' }, answer: 'triangle',
-  }),
-  geometry_symmetry: row('geometry_symmetry', {
-    content: { shape: 'square', lines_of_symmetry: 4 }, answer: 4,
-  }),
+  geometry_face_identify: [
+    row('geometry_face_identify', {
+      imageType: 'shape_3d', content: { shape: 'pyramid', face_shape: 'triangle' }, answer: 'triangle',
+    }),
+    // One per new solid, on the face the plan names: a pyramid's base, a prism's end.
+    ...[
+      ['triangular pyramid', 'triangle'], ['square pyramid', 'square'],
+      ['pentagonal pyramid', 'pentagon'], ['hexagonal pyramid', 'hexagon'],
+      ['pentagonal prism', 'pentagon'], ['hexagonal prism', 'hexagon'],
+    ].map(([shape, face]) => row('geometry_face_identify', {
+      imageType: 'shape_3d', content: { shape, face_shape: face }, answer: face,
+    })),
+  ],
+  geometry_symmetry: [
+    row('geometry_symmetry', {
+      content: { shape: 'square', lines_of_symmetry: 4 }, answer: 4,
+    }),
+    row('geometry_symmetry', {
+      content: { shape: 'kite', points: TURNED_KITE }, answer: 1,
+    }),
+  ],
+  // The first row is choices-only, as the bank serves it: the lettered answer is
+  // never in the row. The rest are answer-carrying (teacher and parent screens),
+  // and each prints its letter, which is why the format is in PRINTS_ANSWER_BY_DESIGN.
+  geometry_figure: [
+    row('geometry_figure', {
+      imageType: 'shape_2d',
+      questionText: 'Which dashed line is a line of symmetry?',
+      content: FIGURE_EXAMPLE,
+      answer: undefined,
+      distractors: undefined,
+      choices: ['A', 'B', 'C', 'D'].map((value) => ({ value })),
+      answerToken: 'test-token-not-real',
+    }),
+    // 1 unlabelled panel, lettered lines.
+    row('geometry_figure', {
+      imageType: 'shape_2d',
+      questionText: 'Which dashed line is a line of symmetry?',
+      content: FIGURE_EXAMPLE,
+      answer: 'B',
+      distractors: ['A', 'C', 'D'].map((value) => ({ value, errorType: 'wrong-line' })),
+    }),
+    // 1 unlabelled panel, no lines (the answer is words, so nothing is printed).
+    row('geometry_figure', {
+      imageType: 'shape_2d',
+      questionText: 'Which describes this shape?',
+      content: {
+        operation: 'geometry_describe_polygon',
+        panels: [{ polygons: [{ points: [[-7, -4], [7, -4], [7, 4], [-7, 4]] }] }],
+      },
+      answer: undefined,
+      distractors: undefined,
+      choices: ['regular square', 'irregular square', 'regular pentagon', 'irregular pentagon']
+        .map((value) => ({ value })),
+      answerToken: 'test-token-not-real',
+    }),
+    // 4 labelled panels.
+    row('geometry_figure', {
+      imageType: 'shape_2d',
+      questionText: 'Which shape is regular?',
+      content: {
+        operation: 'geometry_pick_regular',
+        panels: [
+          [[-6, -6], [6, -6], [6, 6], [-6, 6]],
+          [[-8, -4], [8, -4], [8, 4], [-8, 4]],
+          [[0, -7], [8, 0], [0, 7], [-8, 0]],
+          [[-6, -5], [6, -5], [0, 6]],
+        ].map((points, i) => ({ label: 'ABCD'[i], polygons: [{ points }] })),
+      },
+      answer: 'A',
+      distractors: ['B', 'C', 'D'].map((value) => ({ value, errorType: 'wrong-shape' })),
+    }),
+  ],
   geometry_classify_triangle: row('geometry_classify_triangle', {
     content: { operands: [3, 3, 3], classify_by: 'sides' }, answer: 'equilateral',
   }),
@@ -182,6 +272,92 @@ export const REPRESENTATIVE_ROWS: Record<string, Row | Row[]> = {
   ],
   fraction_concept: row('fraction_concept', {
     content: { fraction: [1, 2] }, answer: '1/2',
+  }),
+  // Trello 427. One row per operation family. More than two models stack.
+  fraction_models: [
+    row('fraction_models', {
+      imageType: 'fraction_models', answer: '3/4',
+      content: { operation: 'fraction_read', layout: 'row', models: [{ shape: 'bar', d: 4, n: 3, wholes: 1 }] },
+    }),
+    row('fraction_models', {
+      imageType: 'fraction_models', answer: '5/6',
+      content: { operation: 'fraction_read', layout: 'row', models: [{ shape: 'circle', d: 6, n: 5, wholes: 1 }] },
+    }),
+    row('fraction_models', {
+      imageType: 'fraction_models', answer: '1 3/4',
+      content: { operation: 'fraction_read_mixed', layout: 'row', models: [{ shape: 'bar', d: 4, n: 7, wholes: 2 }] },
+    }),
+    row('fraction_models', {
+      imageType: 'fraction_models', answer: 'B',
+      content: {
+        operation: 'fraction_pick', layout: 'stack',
+        models: [{ shape: 'bar', d: 4, n: 1, wholes: 1, label: 'A' }, { shape: 'bar', d: 4, n: 3, wholes: 1, label: 'B' }, { shape: 'bar', d: 8, n: 2, wholes: 1, label: 'C' }, { shape: 'bar', d: 3, n: 1, wholes: 1, label: 'D' }],
+      },
+    }),
+    row('fraction_models', {
+      imageType: 'fraction_models', answer: 'C',
+      content: {
+        operation: 'fraction_equal_parts', layout: 'stack',
+        models: [
+          { shape: 'bar', d: 4, n: 0, wholes: 1, label: 'A', split: [1, 2, 3, 2] },
+          { shape: 'bar', d: 4, n: 0, wholes: 1, label: 'B', split: [3, 1, 2, 1] },
+          { shape: 'bar', d: 4, n: 0, wholes: 1, label: 'C' },
+        ],
+      },
+    }),
+    row('fraction_models', {
+      imageType: 'fraction_models', answer: 'A',
+      content: {
+        operation: 'fraction_compare_models', layout: 'row',
+        models: [{ shape: 'bar', d: 4, n: 3, wholes: 1, label: 'A', caption: '3/4' }, { shape: 'bar', d: 4, n: 2, wholes: 1, label: 'B', caption: '2/4' }],
+      },
+    }),
+    row('fraction_models', {
+      imageType: 'fraction_models', answer: 'A',
+      content: {
+        operation: 'fraction_compare_mixed', layout: 'row',
+        models: [{ shape: 'bar', d: 4, n: 6, wholes: 2, label: 'A', caption: '6/4' }, { shape: 'bar', d: 3, n: 4, wholes: 2, label: 'B', caption: '4/3' }],
+      },
+    }),
+    row('fraction_models', {
+      imageType: 'fraction_models', answer: '4/8',
+      content: {
+        operation: 'fraction_equivalent_strips', layout: 'stack', guide: [1, 2],
+        models: [{ shape: 'bar', d: 2, n: 1, wholes: 1, caption: '1/2' }, { shape: 'bar', d: 8, n: 0, wholes: 1 }],
+      },
+    }),
+  ],
+  fraction_number_line: [
+    row('fraction_number_line', {
+      imageType: 'fraction_number_line', answer: '3/4',
+      content: { operation: 'fraction_line_read', tick_labels: false, lines: [{ max: 1, d: 4 }], points: [{ line: 0, n: 3 }] },
+    }),
+    row('fraction_number_line', {
+      imageType: 'fraction_number_line', answer: 'B',
+      content: {
+        operation: 'fraction_line_pick', tick_labels: false, lines: [{ max: 2, d: 4 }],
+        points: [{ line: 0, n: 1, label: 'A' }, { line: 0, n: 5, label: 'B' }, { line: 0, n: 3, label: 'C' }, { line: 0, n: 6, label: 'D' }],
+      },
+    }),
+    row('fraction_number_line', {
+      imageType: 'fraction_number_line', answer: '2/4',
+      content: {
+        operation: 'fraction_line_equivalent', tick_labels: false, lines: [{ max: 1, d: 2 }, { max: 1, d: 4 }],
+        points: [{ line: 0, n: 1 }],
+      },
+    }),
+    row('fraction_number_line', {
+      imageType: 'fraction_number_line', answer: 'B',
+      content: {
+        operation: 'fraction_line_greatest', tick_labels: false, lines: [{ max: 1, d: 6 }],
+        points: [{ line: 0, n: 1, label: 'A' }, { line: 0, n: 5, label: 'B' }, { line: 0, n: 3, label: 'C' }],
+      },
+    }),
+  ],
+  // No picture: the stem is the question. The server ships only `operation`.
+  fraction_text: row('fraction_text', {
+    questionText: 'Is 3/8 less than, equal to, or greater than 1/2?',
+    content: { operation: 'fraction_half_benchmark' }, answer: 'less than',
   }),
   time: row('time', {
     content: { hour: 3, minute: 30, time: '3:30' }, answer: '3:30',

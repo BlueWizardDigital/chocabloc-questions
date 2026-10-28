@@ -3,10 +3,10 @@
 All notable changes to chocabloc-questions are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.7.0-beta.0] — 2026-10-21
+## [0.7.0-beta.3] — 2026-10-28
 
-**Minor**: a new `chocabloc-questions/lesson` entry point; nothing renamed or removed. Per the
-public-API rule a new entry point is minor, so the line moves from 0.6 to 0.7.
+**Minor**: a new `chocabloc-questions/lesson` entry point; nothing renamed or removed. Only the
+ChocaBLOC API moves to this release now: its admin Lessons tab vendors the lesson player. No game moves.
 
 ### Added
 
@@ -29,6 +29,10 @@ public-API rule a new entry point is minor, so the line moves from 0.6 to 0.7.
   arrived, so a short batch ends the run the usual way. The "why" card draws its picture only
   when the validator returned `expected`, so "I'm not sure yet" and a check with no answer
   show the tip alone.
+- **Practice questions match the lesson look:** in Intro and Check, `<chocabloc-question>` takes
+  the lesson's fonts, colours, border and radius from the `--cl-*` vars, with centred choices
+  and the beta.2 choice-pad vars for the picked choice. It ships in the lazy practice chunk, so
+  Help does not grow.
 - **Base-ten pictures:** every number in one picture is drawn with the same block size, so the
   larger number never has smaller blocks.
 
@@ -99,6 +103,75 @@ public-API rule a new entry point is minor, so the line moves from 0.6 to 0.7.
 - **Decimal adding:** `decimal_addition` questions draw their columns picture.
 - **Rounding:** a rounding question's number line spans the two multiples of `round_to`
   (10, 100 or 1000) around the number.
+
+## [0.7.0-beta.2] — 2026-10-27
+
+**Minor** (choice-pad theming, for Shape Factory's lunch card): seven additive CSS variables;
+nothing renamed or removed, and with none of them set every choice pad looks as it did in
+beta.1. Only Shape Factory moves to this release now. The choice-pad lines for the first six
+variables are the same as the lessons branch's (`skill-lessons`, 67f1786), so that branch merges
+develop without a conflict there; the lessons work takes the next number after this one.
+
+### Added
+
+- **`<choca-choice-pad>` layout vars:** `--cq-choices-justify` (the row's `justify-content`,
+  default `normal`; `center` centres a wrapping row) and `--cq-choice-min-height` (default
+  `auto`).
+- **Picked-choice vars** for the `aria-checked="true"` choice: `--cq-choice-selected-bg`,
+  `--cq-choice-selected-text` and `--cq-choice-selected-border` (each defaults to the choice's
+  own value) and `--cq-choice-selected-shadow` (default `none`).
+- **`--cq-choice-selected-opacity`:** the picked choice's opacity once the pad locks after an
+  answer. The default `0.6` is the locked-pad dim every choice already gets; set `1` to keep the
+  picked one at full strength while the rest stay dimmed.
+
+## [0.7.0-beta.1] — 2026-10-27
+
+**Minor** (geometry shape questions): a new format, a new optional field and six new solid
+names; nothing renamed or removed. Only the ChocaBLOC host app moves to this release now. The
+lessons work (`skill-lessons`) takes the next number.
+
+### Added
+
+- **`geometry_figure` format.** Draws 1 unlabelled panel, or 3 to 4 panels lettered `A`, `B`, `C`
+  (, `D`), each with 1 to 8 polygons (3 to 48 points each, coordinates in -10..10, y up), plus
+  up to 4 dashed lines per panel, lettered only in a single unlabelled panel. The letters are
+  the choices. Malformed content paints nothing and hides the canvas.
+- **Optional `points`** on `geometry_identify`, `geometry_properties` (2D), `geometry_classify`
+  (2D) and `geometry_symmetry`: one simple polygon of 3 to 48 points in the same -10..10 frame,
+  drawn at one uniform scale so a small shape stays small. Invalid `points` fall back to the
+  named shape.
+- **Six solid names** for `geometry_identify`, `geometry_properties`, `geometry_volume` and
+  `geometry_face_identify`: `triangular pyramid`, `square pyramid` (draws as `pyramid`),
+  `pentagonal pyramid`, `hexagonal pyramid`, `pentagonal prism` and `hexagonal prism`, with
+  face highlights.
+
+## [0.7.0-beta.0] — 2026-10-23
+
+**Minor** (Trello 427, fraction skills for grades 3-6): new formats and CSS variables;
+nothing renamed or removed. Only the ChocaBLOC host app moves to this release now; a game moves
+when it uses the fraction skills. The lessons work (`skill-lessons`) had claimed this number
+untagged and takes the next one.
+
+### Added
+
+- **Three formats.** `fraction_models` and `fraction_number_line` draw on
+  `<choca-canvas-question>` (`drawFractionModels`, `drawFractionNumberLine`); `fraction_text`
+  is a stem-only format. Malformed content paints nothing and hides the canvas.
+- **Five CSS variables:** `--cq-frac-fill`, `--cq-frac-empty`, `--cq-frac-stroke`,
+  `--cq-frac-guide` and `--cq-frac-text` (defaults `#42a5f5`, `#ffffff`, `#1976d2`, `#ef4444`,
+  `#1d1d1f`).
+- **Fixed choice orders.** A choice set whose values all belong to one of `A, B, C, D, Same`,
+  `less than, equal to, greater than` or `0, 1/2, 1` is shown in that order; any other set keeps
+  the server's order.
+
+### Fixed
+
+- **`fraction_concept` guard (Trello 426).** `fraction_visual` content without a usable
+  `fraction` (for example `{}`) no longer throws or draws a broken picture: nothing is drawn and
+  the canvas is hidden. Type change: `drawFractionVisual` now returns a boolean, and
+  `FractionConceptContent.fraction` is optional.
+- **Canvas on narrow screens.** The question canvas has a `max-width`, so it no longer overflows
+  its container at a 320 px viewport.
 
 ## [0.6.0-beta.22] — 2026-10-21
 

@@ -396,6 +396,14 @@ Look: it takes headings from `--cl-font-display` and body text from `--cl-font-b
 | `geometry_attributes` | `shape_2d` | `ChocaCanvasQuestion` |
 | `geometry_classify` | `shape_2d` / `shape_3d` | `ChocaCanvasQuestion` |
 | `geometry_properties` | `shape_2d` / `shape_3d` | `ChocaCanvasQuestion` |
+| `geometry_identify` | `shape_2d` / `shape_3d` | `ChocaCanvasQuestion` (the named shape; a 2D one is drawn from optional `points` when they are valid) |
+| `geometry_symmetry` | `shape_2d` | `ChocaCanvasQuestion` (the shape, from its name or from optional `points`; never its lines of symmetry) |
+| `geometry_classify_triangle` | `shape_2d` | `ChocaCanvasQuestion` (a triangle with its side lengths or angles marked) |
+| `geometry_face_identify` | `shape_3d` | `ChocaCanvasQuestion` (a solid with one face highlighted; includes the six pyramids and prisms below) |
+| `geometry_volume` | `shape_3d` | `ChocaCanvasQuestion` (a solid with its measurements labelled) |
+| `geometry_surface_area` | `shape_3d` | `ChocaCanvasQuestion` (a solid with its measurements labelled) |
+| `geometry_circle_convert` | `shape_2d` | `ChocaCanvasQuestion` (a circle with the given radius or diameter) |
+| `geometry_figure` | `shape_2d` | `ChocaCanvasQuestion` (one panel, or 3 to 4 lettered panels, of polygons, with optional dashed lines; the answer is the panel or line letter) |
 | `pythagorean` | `right_triangle` | `ChocaCanvasQuestion` |
 | `geometry_area` | `compound_shape` | `ChocaCanvasQuestion` |
 | `geometry_angles` | — | `ChocaCanvasQuestion` |
@@ -405,6 +413,9 @@ Look: it takes headings from `--cl-font-display` and body text from `--cl-font-b
 | `geometry_circle_parts` | `circle_parts` | `ChocaCanvasQuestion` |
 | `data_graph` | `bar_graph` / `pictograph` | `ChocaCanvasQuestion` |
 | `fraction_concept` | `fraction_visual` | `ChocaCanvasQuestion` |
+| `fraction_models` | `fraction_models` | `ChocaCanvasQuestion` (bars, circles, wholes, stacked strips) |
+| `fraction_number_line` | `fraction_number_line` | `ChocaCanvasQuestion` (one or two lines, labelled points) |
+| `fraction_text` | — | stem only (no picture; the stem is `questionText`) |
 | `time` | `analog_clock` | `ChocaCanvasQuestion` |
 | `coordinate_distance` | `coordinate_plane` | `ChocaCanvasQuestion` |
 | `base10_blocks` | `base10_blocks` | `ChocaCanvasQuestion` |
@@ -430,6 +441,7 @@ chocabloc-question {
   --cq-coin-penny-img: url('/sprites/penny.png');
   --cq-choice-bg: #D4881F;
   --cq-focus-ring: #1C2B45;
+  --cq-frac-fill: #42a5f5; /* fraction pictures: shaded parts */
 }
 chocabloc-question::part(container) {
   background: #FFF8E5;

@@ -1,5 +1,5 @@
 {
-  "_source": "server-new ab5ee39 services/renderContent.js",
+  "_source": "server-new e6ce027 services/renderContent.js",
   "CONTENT_BY_FORMAT": {
     "addition": [
       "operands",
@@ -433,6 +433,7 @@
     ],
     "geometry_symmetry": [
       "shape",
+      "points",
       "operation"
     ],
     "geometry_angles": [
@@ -469,6 +470,7 @@
     "geometry_classify": [
       "shape",
       "dimension",
+      "points",
       "operation"
     ],
     "geometry_classify_triangle": [
@@ -484,11 +486,13 @@
     ],
     "geometry_identify": [
       "shape",
+      "points",
       "operation"
     ],
     "geometry_properties": [
       "shape",
       "property",
+      "points",
       "operation"
     ],
     "geometry_attributes": [
@@ -579,6 +583,62 @@
       "operation",
       "place",
       "number"
+    ],
+    "fraction_models": [
+      "operation",
+      "layout",
+      {
+        "models": [
+          "shape",
+          "d",
+          "n",
+          "wholes",
+          "label",
+          "caption",
+          "split"
+        ]
+      },
+      "guide"
+    ],
+    "fraction_number_line": [
+      "operation",
+      "tick_labels",
+      {
+        "lines": [
+          "max",
+          "d"
+        ]
+      },
+      {
+        "points": [
+          "line",
+          "n",
+          "label"
+        ]
+      }
+    ],
+    "fraction_text": [
+      "operation"
+    ],
+    "geometry_figure": [
+      "operation",
+      {
+        "panels": [
+          "label",
+          {
+            "polygons": [
+              "points"
+            ]
+          },
+          {
+            "lines": [
+              "from",
+              "to",
+              "label"
+            ]
+          }
+        ]
+      }
     ]
   }
 }

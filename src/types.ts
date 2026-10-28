@@ -123,14 +123,14 @@ export type GeometryAttributesQuestion = VisualQuestion<
   GeometryAttributesContent
 >;
 
-export type GeometryClassifyContent = { shape: string; dimension: string };
+export type GeometryClassifyContent = { shape: string; dimension: string; points?: unknown };
 export type GeometryClassifyQuestion = VisualQuestion<
   'geometry_classify',
   'shape_2d' | 'shape_3d',
   GeometryClassifyContent
 >;
 
-export type GeometryPropertiesContent = { shape: string; property: string };
+export type GeometryPropertiesContent = { shape: string; property: string; points?: unknown };
 export type GeometryPropertiesQuestion = VisualQuestion<
   'geometry_properties',
   'shape_2d' | 'shape_3d',
@@ -209,18 +209,26 @@ export type GeometryFaceIdentifyQuestion = VisualQuestion<
   GeometryFaceIdentifyContent
 >;
 
-export type GeometryIdentifyContent = { shape: string };
+export type GeometryIdentifyContent = { shape: string; points?: unknown };
 export type GeometryIdentifyQuestion = VisualQuestion<
   'geometry_identify',
   'shape_2d' | 'shape_3d',
   GeometryIdentifyContent
 >;
 
-export type GeometrySymmetryContent = { shape: string; lines_of_symmetry: number };
+export type GeometrySymmetryContent = { shape: string; lines_of_symmetry: number; points?: unknown };
 export type GeometrySymmetryQuestion = VisualQuestion<
   'geometry_symmetry',
   'shape_2d',
   GeometrySymmetryContent
+>;
+
+// Wire-shaped on purpose: the picture is read only through `parseFigure`
+// (helpers/figure-content.ts), so a malformed figure costs the picture, not the question.
+export type GeometryFigureQuestion = VisualQuestion<
+  'geometry_figure',
+  'shape_2d',
+  Record<string, unknown>
 >;
 
 export type GeometryClassifyTriangleContent = { operands: number[]; classify_by: string };
@@ -288,11 +296,24 @@ export type MultiplicationVisualQuestion = VisualQuestion<
   MultiplicationVisualContent
 >;
 
-export type FractionConceptContent = { fraction: [number, number] };
+export type FractionConceptContent = { fraction?: [number, number] };
 export type FractionConceptQuestion = VisualQuestion<
   'fraction_concept',
   'fraction_visual',
   FractionConceptContent
+>;
+
+// Picture content stays in its wire shape (`tick_labels`, not `tickLabels`).
+// Read it only through parseFractionModels / parseFractionNumberLine.
+export type FractionModelsQuestion = VisualQuestion<
+  'fraction_models',
+  'fraction_models',
+  Record<string, unknown>
+>;
+export type FractionNumberLineQuestion = VisualQuestion<
+  'fraction_number_line',
+  'fraction_number_line',
+  Record<string, unknown>
 >;
 
 // — Special formats —
@@ -378,6 +399,7 @@ export type NormalizedQuestion =
   | GeometryFaceIdentifyQuestion
   | GeometryIdentifyQuestion
   | GeometrySymmetryQuestion
+  | GeometryFigureQuestion
   | GeometryClassifyTriangleQuestion
   | GeometryVolumeQuestion
   | GeometrySurfaceAreaQuestion
@@ -385,6 +407,8 @@ export type NormalizedQuestion =
   | DataGraphQuestion
   | MultiplicationVisualQuestion
   | FractionConceptQuestion
+  | FractionModelsQuestion
+  | FractionNumberLineQuestion
   | TimeQuestion
   | PatternQuestion
   | CoordinateDistanceQuestion

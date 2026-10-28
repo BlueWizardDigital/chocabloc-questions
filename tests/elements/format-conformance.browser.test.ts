@@ -39,6 +39,9 @@ const TEXT_ONLY_BY_DESIGN: Record<string, string> = {
   // The canonical text format — the stem is the question.
   text: 'the row ships its own stem and nothing else',
 
+  // Fractions as words and numbers (Trello 427): every value the question needs is in its stem.
+  fraction_text: 'the fractions, decimals and mixed numbers are in the stem',
+
   // Arithmetic: both operands and the operator are in the stem.
   addition: 'both addends are in the stem',
   addition_three: 'all three addends are in the stem',
@@ -130,6 +133,21 @@ const TEXT_ONLY_BY_DESIGN: Record<string, string> = {
   // excuse exactly the bug that shipped: "What coin is this?" with no coins.
 };
 
+// Rows of an exempt format that legitimately print nothing: the answer is a
+// fraction the child reads off the shading or the marked point, or works out (an
+// equivalent of the drawn one), so printing it on the picture would give it away.
+// Only these operations, only on the two fraction picture formats. Every letter
+// answer (pick, equal parts, compare, greatest) still has to print its letter.
+const COMPUTED_ANSWER_OPERATIONS = new Set([
+  'fraction_read', 'fraction_read_mixed', 'fraction_equivalent_strips',
+  'fraction_line_read', 'fraction_line_equivalent',
+]);
+const isComputedAnswerRow = (raw: Record<string, unknown>): boolean => {
+  const content = raw['content'] as { operation?: unknown } | undefined;
+  return (raw['format'] === 'fraction_models' || raw['format'] === 'fraction_number_line') &&
+    COMPUTED_ANSWER_OPERATIONS.has(String(content?.operation));
+};
+
 // A picture must not print its own answer (beta.19: a radius label on "What is
 // the radius?", the product at the end of a number line, "face: triangle").
 // A format here may show text equal to the answer, because the text is part of
@@ -139,6 +157,9 @@ const PRINTS_ANSWER_BY_DESIGN: Record<string, string> = {
   data_graph: 'reading the graph is the question: its axis numbers and category names are what it asks about',
   coordinate_distance: 'the axis numbers label the grid the child counts on; the distance itself is never drawn',
   pattern: 'a repeating pattern shows its own items, so the next item already appears earlier in the sequence',
+  fraction_models: 'the letter labels and the captions are the options, and a letter answer is one of them',
+  geometry_figure: 'the letters under the panels, or on the dashed lines, are the options; a letter answer is one of them',
+  fraction_number_line: 'the letter labels and the whole-number ticks are the options; the marked fraction is never labelled',
 };
 
 /* ================================================================
@@ -351,6 +372,10 @@ describe('format conformance — every dispatched format renders something', () 
         let q: NormalizedQuestion | null = null;
         try { q = normalizeQuestion(raw); } catch { /* the test above reports a row that won't normalize */ }
         const answer = q?.answer;
+        if (q && answer === undefined && exempt && q.choices !== undefined) {
+          // A choices-only row (the bank's shape) carries no answer to look for.
+          return;
+        }
         if (!q || answer === undefined || typeof answer === 'object') {
           expect(exempt, `${label}: an exempt format needs a row with an answer to check`).to.equal(false);
           return;
@@ -359,6 +384,12 @@ describe('format conformance — every dispatched format renders something', () 
         const out = await render(q);
         const printed = out.pictureText.filter((t) => tokens(t).includes(String(answer)));
         if (exempt) {
+          // Every row of an exempt format must print its answer, except a row whose
+          // answer is computed, not printed (see COMPUTED_ANSWER_OPERATIONS).
+          if (isComputedAnswerRow(raw)) {
+            expect(printed, `${label}: a computed answer must not be printed on the picture`).to.have.lengthOf(0);
+            return;
+          }
           expect(
             printed,
             `${label}: PRINTS_ANSWER_BY_DESIGN says this picture shows its answer (${String(answer)}), ` +
@@ -378,6 +409,37 @@ describe('format conformance — every dispatched format renders something', () 
 
 describe('the allowlist itself', () => {
   const allowlisted = { ...TEXT_ONLY_BY_DESIGN, ...NO_PICTURE_BY_DESIGN, ...PRINTS_ANSWER_BY_DESIGN };
+
+  it('only fraction rows are excused from printing their answer; every other exempt row must', () => {
+    const excused: string[] = [];
+    for (const format of Object.keys(PRINTS_ANSWER_BY_DESIGN)) {
+      const entry = REPRESENTATIVE_ROWS[format];
+      for (const raw of Array.isArray(entry) ? entry : entry ? [entry] : []) {
+        if (isComputedAnswerRow(raw)) excused.push(String((raw['content'] as { operation: string }).operation));
+      }
+    }
+    expect([...new Set(excused)].sort()).to.deep.equal([...COMPUTED_ANSWER_OPERATIONS].sort());
+    expect(isComputedAnswerRow({ format: 'data_graph', content: { operation: 'fraction_line_equivalent' } })).to.equal(false);
+    expect(isComputedAnswerRow({ format: 'fraction_models', content: { operation: 'fraction_pick' } })).to.equal(false);
+  });
+
+  it('every answer-printing exemption keeps an answer-carrying row that must print its answer', () => {
+    // The per-row check skips choices-only rows, so without this an exemption whose rows
+    // all became choices-only would go unchecked. Each such row prints its answer in the
+    // sweep above (computed-answer rows excepted, and they cannot satisfy this).
+    const unchecked = Object.keys(PRINTS_ANSWER_BY_DESIGN).filter((format) => {
+      const entry = REPRESENTATIVE_ROWS[format];
+      const rows = Array.isArray(entry) ? entry : entry ? [entry] : [];
+      return !rows.some((raw) => {
+        if (isComputedAnswerRow(raw)) return false;
+        let q: NormalizedQuestion | null = null;
+        try { q = normalizeQuestion(raw); } catch { return false; }
+        return q !== null && q.answer !== undefined && typeof q.answer !== 'object';
+      });
+    });
+    expect(unchecked, `exempt formats with no answer-carrying row to check: ${unchecked.join(', ')}`)
+      .to.have.lengthOf(0);
+  });
 
   it('every allowlisted format is still a dispatched format', () => {
     const dispatched = new Set(DISPATCH_FORMATS);

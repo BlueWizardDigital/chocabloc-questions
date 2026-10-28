@@ -1,5 +1,6 @@
 import { expect } from '@esm-bundle/chai';
 import '../../src/elements/ChocaChoicePad';
+import '../../src/elements/ChocablocQuestion';
 
 function mount(html: string): HTMLElement {
   const wrapper = document.createElement('div');
@@ -308,5 +309,101 @@ describe('<choca-choice-pad coin-choices>', () => {
     el.addEventListener('picked', (e) => { captured = (e as CustomEvent).detail; });
     (el.shadowRoot!.querySelector('button') as HTMLButtonElement).click();
     expect(captured!.value).to.deep.equal(['nickel', 'quarter', 'toonie', 'nickel']);
+  });
+});
+
+describe('<choca-choice-pad> layout and picked-choice vars (v0.7.0-beta.2)', () => {
+  const css = (n: Element): CSSStyleDeclaration => getComputedStyle(n);
+  const buttons = (el: HTMLElement): HTMLButtonElement[] =>
+    Array.from(el.shadowRoot!.querySelectorAll<HTMLButtonElement>('button'));
+
+  it('--cq-choices-justify centres the row', async () => {
+    const el = mount(`<choca-choice-pad mode="mc" style="width: 400px"></choca-choice-pad>`);
+    await setChoicesAndAwait(el, [{ value: 7 }]);
+    const pad = el.shadowRoot!.querySelector('[part="pad"]') as HTMLElement;
+    const gaps = (): [number, number] => {
+      const p = pad.getBoundingClientRect();
+      const b = buttons(el)[0]!.getBoundingClientRect();
+      return [b.left - p.left, p.right - b.right];
+    };
+    expect(css(pad).justifyContent).to.equal('normal');
+    expect(gaps()[0]).to.be.below(1);
+    el.style.setProperty('--cq-choices-justify', 'center');
+    expect(css(pad).justifyContent).to.equal('center');
+    const [left, right] = gaps();
+    expect(left).to.be.above(100);
+    expect(Math.abs(left - right)).to.be.below(1);
+  });
+
+  it('--cq-choice-min-height sets a floor on every choice', async () => {
+    const el = mount(`<choca-choice-pad mode="mc"></choca-choice-pad>`);
+    el.style.setProperty('--cq-choice-min-height', '64px');
+    await setChoicesAndAwait(el, [{ value: 1 }, { value: 2 }]);
+    for (const b of buttons(el)) expect(b.getBoundingClientRect().height).to.be.at.least(64);
+  });
+
+  it('the selected vars style the aria-checked="true" choice and no other', async () => {
+    const el = mount(`<choca-choice-pad mode="mc"></choca-choice-pad>`);
+    el.style.setProperty('--cq-choice-selected-bg', 'rgb(10, 20, 30)');
+    el.style.setProperty('--cq-choice-selected-text', 'rgb(200, 0, 0)');
+    el.style.setProperty('--cq-choice-selected-border', '3px solid rgb(0, 0, 255)');
+    el.style.setProperty('--cq-choice-selected-shadow', 'rgb(0, 0, 0) 0px 0px 0px 4px');
+    await setChoicesAndAwait(el, [{ value: 1 }, { value: 2 }, { value: 3 }]);
+    for (const b of buttons(el)) expect(css(b).backgroundColor).to.equal('rgb(240, 240, 240)');
+    buttons(el)[1]!.click();
+    const [first, picked, third] = buttons(el);
+    expect(picked!.getAttribute('aria-checked')).to.equal('true');
+    expect(css(picked!).backgroundColor).to.equal('rgb(10, 20, 30)');
+    expect(css(picked!).color).to.equal('rgb(200, 0, 0)');
+    expect(css(picked!).borderTopWidth).to.equal('3px');
+    expect(css(picked!).borderTopColor).to.equal('rgb(0, 0, 255)');
+    expect(css(picked!).boxShadow).to.equal('rgb(0, 0, 0) 0px 0px 0px 4px');
+    for (const other of [first!, third!]) {
+      expect(other.getAttribute('aria-checked')).to.equal('false');
+      expect(css(other).backgroundColor).to.equal('rgb(240, 240, 240)');
+      expect(css(other).borderTopWidth).to.equal('1px');
+      expect(css(other).boxShadow).to.equal('none');
+    }
+  });
+
+  /** A money question answered through <chocabloc-question>, so the pad locks the way it does in a game. */
+  async function answerAndLock(opacity?: string): Promise<HTMLButtonElement[]> {
+    const el = mount(`<chocabloc-question seed="42"></chocabloc-question>`);
+    if (opacity !== undefined) el.style.setProperty('--cq-choice-selected-opacity', opacity);
+    (el as HTMLElement & { question: unknown }).question = {
+      id: 'X',
+      skillIds: ['MONEY-COIN-VALUE-USD'],
+      format: 'money',
+      imageType: 'coins',
+      content: { coins: { quarter: 1 }, currency: 'USD' },
+      answer: 25,
+      distractors: [{ value: 20, errorType: 'off-by-nickel' }],
+    };
+    await new Promise((r) => requestAnimationFrame(r));
+    const pile = el.shadowRoot!.querySelector('choca-coin-pile') as HTMLElement;
+    const pad = pile.shadowRoot!.querySelector('choca-choice-pad') as HTMLElement;
+    const answered = new Promise((r) => el.addEventListener('answered', r, { once: true }));
+    (pad.shadowRoot!.querySelector('[part~="choice-correct"]') as HTMLButtonElement).click();
+    await answered;
+    expect(pad.hasAttribute('disabled')).to.equal(true);
+    return buttons(pad);
+  }
+
+  it('a picked, locked choice keeps the 0.6 default', async () => {
+    const all = await answerAndLock();
+    const picked = all.find((b) => b.getAttribute('aria-checked') === 'true')!;
+    expect(picked.getAttribute('aria-disabled')).to.equal('true');
+    expect(css(picked).opacity).to.equal('0.6');
+    for (const b of all) expect(css(b).opacity).to.equal('0.6');
+  });
+
+  it('--cq-choice-selected-opacity: 1 keeps the picked choice at full strength; the rest stay dimmed', async () => {
+    const all = await answerAndLock('1');
+    const picked = all.find((b) => b.getAttribute('aria-checked') === 'true')!;
+    expect(picked.getAttribute('aria-disabled')).to.equal('true');
+    expect(css(picked).opacity).to.equal('1');
+    const rest = all.filter((b) => b !== picked);
+    expect(rest.length).to.be.above(0);
+    for (const b of rest) expect(css(b).opacity).to.equal('0.6');
   });
 });

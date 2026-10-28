@@ -1,4 +1,5 @@
 import type { Choice } from '../types';
+import { orderFixedChoiceSet } from '../helpers/choice-order';
 
 /**
  * v0.2.0 PC-3: choice values may be raw scalars OR `{value, error_type}` objects.
@@ -80,6 +81,10 @@ const TEMPLATE = `
       cursor: not-allowed;
       opacity: 0.6;
     }
+    /* v0.7.0-beta.2: the picked choice once the pad locks. Defaults to the 0.6 above; three attributes outrank its two. */
+    [part~="choice"][aria-checked="true"][aria-disabled="true"] {
+      opacity: var(--cq-choice-selected-opacity, 0.6);
+    }
     /* v0.2.0 review mode: read-only display with correct/wrong/other marks */
     :host([mode="review"]) [part~="choice-correct"] {
       border: 2px solid var(--cq-choice-correct-border, #10b981);
@@ -150,7 +155,15 @@ export class ChocaChoicePad extends HTMLElement {
   }
 
   set choices(value: Choice[]) {
-    this._choices = Array.isArray(value) ? value : [];
+    const list = Array.isArray(value) ? value : [];
+    // Fixed orders (A, B, C, D; less/equal/greater; 0, 1/2, 1) are applied here
+    // so picking, the keyboard and review all read one array. Values keep their
+    // original type.
+    const keys = list.map((c) => choiceValue(c.value));
+    const ordered = orderFixedChoiceSet(keys);
+    this._choices = ordered
+      ? [...list].sort((a, b) => ordered.indexOf(choiceValue(a.value)) - ordered.indexOf(choiceValue(b.value)))
+      : list;
     this._activeIndex = 0;
     this._pickedValueKey = null;
     this._render();

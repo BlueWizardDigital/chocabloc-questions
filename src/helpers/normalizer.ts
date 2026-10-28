@@ -22,6 +22,7 @@ import type {
   GeometryFaceIdentifyQuestion,
   GeometryIdentifyQuestion,
   GeometrySymmetryQuestion,
+  GeometryFigureQuestion,
   GeometryClassifyTriangleQuestion,
   GeometryVolumeQuestion,
   GeometrySurfaceAreaQuestion,
@@ -29,6 +30,8 @@ import type {
   DataGraphQuestion,
   MultiplicationVisualQuestion,
   FractionConceptQuestion,
+  FractionModelsQuestion,
+  FractionNumberLineQuestion,
   TimeQuestion,
   PatternQuestion,
   CoordinateDistanceQuestion,
@@ -37,7 +40,7 @@ import type {
   Base10Blocks,
   Base10BlocksContent,
 } from '../types';
-import { NormalizeError } from '../types';
+import { NormalizeError, ParseError } from '../types';
 import { parseQuestion, isQuestionLike } from './parsers';
 import { isProd } from '../internal/env';
 
@@ -268,6 +271,12 @@ function normalizeGeometryAttributesRow(r: Record<string, unknown>): GeometryAtt
   };
 }
 
+// `points` rides along untouched: a malformed polygon costs the picture at
+// draw time (parsePolygonPoints), never the question.
+function withPoints(c: Record<string, unknown>): { points?: unknown } {
+  return c['points'] === undefined ? {} : { points: c['points'] };
+}
+
 function normalizeGeometryClassifyRow(r: Record<string, unknown>): GeometryClassifyQuestion {
   const base = extractBase(r);
   const c = requireContent(r);
@@ -277,7 +286,7 @@ function normalizeGeometryClassifyRow(r: Record<string, unknown>): GeometryClass
   const imageType = resolveImageType(r, ['shape_2d', 'shape_3d']) as 'shape_2d' | 'shape_3d';
   return {
     ...base, format: 'geometry_classify', imageType: imageType ?? 'shape_3d',
-    content: { shape, dimension }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+    content: { shape, dimension, ...withPoints(c) }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
   };
 }
 
@@ -290,7 +299,7 @@ function normalizeGeometryPropertiesRow(r: Record<string, unknown>): GeometryPro
   const imageType = resolveImageType(r, ['shape_2d', 'shape_3d']) as 'shape_2d' | 'shape_3d';
   return {
     ...base, format: 'geometry_properties', imageType: imageType ?? 'shape_3d',
-    content: { shape, property }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+    content: { shape, property, ...withPoints(c) }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
   };
 }
 
@@ -430,7 +439,7 @@ function normalizeGeometryIdentifyRow(r: Record<string, unknown>): GeometryIdent
   const imageType = resolveImageType(r, ['shape_2d', 'shape_3d']) as 'shape_2d' | 'shape_3d';
   return {
     ...base, format: 'geometry_identify', imageType: imageType ?? 'shape_2d',
-    content: { shape }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+    content: { shape, ...withPoints(c) }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
   };
 }
 
@@ -442,7 +451,16 @@ function normalizeGeometrySymmetryRow(r: Record<string, unknown>): GeometrySymme
   const lines_of_symmetry = getNumber(c, 'lines_of_symmetry') ?? 0;
   return {
     ...base, format: 'geometry_symmetry', imageType: 'shape_2d',
-    content: { shape, lines_of_symmetry }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+    content: { shape, lines_of_symmetry, ...withPoints(c) }, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+  };
+}
+
+function normalizeGeometryFigureRow(r: Record<string, unknown>): GeometryFigureQuestion {
+  const base = extractBase(r);
+  const c = requireContent(r);
+  return {
+    ...base, format: 'geometry_figure', imageType: 'shape_2d',
+    content: c, answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
   };
 }
 
@@ -546,12 +564,32 @@ function normalizeMultiplicationRow(r: Record<string, unknown>): MultiplicationV
 function normalizeFractionConceptRow(r: Record<string, unknown>): FractionConceptQuestion {
   const base = extractBase(r);
   const c = requireContent(r);
+  // A missing or malformed fraction costs the picture, never the question
+  // (Trello 426): the content stays empty and drawFractionVisual draws nothing.
   const fraction = getNumberArray(c, 'fraction');
-  if (!fraction || fraction.length !== 2)
-    throw new NormalizeError('fraction_concept missing fraction [n,d]', r);
+  const valid = fraction !== null && fraction !== undefined && fraction.length === 2;
   return {
     ...base, format: 'fraction_concept', imageType: 'fraction_visual',
-    content: { fraction: fraction as [number, number] },
+    content: valid ? { fraction: fraction as [number, number] } : {},
+    answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+  };
+}
+
+// The picture is not validated here: bad picture data is caught at draw time
+// (parseFractionModels / parseFractionNumberLine), so it costs the picture and
+// never the question.
+function normalizeFractionModelsRow(r: Record<string, unknown>): FractionModelsQuestion {
+  return {
+    ...extractBase(r), format: 'fraction_models', imageType: 'fraction_models',
+    content: requireContent(r),
+    answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
+  };
+}
+
+function normalizeFractionNumberLineRow(r: Record<string, unknown>): FractionNumberLineQuestion {
+  return {
+    ...extractBase(r), format: 'fraction_number_line', imageType: 'fraction_number_line',
+    content: requireContent(r),
     answer: extractAnswer(r), distractors: normalizeDistractors(r['distractors']),
   };
 }
@@ -900,6 +938,9 @@ function buildStem(format: string, c: Record<string, unknown>, answer?: AnswerVa
       return `What are the coordinates of the point?`;
     case 'number_line':
       return `What number is shown on the number line?`;
+    case 'fraction_text':
+      // The stem is the whole question and the server always ships it.
+      throw new ParseError('fraction_text needs questionText', c);
     default:
       return 'Solve:';
   }
@@ -985,6 +1026,7 @@ const FORMAT_NORMALIZERS: Record<string, (r: Record<string, unknown>) => Normali
   geometry_face_identify: normalizeGeometryFaceIdentifyRow,
   geometry_identify: normalizeGeometryIdentifyRow,
   geometry_symmetry: normalizeGeometrySymmetryRow,
+  geometry_figure: normalizeGeometryFigureRow,
   geometry_classify_triangle: normalizeGeometryClassifyTriangleRow,
   geometry_volume: normalizeGeometryVolumeRow,
   geometry_surface_area: normalizeGeometrySurfaceAreaRow,
@@ -996,6 +1038,8 @@ const FORMAT_NORMALIZERS: Record<string, (r: Record<string, unknown>) => Normali
     return normalizeWithStem(r);
   },
   fraction_concept: normalizeFractionConceptRow,
+  fraction_models: normalizeFractionModelsRow,
+  fraction_number_line: normalizeFractionNumberLineRow,
   time: normalizeTimeRow,
   pattern: normalizePatternRow,
   coordinate_distance: normalizeCoordinateDistanceRow,
@@ -1032,6 +1076,7 @@ const STEM_FORMATS = [
   'money_coin_colour', 'money_coin_denomination', 'money_coin_name', 'money_coin_size',
   'money_budget_balance', 'money_budget_plan', 'money_financial_records', 'money_price_list',
   'coordinate', 'number_line',
+  'fraction_text',
 ] as const;
 for (const f of STEM_FORMATS) FORMAT_NORMALIZERS[f] = normalizeWithStem;
 const STEM_FORMAT_SET: ReadonlySet<string> = new Set(STEM_FORMATS);

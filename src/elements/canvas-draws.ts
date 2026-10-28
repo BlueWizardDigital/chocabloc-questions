@@ -1,3 +1,6 @@
+import { frame3D, isoProjection, tracePath, fillFaces, type Pt, type IsoFn } from './canvas-primitives';
+import { solidGeometry, drawSolid, solidFaceOutline } from './draw-solids';
+
 export function drawRegularPolygon(
   ctx: CanvasRenderingContext2D,
   cx: number, cy: number, radius: number, sides: number, startAngle = 0,
@@ -103,24 +106,6 @@ export function drawShape2D(
   ctx.stroke();
 }
 
-type Pt = { x: number; y: number };
-type IsoFn = (x: number, y: number, z: number) => Pt;
-
-// The 3D shapes' geometry lives in the *Points / *Geom helpers below, so the
-// face highlight (drawFaceHighlight) outlines exactly the face that was drawn.
-
-/** Centre and scale every 3D shape is drawn at. */
-function frame3D(w: number, h: number): { cx: number; cy: number; s: number } {
-  return { cx: w / 2, cy: h / 2, s: Math.min(w, h) * 0.3 };
-}
-
-function isoProjection(cx: number, cy: number, s: number): IsoFn {
-  return (x, y, z) => ({
-    x: cx + (x - z) * 0.866 * s,
-    y: cy - y * s + (x + z) * 0.5 * s,
-  });
-}
-
 // Half-sizes along x, y, z.
 const CUBE_DIMS: readonly [number, number, number] = [1, 1, 1];
 const RECT_PRISM_DIMS: readonly [number, number, number] = [1.3, 0.7, 0.7];
@@ -148,22 +133,6 @@ function boxFor(shape: 'cube' | 'rectangular prism', w: number, h: number): Pt[]
   const { cx, cy, s } = frame3D(w, h);
   const fit = Math.min(s, (h / 2 - BOX_MARGIN) / (sy + (sx + sz) / 2), (w / 2 - BOX_MARGIN) / ((sx + sz) * 0.866));
   return boxCorners(isoProjection(cx, cy, fit), dims);
-}
-
-function tracePath(ctx: CanvasRenderingContext2D, pts: readonly Pt[]): void {
-  ctx.moveTo(pts[0]!.x, pts[0]!.y);
-  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y);
-  ctx.closePath();
-}
-
-function fillFaces(ctx: CanvasRenderingContext2D, faces: readonly [Pt[], string][]): void {
-  for (const [pts, fill] of faces) {
-    ctx.fillStyle = fill;
-    ctx.beginPath();
-    tracePath(ctx, pts);
-    ctx.fill();
-    ctx.stroke();
-  }
 }
 
 /** A cube or a rectangular prism: its top, front and right faces. */
@@ -295,12 +264,16 @@ export function drawShape3D(
     case 'sphere': drawSphere(ctx, cx, cy, s); break;
     case 'cylinder': drawCylinder(ctx, cx, cy, s); break;
     case 'cone': drawCone(ctx, cx, cy, s); break;
-    case 'pyramid': drawPyramid(ctx, cx, cy, s); break;
+    case 'pyramid':
+    case 'square pyramid': drawPyramid(ctx, cx, cy, s); break;
     case 'triangular prism': drawTriangularPrism(ctx, cx, cy, s); break;
-    default:
+    default: {
+      const faces = solidGeometry(shapeName, w, h);
+      if (faces) { drawSolid(ctx, faces); break; }
       ctx.font = '40px Arial'; ctx.fillStyle = '#999';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('?', cx, cy);
+    }
   }
 }
 
@@ -707,10 +680,13 @@ export function drawCircleGiven(
 }
 
 export function drawFractionVisual(
-  ctx: CanvasRenderingContext2D, w: number, h: number, fraction: [number, number],
-): void {
+  ctx: CanvasRenderingContext2D, w: number, h: number, fraction: [number, number] | undefined,
+): boolean {
   ctx.clearRect(0, 0, w, h);
+  if (!Array.isArray(fraction) || fraction.length !== 2) return false;
   const [numerator, denominator] = fraction;
+  if (!Number.isInteger(numerator) || !Number.isInteger(denominator)
+    || denominator < 1 || numerator < 0) return false;
   const cx = w / 2, cy = h / 2, radius = Math.min(w, h) / 2 - 15;
   if (denominator <= 8) {
     const sliceAngle = (Math.PI * 2) / denominator;
@@ -736,6 +712,7 @@ export function drawFractionVisual(
       ctx.strokeRect(x + i * segW, y, segW, barH);
     }
   }
+  return true;
 }
 
 export function drawAngle(
@@ -995,9 +972,9 @@ type FaceOutline = { corners: Pt[] } | { ellipse: { x: number; y: number; rx: nu
 /**
  * The face a geometry_face_identify question points at, on the shape that
  * drawShape3D drew. A shape with one kind of flat face (cube, rectangular
- * prism, cylinder, cone) shows that face whatever `faceShape` says. A pyramid
- * and a triangular prism have two kinds, so `faceShape` picks the face. Null
- * when the shape has no such face.
+ * prism, cylinder, cone) shows that face whatever `faceShape` says. A pyramid,
+ * a triangular prism and the solids from draw-solids.ts have two kinds, so
+ * `faceShape` picks the face. Null when the shape has no such face.
  */
 function faceOutline(shape: string, faceShape: string, w: number, h: number): FaceOutline | null {
   const { cx, cy, s } = frame3D(w, h);
@@ -1007,7 +984,8 @@ function faceOutline(shape: string, faceShape: string, w: number, h: number): Fa
       const v = boxFor(shape, w, h);
       return { corners: [v[6]!, v[7]!, v[4]!, v[5]!] }; // the top face
     }
-    case 'pyramid': {
+    case 'pyramid':
+    case 'square pyramid': {
       const { apex, base } = pyramidPoints(cx, cy, s);
       if (faceShape === 'square') return { corners: base };
       if (faceShape === 'triangle') return { corners: [apex, base[3]!, base[2]!] }; // the front face
@@ -1027,8 +1005,11 @@ function faceOutline(shape: string, faceShape: string, w: number, h: number): Fa
       const g = coneGeom(cy, s);
       return { ellipse: { x: cx, y: g.bot, rx: g.rx, ry: g.ry } };
     }
-    default:
-      return null;
+    default: {
+      const faces = solidGeometry(shape, w, h);
+      const corners = faces && solidFaceOutline(faces, faceShape);
+      return corners ? { corners } : null;
+    }
   }
 }
 
