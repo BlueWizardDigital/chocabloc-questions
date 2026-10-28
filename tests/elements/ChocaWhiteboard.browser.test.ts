@@ -288,18 +288,37 @@ describe('stacked math rendering', () => {
     const { calls, canvas } = renderMath('343 + 46');
     await frame();
 
-    // Golden coordinates below were captured from the pre-change renderer and
-    // depend on this metric. If the browser's monospace metrics move, this
-    // assertion fails first and explains the coordinate mismatches below it.
-    expect(metricsCtx(canvas).measureText('0').width).to.be.closeTo(14.40234375, 1e-6);
+    // Golden coordinates were captured from the pre-change renderer on a
+    // 400px-wide canvas, and every x depends on the digit width `w`. They are
+    // written in units of `w` because the monospace font differs by machine
+    // (14.40234375 on macOS, 14.44921875 on Linux CI). The range only rejects a
+    // broken metric: with w = 0 every x collapses to the centre and the golden
+    // would pass for any layout.
+    const w = metricsCtx(canvas).measureText('0').width;
+    expect(w).to.be.within(8, 24);
+    expect(canvas.width).to.equal(400);
+    const mid = canvas.width / 2;
 
-    expect(calls).to.deep.equal([
-      { fn: 'fillText', args: ['343', 236.005859375, 40], align: 'right' },
-      { fn: 'fillText', args: ['46', 236.005859375, 72], align: 'right' },
-      { fn: 'fillText', args: ['+', 163.994140625, 72], align: 'left' },
-      { fn: 'moveTo', args: [149.591796875, 104], align: 'left' },
-      { fn: 'lineTo', args: [243.20703125, 104], align: 'left' },
-    ]);
+    const golden: CtxCall[] = [
+      { fn: 'fillText', args: ['343', mid + 2.5 * w, 40], align: 'right' },
+      { fn: 'fillText', args: ['46', mid + 2.5 * w, 72], align: 'right' },
+      { fn: 'fillText', args: ['+', mid - 2.5 * w, 72], align: 'left' },
+      { fn: 'moveTo', args: [mid - 3.5 * w, 104], align: 'left' },
+      { fn: 'lineTo', args: [mid + 3 * w, 104], align: 'left' },
+    ];
+
+    // Everything but x must match exactly; x is compared with a tolerance
+    // because the renderer adds its terms in a different order.
+    const xIndex = (c: CtxCall): number => (c.fn === 'fillText' ? 1 : 0);
+    const withoutX = (c: CtxCall): CtxCall => ({ ...c, args: c.args.filter((_, j) => j !== xIndex(c)) });
+    expect(calls.map(withoutX)).to.deep.equal(golden.map(withoutX));
+    calls.forEach((c, i) => {
+      const want = golden[i]!;
+      expect(c.args[xIndex(c)] as number, `x of call ${i} (${c.fn})`).to.be.closeTo(
+        want.args[xIndex(want)] as number,
+        1e-6
+      );
+    });
   });
 
   it('puts the operator beside the LAST operand in a 3-operand stack', async () => {
