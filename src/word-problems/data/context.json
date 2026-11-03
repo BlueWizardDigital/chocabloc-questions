@@ -1280,10 +1280,7 @@
   "question_phrases": {
     "total": [
       "How many in all?",
-      "How many altogether?",
-      "What is the total?",
-      "How many are there now?",
-      "What is the sum?"
+      "How many altogether?"
     ],
     "remaining": [
       "How many are left?",
@@ -1310,7 +1307,6 @@
     ],
     "product": [
       "How many in all?",
-      "What is the total?",
       "How many altogether?"
     ],
     "measurement": [

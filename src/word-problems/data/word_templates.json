@@ -575,7 +575,7 @@
   "ADD-WITHIN-20-NO-REGROUP": {
     "beginner": [
       "{a} {monster} plus {b} {monster}. How many {monster}?",
-      "{a} and {b} {item}. What is the sum?",
+      "{a} and {b} {item}. How many {item} in all?",
       {
         "template": "{a} {specialty} and {b} more. Total?",
         "themes": [
@@ -1465,7 +1465,7 @@
     ],
     "intermediate": [
       "A group of {monster} threw a party. They had {a} dishes of food and ate {b}. How many dishes of leftovers did those {monster} send home with their guests?",
-      "A group of {monster} stole {a} {item} for their boss. Some adventurers reclaimed {b} {item}. How many were those {monster} able to present?",
+      "A group of {monster} stole {a} {item} for their boss. Some adventurers reclaimed {b} {item}. How many {item} did those {monster} keep?",
       {
         "template": "{name} had {a} {ingredient}, but used {b} to make some {specialty}. How many {ingredient} did {name} have leftover?",
         "complexity": [],
@@ -3133,7 +3133,7 @@
     ],
     "intermediate": [
       "A group of {monster} threw a party. They had {a} dishes of food and ate {b}. How many dishes of leftovers did those {monster} send home with their guests?",
-      "A group of {monster} stole {a} {item} for their boss. Some adventurers reclaimed {b} {item}. How many were those {monster} able to present?",
+      "A group of {monster} stole {a} {item} for their boss. Some adventurers reclaimed {b} {item}. How many {item} did those {monster} keep?",
       {
         "template": "{name} had {a} {ingredient}, but used {b} to make some {specialty}. How many {ingredient} did {name} have leftover?",
         "complexity": [],

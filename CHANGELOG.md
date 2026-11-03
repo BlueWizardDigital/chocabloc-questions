@@ -5,6 +5,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.7.0-beta.5] — 2026-11-03
+
+**Patch** (Trello 450, from the math tester robot's re-run on beta.4): data only, no API or
+engine change.
+
+### Fixed
+
+- **No maths word as a story's question.** "What is the sum?" and "What is the total?" are gone
+  from the `total` and `product` question pools, and "How many are there now?" from `total` (it
+  misfits a story that combines two collections). Both pools now hold "How many in all?" and
+  "How many altogether?". The ADD-WITHIN-20-NO-REGROUP line that wrote "What is the sum?" itself
+  asks "How many {item} in all?".
+- **"How many were those {monster} able to present?"** now asks "How many {item} did those
+  {monster} keep?" (SUB-3DIGIT-WITH-REGROUP, and its copy under FRAC-SUB-UNLIKE-DENOM).
+
 ## [0.7.0-beta.4] — 2026-11-03
 
 **Patch** (Trello 450, word-problem wording the math tester robot found in Adventure 101): no

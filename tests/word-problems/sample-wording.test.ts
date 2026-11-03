@@ -84,6 +84,8 @@ const DEFECTS: Array<[string, RegExp]> = [
   ['R2.8 "bigfoot" with no plural', /bigfoot/],
   ['R4 a lower-case sentence start', /[.!?] [a-z]/],
   ['R4 a compare question about places, not counts', /Which sign compares the (?!first |number of )/],
+  ['R5 a maths word as the story question (robot re-run, 2026-11-03)', /What is the (sum|total)\?/],
+  ['R5 "able to present"', /able to present/],
 ];
 
 const engine = createWordProblemEngine({ templates: sampleTemplates, context: sampleContext });
