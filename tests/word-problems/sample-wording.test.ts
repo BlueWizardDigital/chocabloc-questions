@@ -173,3 +173,57 @@ describe('sample data wording (Trello 450)', () => {
     expect(seen.size).toBeGreaterThan(0); // the {recipient} story renders now, as a {role}
   });
 });
+
+// Round 3. Every template text, with where it lives and the themes it is written for.
+const ALL_TEMPLATES = Object.entries(sampleTemplates).flatMap(([skill, byDiff]) =>
+  (['beginner', 'intermediate', 'advanced'] as const).flatMap((d) =>
+    (byDiff[d] ?? []).map((t, i) => ({
+      where: `${skill} ${d}[${i}]`,
+      text: typeof t === 'string' ? t : t.template,
+      themes: typeof t === 'string' ? [] : (t.themes ?? []),
+    })),
+  ),
+);
+
+describe('template agreement and coverage (Trello 450 round 3)', () => {
+  it('lets the count decide every verb that follows or leads a count slot', () => {
+    // A verb written after a count ("{b} were taken") is wrong when the count is 1; use a
+    // marker ("{b} {~was/were} taken"). A verb before the count ("There are {a} ...") cannot be
+    // marked, because markers read backwards, so the sentence is reworded instead.
+    const COUNT = String.raw`\{(?:[a-f]|number|result|abs_a|abs_b)\}`;
+    const VERB = '(?:were|are|was|is|has|have|arrive|arrives|break|breaks|run|runs|remain|remains|expire|expires|make|makes|produce|produces|cost|costs|need|needs)';
+    const rules: Array<[string, RegExp]> = [
+      ['verb after a count', new RegExp(`${COUNT}(?: more)?(?: \\{[a-z_0-9]+\\})?(?: that)? ${VERB}\\b`)],
+      ['verb before a count', new RegExp(`\\b[Tt]here (?:are|were|is|was) ${COUNT}`)],
+      // "Another {location}" reads as plural; "Another {b} {~was/were} added" is fine.
+      ['"another" before a word slot', /\b[Aa]nother \{(?![a-f]\})[a-z_0-9]+\}/],
+    ];
+    const found = ALL_TEMPLATES.flatMap(({ where, text }) =>
+      rules.filter(([, re]) => re.test(text)).map(([rule]) => `${rule}: ${where}: ${text}`),
+    );
+    expect(found).toEqual([]);
+  });
+
+  it('gives every theme-only template words for each of its slots', () => {
+    const themes = sampleContext.themes ?? {};
+    const found = ALL_TEMPLATES.flatMap(({ where, text, themes: only }) =>
+      only.flatMap((th) =>
+        [...text.matchAll(/\{([a-z_0-9]+)\}/g)]
+          .map((m) => (m[1] as string).replace(/\d+$/, ''))
+          .filter((base) => base in (themes[th] ?? {}) && !(themes[th]![base] ?? []).length)
+          .map((base) => `${where} (${th}) uses {${base}}, which ${th} has no words for`),
+      ),
+    );
+    expect(found).toEqual([]);
+  });
+
+  it('words DIV-2DIGIT-BY-1DIGIT-WITH-REMAINDER at advanced in every theme, asking for both parts', () => {
+    const r = { skill: 'DIV-2DIGIT-BY-1DIGIT-WITH-REMAINDER', op: 'division', ops: [10, 3] };
+    for (const theme of themes) {
+      for (let seed = 0; seed < 10; seed++) {
+        const text = render(r, theme, seed, 'advanced');
+        expect(text, `${theme} ${seed}`).toMatch(/\b10\b.*\b3\b.*How many .*each.*, and how many (are left( over)?|remain)\?$/);
+      }
+    }
+  });
+});

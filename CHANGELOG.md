@@ -9,8 +9,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 **Patch** (Trello 450, word-problem wording the math tester robot found in Adventure 101): no
 API change; the engine's wording rules and the bundled templates and context change. Operands and
-answers are unchanged. Every template that rendered still renders; some that never could now do
-(see the last five entries).
+answers are unchanged. Every template that rendered still renders; some that never could now do,
+and DIV-2DIGIT-BY-1DIGIT-WITH-REMAINDER gains five advanced stories (see the last eight entries).
 
 ### Fixed
 
@@ -58,6 +58,28 @@ answers are unchanged. Every template that rendered still renders; some that nev
 - **Smaller fixes:** "the greatest amount of {specialty} that {name} could brew" (the name read as a
   title: "of flying potion Charlotte"); "A group of {role} purchased" (was "a group of … purcahsed");
   the mountain "bigfoot", which had no plural, is now "yeti/yetis".
+- **The count decides the verb.** A verb written after a count takes a marker: "1 was removed",
+  "1 more arrives", "1 is gone", "1 healing potion costs" (were "1 were removed", "1 more arrive",
+  …). Where the verb came before the count ("There are {a} …", "There were {a} …"), the sentence is
+  reworded, because a marker reads backwards: "The {container} has {a} {item}", "One {container}
+  has {a} {item}, another has {b}, and a third has {c}". "Another {location}" (read as "Another
+  meadows") is "A second {location}". On the bank rows A101 serves, these slips went from 182
+  renders to 0.
+- **Plural after "many".** "If they already had 1, how many torches…" (was "torch"): "how many"
+  takes a plural whatever came earlier in the sentence. A nearer "the" or "a" still decides.
+- **Potion stories that used `{item}` render.** Potion has no `{item}`, so 29 potion-only template
+  entries (ADD-*, SUB-FROM-10, SUB-WITHIN-5, MISSING-ADDEND-WITHIN-10, DIV-*, FRAC-OF-QUANTITY,
+  MULT-*, RATIO-BASIC, RATIO-PROPORTIONS, UNIT-RATE-BASIC) never rendered. They use `{ingredient}`
+  now. Where the story did not ask what the answer answers, it was reworded: the SUB-FROM-10 and
+  SUB-WITHIN-5 copies of an addition story subtract, the MISSING-ADDEND-WITHIN-10 copy asks how many
+  more, the RATIO-BASIC stories ask for the ratio in simplest form (23 of its 54 bank answers are
+  simplified), and the RATIO-PROPORTIONS endings name the potion. FRAC-OF-QUANTITY,
+  MISSING-ADDEND-WITHIN-10, RATIO-PROPORTIONS and UNIT-RATE-BASIC still never reach a template from
+  a bank row: their rows carry no operands the engine can read.
+- **DIV-2DIGIT-BY-1DIGIT-WITH-REMAINDER at advanced in every theme.** Cave, forest, catacomb,
+  mountain and docks each get a story that shares {a} among {b} and asks "How many does each get,
+  and how many are left over?" (docks: "How many go in each {container}, …"). Only potion had
+  advanced stories, so the other five themes showed plain text there.
 
 ## [0.7.0-beta.3] — 2026-10-28
 
