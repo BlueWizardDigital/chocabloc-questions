@@ -373,6 +373,24 @@ describe('renderTemplate slots inside a question phrase (Trello 450)', () => {
   });
 });
 
+// "If they already had 1, how many torch ...": the count before the comma decided the noun.
+describe('pluralCount after "many" (Trello 450 round 3)', () => {
+  it('is plural right after "many", whatever came earlier in the sentence', () => {
+    expect(pluralCount('If they already had 1, how many ')).toBe(2);
+    expect(pluralCount('With 1 fairy wing, how many ')).toBe(2);
+    expect(pluralCount('the one with so many ')).toBe(2);
+  });
+  it('still lets a nearer cue decide', () => {
+    expect(pluralCount('how many of the ')).toBe(1);
+    expect(pluralCount('many a ')).toBe(1);
+  });
+  it('inflects a slot after a comma-joined "how many" (reported shape)', () => {
+    const ctxM: ContextData = { themes: { cave: { item: ['torch/torches'] } } };
+    expect(renderTemplate('If they already had {b}, how many {item} did the patrol finish with?', { b: '1' }, ctxM, 'cave', undefined, makeRng('s')))
+      .toBe('If they already had 1, how many torches did the patrol finish with?');
+  });
+});
+
 // "0.1" and "3.1" used to read as a count of 1: the decimal point was taken as a sentence end.
 describe('pluralCount and decimals (Trello 450)', () => {
   it('reads a decimal number as plural', () => {

@@ -17,7 +17,8 @@ const SILENT_H = /^(hour|honest|honou?r|heir)/i;
 
 /**
  * Nearest cue in the same sentence wins: a number gives its count (a decimal is plural), a
- * singular keyword gives 1, "of" gives plural ("a group of {x}", "a bag of {x}"). No cue: plural (2).
+ * singular keyword gives 1, "of" and "many" give plural ("a group of {x}", "how many {x}").
+ * No cue: plural (2).
  */
 export function pluralCount(before: string): number {
   // Cues do not carry across a sentence boundary: "... 1 more. How many {item}" is plural.
@@ -30,7 +31,7 @@ export function pluralCount(before: string): number {
     const t = (tokens[i] as string).replace(/[^\w-]/g, '');
     if (/^-?\d+$/.test(t)) return Math.abs(parseInt(t, 10));
     if (SINGULAR_WORDS.has(t)) return 1;
-    if (t === 'of') return 2;
+    if (t === 'of' || t === 'many') return 2;
   }
   return 2;
 }
