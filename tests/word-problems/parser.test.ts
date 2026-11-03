@@ -207,3 +207,87 @@ describe('renderTemplate placeholder consistency', () => {
     expect(seen.size).toBe(3); // the cache is per render: every name is still reachable
   });
 });
+
+// Trello 450: wording the math tester robot found in Adventure 101.
+describe('pluralCount after "of" (Trello 450)', () => {
+  it('is plural for a bare noun after "of"', () => {
+    expect(pluralCount('A group of ')).toBe(2);
+    expect(pluralCount('a bag of ')).toBe(2);
+    expect(pluralCount('One team of ')).toBe(2);
+  });
+  it('lets "of" outrank a singular word further back', () => {
+    expect(pluralCount('What is the ratio of {item} to ')).toBe(2);
+  });
+  it('still lets a nearer number or "the" decide', () => {
+    expect(pluralCount('A stampede of 1 ')).toBe(1);
+    expect(pluralCount('A stampede of 7 ')).toBe(7);
+    expect(pluralCount('the edge of the ')).toBe(1);
+  });
+  it('does not carry across a sentence boundary', () => {
+    expect(pluralCount('A group of them. The ')).toBe(1);
+  });
+});
+
+describe('renderTemplate "a" before a vowel sound (Trello 450)', () => {
+  const ctxA: ContextData = {
+    themes: {
+      cave: { animal: ['glowworm/glowworms'], location: ['alcove/alcoves'], monster: ['golem/golems'] },
+      catacomb: { location: ['underground lake/underground lakes'], item: ['urn/urns'] },
+      potion: { ingredient: ['unicorn hair/unicorn hairs'], location: ['apothecary shop/apothecary shops'] },
+    },
+    characters: { names: ['Zoey'], roles: ['explorer/explorers'] },
+  };
+  const r = (tpl: string, theme: string, math: Record<string, string> = {}) =>
+    renderTemplate(tpl, math, ctxA, theme, undefined, makeRng('s'));
+
+  it('writes "an" before a slot that starts with a vowel sound (reported case)', () => {
+    expect(r('{name} sees {a} {animal} in a {location}.', 'cave', { a: '1' })).toBe('Zoey sees 1 glowworm in an alcove.');
+  });
+  it('turns a sentence-initial "A" into "An"', () => {
+    expect(r('A {location} sells potions. A {location} again.', 'potion')).toBe('An apothecary shop sells potions. An apothecary shop again.');
+    expect(r('A {role} waits.', 'cave')).toBe('An explorer waits.');
+  });
+  it('goes by the first word of a multi-word value', () => {
+    expect(r('They rest by a {location}.', 'catacomb')).toBe('They rest by an underground lake.');
+    expect(r('It is a {item}.', 'catacomb')).toBe('It is an urn.');
+  });
+  it('keeps "a" before a consonant sound, including a "you" sound', () => {
+    expect(r('A lair of a {monster}.', 'cave')).toBe('A lair of a golem.');
+    expect(r('Add a {ingredient}.', 'potion')).toBe('Add a unicorn hair.');
+  });
+  it('touches only a standalone article right before the slot', () => {
+    // "A" mid-sentence is a label, not an article; "a" inside a word is not one.
+    expect(r('Point A {location} is near.', 'cave')).toBe('Point A alcove is near.');
+    expect(r('Gamma {location} and a big {location}.', 'cave')).toBe('Gamma alcoves and a big alcove.');
+    expect(r('an {location}', 'cave')).toBe('an alcove');
+  });
+  it('leaves literal template text alone', () => {
+    expect(r('Point A is {a} steps away.', 'cave', { a: '5' })).toBe('Point A is 5 steps away.');
+  });
+});
+
+describe('renderTemplate question phrase after a comma (Trello 450)', () => {
+  const ctxQ: ContextData = {
+    themes: { cave: { item: ['gem/gems'] } },
+    characters: { names: ['Emma', 'Harper'] },
+    question_phrases: { remaining: ['What is left over?'], total: ['How many in all?'] },
+  };
+  const r = (tpl: string, math: Record<string, string>) => renderTemplate(tpl, math, ctxQ, 'cave', undefined, makeRng('s'));
+
+  it('lower-cases a question phrase that continues a sentence (reported case)', () => {
+    expect(r('{name} started with {a} {item}. After giving {b} to {name2}, {question_remaining}', { a: '800', b: '405' }))
+      .toMatch(/^\w+ started with 800 gems\. After giving 405 to \w+, what is left over\?$/);
+  });
+  it('keeps the capital where the question opens a sentence', () => {
+    expect(r('{a} {item}. {question_total}', { a: '5' })).toBe('5 gems. How many in all?');
+    expect(r('{question_total}', {})).toBe('How many in all?');
+  });
+});
+
+describe('renderTemplate "a group of {x}" (Trello 450)', () => {
+  const ctxG: ContextData = { themes: { catacomb: { monster: ['skeleton/skeletons'], item: ['urn/urns'] } } };
+  it('is plural after "a group of" (reported case)', () => {
+    expect(renderTemplate('A group of {monster} stole {a} {item}.', { a: '742' }, ctxG, 'catacomb', undefined, makeRng('s')))
+      .toBe('A group of skeletons stole 742 urns.');
+  });
+});

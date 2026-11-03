@@ -5,8 +5,18 @@ const PLACEHOLDER = /\{([a-z_0-9]+)\}/g; // lowercase-only by contract
 const MARKER = /\{~([^/}]+)\/([^}]+)\}/g;
 const NEXT_PLACEHOLDER = /^\s*\{([a-z_0-9]+)\}/; // lookahead for an apposed name slot
 const SINGULAR_WORDS = new Set(['a', 'an', 'each', 'every', 'the', 'one', '1']);
+// Flags a slot value that opens with a vowel sound, so the article before it can become "an".
+const AN_MARK = '';
+const AN_MARK_ALL = //g;
+// "a"/"A" right before a flagged slot. Group 1 tells a sentence-opening "A" from a label ("Point A").
+const ARTICLE_BEFORE_MARK = /(^|[.!?]["')\]]?\s+|\s)(a|A)(\s+)/g;
+// Vowel letter, consonant sound. Only words the shipped data puts after an article ("a unicorn hair").
+const VOWEL_LETTER_CONSONANT_SOUND = /^unicorn/i;
 
-/** Nearest preceding number in the same sentence wins; else a singular keyword; else plural (2). */
+/**
+ * Nearest cue in the same sentence wins: a number gives its count, a singular keyword gives 1,
+ * "of" gives plural ("a group of {x}", "a bag of {x}"). No cue: plural (2).
+ */
 export function pluralCount(before: string): number {
   // Cues do not carry across a sentence boundary: "... 1 more. How many {item}" is plural.
   const clause = before.slice(before.search(/[^.!?]*$/));
@@ -15,8 +25,14 @@ export function pluralCount(before: string): number {
     const t = (tokens[i] as string).replace(/[^\w-]/g, '');
     if (/^-?\d+$/.test(t)) return Math.abs(parseInt(t, 10));
     if (SINGULAR_WORDS.has(t)) return 1;
+    if (t === 'of') return 2;
   }
   return 2;
+}
+
+/** Does this value take "an"? By sound: a vowel letter, minus the data's "you"-sound words. */
+function opensWithVowelSound(value: string): boolean {
+  return /^[aeiou]/i.test(value) && !VOWEL_LETTER_CONSONANT_SOUND.test(value);
 }
 
 /** "gem/gems" -> singular if count === 1, else plural. No slash -> unchanged. */
@@ -124,8 +140,20 @@ export function renderTemplate(
     // ("guide Evelyn"), which is singular whatever the sentence counts.
     const ahead = NEXT_PLACEHOLDER.exec(full.slice(offset + m.length));
     const isTitle = ahead != null && nameBases.has((ahead[1] as string).replace(/\d+$/, ''));
-    return slash(val, isTitle ? 1 : pluralCount(full.slice(0, offset)));
+    const before = full.slice(0, offset);
+    let out = slash(val, isTitle ? 1 : pluralCount(before));
+    // Question phrases are written to open a sentence; after a comma they continue one
+    // ("After giving 405 to Harper, what is left over?").
+    if (key.startsWith('question_') && /,\s*$/.test(before)) out = out.charAt(0).toLowerCase() + out.slice(1);
+    return opensWithVowelSound(out) ? AN_MARK + out : out;
   });
+  // "a alcove" -> "an alcove". Only an article written directly before a slot changes, and a
+  // capital "A" only where it opens a sentence.
+  text = text
+    .replace(ARTICLE_BEFORE_MARK, (m, pre: string, art: string, gap: string) =>
+      art === 'A' && /^\s+$/.test(pre) ? m : `${pre}${art}n${gap}`,
+    )
+    .replace(AN_MARK_ALL, '');
 
   // Pass 3: inline {~singular/plural} markers.
   text = text.replace(MARKER, (_m, s: string, p: string, offset: number, full: string) =>
