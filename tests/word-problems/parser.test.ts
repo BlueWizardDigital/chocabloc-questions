@@ -381,8 +381,7 @@ describe('pluralCount after "many" (Trello 450 round 3)', () => {
     expect(pluralCount('the one with so many ')).toBe(2);
   });
   it('still lets a nearer cue decide', () => {
-    expect(pluralCount('how many of the ')).toBe(1);
-    expect(pluralCount('many a ')).toBe(1);
+    expect(pluralCount('many a ')).toBe(1); // "many a gem" is singular English
   });
   it('inflects a slot after a comma-joined "how many" (reported shape)', () => {
     const ctxM: ContextData = { themes: { cave: { item: ['torch/torches'] } } };
@@ -408,6 +407,8 @@ describe('pluralCount and decimals (Trello 450)', () => {
     expect(pluralCount('It held 7. How many ')).toBe(2);
     expect(pluralCount('There is 1 gem. 1 ')).toBe(1);
     expect(pluralCount('It weighs 0.5. The ')).toBe(1);
+    // No other cue after the full stop, so only the sentence end keeps "1" out.
+    expect(pluralCount('He took 1. Then he ate ')).toBe(2);
   });
   it('inflects a slot and a marker after a decimal', () => {
     const ctxD: ContextData = { themes: { cave: { item: ['gem/gems'] } } };

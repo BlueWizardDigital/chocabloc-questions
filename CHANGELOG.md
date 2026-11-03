@@ -10,7 +10,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 **Patch** (Trello 450, word-problem wording the math tester robot found in Adventure 101): no
 API change; the engine's wording rules and the bundled templates and context change. Operands and
 answers are unchanged. Every template that rendered still renders; some that never could now do,
-and DIV-2DIGIT-BY-1DIGIT-WITH-REMAINDER gains five advanced stories (see the last eight entries).
+and DIV-2DIGIT-BY-1DIGIT-WITH-REMAINDER gains five advanced stories (from "A slot inside a question
+phrase is filled" down).
 
 ### Fixed
 
@@ -71,15 +72,27 @@ and DIV-2DIGIT-BY-1DIGIT-WITH-REMAINDER gains five advanced stories (see the las
   entries (ADD-*, SUB-FROM-10, SUB-WITHIN-5, MISSING-ADDEND-WITHIN-10, DIV-*, FRAC-OF-QUANTITY,
   MULT-*, RATIO-BASIC, RATIO-PROPORTIONS, UNIT-RATE-BASIC) never rendered. They use `{ingredient}`
   now. Where the story did not ask what the answer answers, it was reworded: the SUB-FROM-10 and
-  SUB-WITHIN-5 copies of an addition story subtract, the MISSING-ADDEND-WITHIN-10 copy asks how many
-  more, the RATIO-BASIC stories ask for the ratio in simplest form (23 of its 54 bank answers are
-  simplified), and the RATIO-PROPORTIONS endings name the potion. FRAC-OF-QUANTITY,
-  MISSING-ADDEND-WITHIN-10, RATIO-PROPORTIONS and UNIT-RATE-BASIC still never reach a template from
-  a bank row: their rows carry no operands the engine can read.
+  SUB-WITHIN-5 copies of an addition story subtract, and the RATIO-PROPORTIONS endings name the
+  potion. FRAC-OF-QUANTITY, RATIO-PROPORTIONS and UNIT-RATE-BASIC still never reach a template from
+  a bank row: their rows carry no operands the engine can read. The MISSING-ADDEND-WITHIN-10 copy
+  now reads as a missing-addend story, but it cannot render: like every template for that skill it
+  needs `{result}`, which the engine does not show.
+- **Every RATIO-BASIC story asks for the ratio in simplest form**, in every theme. All 54 stored
+  answers are a:b divided by their greatest common factor (23 differ from a:b), and the unsimplified
+  form ("10:10") is listed as a wrong choice.
 - **DIV-2DIGIT-BY-1DIGIT-WITH-REMAINDER at advanced in every theme.** Cave, forest, catacomb,
   mountain and docks each get a story that shares {a} among {b} and asks "How many does each get,
   and how many are left over?" (docks: "How many go in each {container}, …"). Only potion had
   advanced stories, so the other five themes showed plain text there.
+- **Final pass.** A slot word written bare after a count takes its slot ("{b} {specialty}",
+  "{b} {container}", "Had {a} {ingredient}"). MULT-FACTS-13-15's potion stories end with a product
+  question, not "What is the sum?". No sentence opens in lower case: "They {verb_loss} {b}.",
+  "If the radius…", "If two sides…", and "{name}, a {role}, …" where a story opened with
+  "{role} {name}". Counts decide "{~group/groups}", "{~shelf/shelves}", "{~pack/packs}" and
+  "{~inch/inches}" (was "1 shelves", "1 inches"). DEC-TO-PERCENT reads right for the value 1 ("As
+  a decimal, the amount of the cauldron filled is 1. What percent of the cauldron is filled?"). The
+  compare stories about two places or two sides compare counts: "Which sign compares the number of
+  gems in the cavern to the number in the tunnel".
 
 ## [0.7.0-beta.3] — 2026-10-28
 

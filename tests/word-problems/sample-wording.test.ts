@@ -82,6 +82,8 @@ const DEFECTS: Array<[string, RegExp]> = [
   ['R2.6 a name read as a title after "of {specialty}"', /amount of [a-z -]+(?<!that) [A-Z][a-z]+ could brew/],
   ['R2.7 "purcahsed" or a lower-case sentence start', /purcahsed|[.!?] a group of/],
   ['R2.8 "bigfoot" with no plural', /bigfoot/],
+  ['R4 a lower-case sentence start', /[.!?] [a-z]/],
+  ['R4 a compare question about places, not counts', /Which sign compares the (?!first |number of )/],
 ];
 
 const engine = createWordProblemEngine({ templates: sampleTemplates, context: sampleContext });
@@ -149,7 +151,7 @@ describe('sample data wording (Trello 450)', () => {
   it('words the skills whose templates never rendered, in every theme, asking what the answer answers', () => {
     const asks: Record<string, RegExp> = {
       'DEC-TO-FRAC': /^Convert 0\.125 to a fraction\.$/,
-      'DEC-TO-PERCENT': /^Convert 0\.15 to a percent\.$|fill 0\.15 of an? [a-z ]+\. What percent of the [a-z ]+ is filled\?$/,
+      'DEC-TO-PERCENT': /^Convert 0\.15 to a percent\.$|into an? [a-z ]+\. As a decimal, the amount of the [a-z ]+ filled is 0\.15\. What percent of the [a-z ]+ is filled\?$/,
       'PERCENT-TO-DECIMAL': /^Convert 11% to a decimal\.$|fill 11% of an? [a-z ]+\. As a decimal, how much of the [a-z ]+ is filled\?$/,
     };
     for (const r of ROWS.filter((x) => x.skill in asks)) {
@@ -223,6 +225,81 @@ describe('template agreement and coverage (Trello 450 round 3)', () => {
       for (let seed = 0; seed < 10; seed++) {
         const text = render(r, theme, seed, 'advanced');
         expect(text, `${theme} ${seed}`).toMatch(/\b10\b.*\b3\b.*How many .*each.*, and how many (are left( over)?|remain)\?$/);
+      }
+    }
+  });
+});
+
+describe('template source and meaning checks (Trello 450 final pass)', () => {
+  const themeVocab = sampleContext.themes ?? {};
+  // Slots whose words are lower-case: theme pools, roles and the like, and verbs. Not names,
+  // question phrases (written capitalised) or math slots (numbers).
+  const lowerSlots = new Set<string>([
+    ...Object.values(themeVocab).flatMap((t) => Object.keys(t)),
+    ...Object.keys(sampleContext.characters ?? {}).filter((k) => k !== 'names').flatMap((k) => [k, k.replace(/s$/, '')]),
+  ]);
+  const opensLower = (slot: string) => lowerSlots.has(slot.replace(/\d+$/, '')) || slot.startsWith('verb_');
+
+  it('opens every sentence with a capital, in the template text', () => {
+    const found = ALL_TEMPLATES.filter(({ text }) =>
+      [...text.matchAll(/(^|[.!?]\s+)(?:\{([a-z_0-9]+)\}|([a-z]))/g)].some((m) => (m[2] ? opensLower(m[2]) : !!m[3])),
+    ).map(({ where, text }) => `${where}: ${text}`);
+    expect(found).toEqual([]);
+  });
+
+  it('never writes a slot-pool word bare after a count ("{b} specialty")', () => {
+    const words = [...lowerSlots].flatMap((b) => [b, `${b}s`, b.replace(/y$/, 'ies')]).map((w) => w.replace('_', '[ _]'));
+    const bare = new RegExp(`\\{(?:[a-f]|number|result|value)\\}(?: more| small| extra| equal)? (?:${words.join('|')})\\b`);
+    expect(ALL_TEMPLATES.filter(({ text }) => bare.test(text)).map(({ where, text }) => `${where}: ${text}`)).toEqual([]);
+  });
+
+  it('puts {a} before {b} in every compare story, so "<" still means a < b', () => {
+    const found = ALL_TEMPLATES.filter(({ where, text }) => /COMPARE/.test(where) && text.includes('{a}') && text.includes('{b}'))
+      .filter(({ text }) => text.indexOf('{a}') > text.indexOf('{b}'))
+      .map(({ where, text }) => `${where}: ${text}`);
+    expect(found).toEqual([]);
+  });
+
+  it('uses each ending pool only in the skills it answers', () => {
+    const owner: Record<string, RegExp> = {
+      question_total: /(^|-)ADD-/,
+      question_remaining: /(^|-)SUB-/,
+      question_product: /^MULT-/,
+      question_each: /^DIV-/,
+    };
+    const found = ALL_TEMPLATES.flatMap(({ where, text }) =>
+      Object.entries(owner)
+        .filter(([slot, skills]) => text.includes(`{${slot}}`) && !skills.test(where.split(' ')[0] as string))
+        .map(([slot]) => `${where} uses {${slot}}: ${text}`),
+    );
+    expect(found).toEqual([]);
+  });
+
+  it('subtracts in the potion SUB-FROM-10 and SUB-WITHIN-5 stories', () => {
+    const totals = /How many in all\?|How many altogether\?|What is the total\?|What is the sum\?|How many are there now\?| and \d+ more\b/;
+    for (const r of [
+      { skill: 'SUB-FROM-10', op: 'subtraction', ops: [10, 7] },
+      { skill: 'SUB-WITHIN-5', op: 'subtraction', ops: [4, 1] },
+    ]) {
+      let reworded = 0;
+      for (let seed = 0; seed < 60; seed++) {
+        const text = render(r, 'potion', seed, 'beginner') as string;
+        expect(text, r.skill).not.toMatch(totals);
+        if (/ (is|are) used for a potion\. /.test(text)) reworded++;
+      }
+      expect(reworded, `${r.skill} reaches its subtraction story`).toBeGreaterThan(0);
+    }
+  });
+
+  it('asks for the ratio in simplest form in every RATIO-BASIC story', () => {
+    // 23 of the 54 stored answers are simplified ("10:10" is a wrong choice, "1:1" the answer).
+    const r = { skill: 'RATIO-BASIC', op: 'ratio', ops: [2, 8] };
+    for (const theme of themes) {
+      for (const difficulty of ['beginner', 'intermediate', 'advanced'] as const) {
+        for (let seed = 0; seed < 20; seed++) {
+          const text = render(r, theme, seed, difficulty);
+          if (text !== undefined) expect(text, `${theme} ${difficulty}`).toMatch(/simplest form/);
+        }
       }
     }
   });
