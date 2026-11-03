@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.7.0-beta.4] — 2026-11-03
+
 **Patch** (Trello 450, word-problem wording the math tester robot found in Adventure 101): no
 API change; the engine's wording rules and the bundled templates and context change. Operands,
 answers and which templates a skill can pick are unchanged.
