@@ -116,7 +116,7 @@
     ],
     "intermediate": [
       "{name} observed {a} {monster} in one {location} and {b} {monster} in another. How many {monster} did {name} observe?",
-      "The first {container} held {a} {item}. The second held {b}. {question_total}",
+      "The first {container} held {a} {item}. The second held {b}. When combined, how many are there in total?",
       {
         "template": "{name} found {a} {ingredient} in one {location} and {b} in the {location2}. {question_total}",
         "themes": [
@@ -223,10 +223,10 @@
       }
     ],
     "intermediate": [
-      "The expedition found {a} {item} in week one and {b} in week two. {question_total}",
+      "The expedition found {a} {item} in week one and {b} in week two. How many did they find in all?",
       "{name} recorded {a} {item}. {name2} recorded {b}. How many did they record total?",
       {
-        "template": "The {location} produced {a} {specialty} in week one and {b} in week two. {question_total}",
+        "template": "The {location} produced {a} {specialty} in week one and {b} in week two. How many did it produce in all?",
         "themes": [
           "potion"
         ]
@@ -261,7 +261,7 @@
     ],
     "intermediate": [
       "{name} observed {a} {monster} in one {location} and {b} {monster} in another. How many {monster} did {name} observe?",
-      "The first {container} held {a} {item}. The second held {b}. {question_total}",
+      "The first {container} held {a} {item}. The second held {b}. When combined, how many are there in total?",
       {
         "template": "{name} found {a} {ingredient} in one {location} and {b} in the {location2}. {question_total}",
         "complexity": [],
@@ -429,7 +429,7 @@
     ],
     "intermediate": [
       "{name} observed {a} {monster} in one {location} and {b} {monster} in another. How many {monster} did {name} observe?",
-      "The first {container} held {a} {item}. The second held {b}. {question_total}",
+      "The first {container} held {a} {item}. The second held {b}. When combined, how many are there in total?",
       {
         "template": "{name} found {a} {ingredient} in one {location} and {b} in the {location2}. {question_total}",
         "complexity": [],
@@ -749,7 +749,7 @@
     ],
     "intermediate": [
       "{name} has {a} {item}. {name2} has {b} {item}. How does {name}'s {item} compare to {name2}'s?",
-      "One {container} has {a} {item}. Another has {b}. How does the 1st container compare to the 2nd?",
+      "One {container} has {a} {item}. Another has {b}. Which sign compares the first {container} to the second: <, >, or =?",
       {
         "template": "{name} brewed {a} {specialty}. {name2} brewed {b}. How does {name}'s batch compare to {name2}'s?",
         "themes": [
@@ -757,7 +757,7 @@
         ]
       },
       {
-        "template": "One {container} has {a} {ingredient}. Another has {b}. How does the 1st container compare to the 2nd?",
+        "template": "One {container} has {a} {ingredient}. Another has {b}. Which sign compares the first {container} to the second: <, >, or =?",
         "themes": [
           "potion"
         ]
@@ -873,9 +873,9 @@
   },
   "DEC-ADD-DECIMALS": {
     "beginner": [
-      "{a} {item} + {b} {item} = ?",
+      "{a} kg of {item} + {b} kg of {item} = ?",
       {
-        "template": "{a} {ingredient} + {b} {ingredient} = ?",
+        "template": "{a} g of {ingredient} + {b} g of {ingredient} = ?",
         "complexity": [],
         "themes": [
           "potion"
@@ -883,9 +883,9 @@
       }
     ],
     "intermediate": [
-      "While taking stock of their supplies, {name} found they had one bag with {a} {item} and another bag with {b} {item}. How many {item} did they have in total?",
+      "While taking stock of their supplies, {name} found they had one bag with {a} kg of {item} and another bag with {b} kg of {item}. How many kilograms of {item} did they have in total?",
       {
-        "template": "{name} brewed {a} {container} of {specialty}, while {name2} brewed {b}. How many did they brew together?",
+        "template": "{name} brewed {a} L of {specialty}, while {name2} brewed {b} L. How many liters did they brew together?",
         "complexity": [],
         "themes": [
           "potion"
@@ -897,16 +897,16 @@
   "DEC-DIV-WHOLE-BY-DECIMAL": {
     "beginner": [
       "{a} \u00f7 {b} = ?",
-      "{a} {item} put into {b} groups. How many in each group?",
+      "{a} kg of {item} are packed into bags of {b} kg each. How many bags does that fill?",
       {
-        "template": "{a} {ingredient} used in {b} specialty. How many {ingredient} in each?",
+        "template": "{a} g of {ingredient} are split into portions of {b} g each. How many portions are there?",
         "complexity": [],
         "themes": [
           "potion"
         ]
       },
       {
-        "template": "{a} {specialty} in {b} {container}. How many {specialty} in each?",
+        "template": "{a} L of {specialty} are poured into {container} that hold {b} L each. How many {container} does that fill?",
         "complexity": [],
         "themes": [
           "potion"
@@ -918,17 +918,17 @@
   },
   "DEC-MULT-WHOLE-BY-DECIMAL": {
     "beginner": [
-      "{a} {item} \u00d7 {b} = ?",
-      "{a} {location} have {b} {item} each. How many {item} total?",
+      "{a} {~bag/bags} of {item}, {b} kg each. How many kilograms in all?",
+      "{a} {location} {~has/have} {b} kg of {item} each. How many kilograms of {item} in total?",
       {
-        "template": "{a} {specialty} in {b} {container}. How many {specialty} total?",
+        "template": "{a} {container} {~holds/hold} {b} L of {specialty} each. How many liters in total?",
         "complexity": [],
         "themes": [
           "potion"
         ]
       },
       {
-        "template": "{name} brews {a} {specialty} using {b} {ingredient} each. How many {ingredient} total?",
+        "template": "{name} brews {a} {specialty}, using {b} g of {ingredient} for each one. How many grams of {ingredient} in total?",
         "complexity": [],
         "themes": [
           "potion"
@@ -982,7 +982,7 @@
     ],
     "intermediate": [
       "{name} has {a} {item} to pack into {b} {container}. Each {container} gets the same amount. {question_each}",
-      "The {location} has {a} {item}. They need to go into {b} equal piles. {question_each}",
+      "The {location} has {a} {item}. They need to go into {b} equal piles. How many in each pile?",
       {
         "template": "{name} has {a} {specialty} to pack into {b} {container}. Each gets the same amount. {question_each}",
         "themes": [
@@ -990,17 +990,17 @@
         ]
       },
       {
-        "template": "The {location} has {a} {ingredient}. Sort into {b} equal piles for potion batches. {question_each}",
+        "template": "The {location} has {a} {ingredient}. Sort into {b} equal piles for potion batches. How many in each pile?",
         "themes": [
           "potion"
         ]
       }
     ],
     "advanced": [
-      "{name} is helping the {role} organize the {location}. There are {a} {item} that need to be sorted into {b} equal {container}. {question_each}",
+      "{name} is helping the {role} organize the {location}. There are {a} {item} that need to be sorted into {b} equal {container}. How many go in each {container}?",
       "For the event, {a} {item} arrived at the {location}. {name} must divide them equally among {b} stations. Each station is in a different area. {question_each}",
       {
-        "template": "{name} is helping the wizard organize the {location}. There are {a} {specialty} that need to be sorted into {b} equal {container}. {question_each}",
+        "template": "{name} is helping the wizard organize the {location}. There are {a} {specialty} that need to be sorted into {b} equal {container}. How many go in each {container}?",
         "themes": [
           "potion"
         ]
@@ -1075,8 +1075,8 @@
       }
     ],
     "intermediate": [
-      "The {location} has {a} {item}. They need to go into {b} equal piles. {question_each}",
-      "{name} and their friends find {a} {item}. If they split the {item} equally {b} ways, how many does each friend get?",
+      "The {location} has {a} {item}. They need to go into {b} equal piles. How many in each pile?",
+      "{name} and their friends find {a} {item}. If they split them equally {b} ways, how many does each friend get?",
       {
         "template": "{name} has {a} {specialty} to pack into {b} {container}. Each gets the same amount. {question_each}",
         "complexity": [],
@@ -1093,10 +1093,10 @@
       }
     ],
     "advanced": [
-      "{name} is helping the {role} organize the {location}. There are {a} {item} that need to be sorted into {b} equal {container}. {question_each}",
+      "{name} is helping the {role} organize the {location}. There are {a} {item} that need to be sorted into {b} equal {container}. How many go in each {container}?",
       "{role} {name} has gathered {a} {item} at the {location}. If they gathered {b} {item} every day, how many days did it take them to gather them all?",
       {
-        "template": "{name} is helping the wizard organize the {location}. There are {a} {specialty} that need to be sorted into {b} equal {container}. {question_each}",
+        "template": "{name} is helping the wizard organize the {location}. There are {a} {specialty} that need to be sorted into {b} equal {container}. How many go in each {container}?",
         "complexity": [],
         "themes": [
           "potion"
@@ -1154,9 +1154,9 @@
     ],
     "intermediate": [
       "{name} has {a} {item} to pack into {b} {container}. Each {container} gets the same amount. {question_each}",
-      "A stampede of {a} {animal} is running by the {location}. They stop to rest and break into {b} groups. How many {animal} in each group?",
+      "A group of {a} {animal} passes by the {location}. They stop to rest and break into {b} groups. How many {animal} in each group?",
       {
-        "template": "The {location} has {a} {ingredient}. Sort into {b} equal piles for potion batches. {question_each}",
+        "template": "The {location} has {a} {ingredient}. Sort into {b} equal piles for potion batches. How many in each pile?",
         "complexity": [],
         "themes": [
           "potion"
@@ -1207,16 +1207,16 @@
       }
     ],
     "intermediate": [
-      "There are {a} {item}. They are put into {b} equal groups. {question_each}",
+      "There are {a} {item}. They are put into {b} equal groups. How many in each group?",
       "{name} wants to share {a} {item} equally among {b} {recipient}. {question_each}",
       {
-        "template": "{name} brewed {a} {specialty} to share among {b} apprentices. {question_each}",
+        "template": "{name} brewed {a} {specialty} to share among {b} apprentices. How many does each apprentice get?",
         "themes": [
           "potion"
         ]
       },
       {
-        "template": "The {container} holds {a} {item}. Divide into {b} equal batches for potions. {question_each}",
+        "template": "The {container} holds {a} {item}. Divide into {b} equal batches for potions. How many in each batch?",
         "themes": [
           "potion"
         ]
@@ -1236,16 +1236,16 @@
       }
     ],
     "intermediate": [
-      "{name} has {a} {item} to divide into {b} equal groups. {question_each}",
-      "The {container} holds {a} {item}. Split into {b} equal piles. {question_each}",
+      "{name} has {a} {item} to divide into {b} equal groups. How many in each group?",
+      "The {container} holds {a} {item}. Split into {b} equal piles. How many in each pile?",
       {
-        "template": "{name} has {a} {specialty} to divide into {b} equal shipments. {question_each}",
+        "template": "{name} has {a} {specialty} to divide into {b} equal shipments. How many in each shipment?",
         "themes": [
           "potion"
         ]
       },
       {
-        "template": "The {container} holds {a} {item}. Split into {b} batches for brewing. {question_each}",
+        "template": "The {container} holds {a} {item}. Split into {b} batches for brewing. How many in each batch?",
         "themes": [
           "potion"
         ]
@@ -1253,13 +1253,13 @@
     ],
     "advanced": [
       {
-        "template": "{name} organized {a} {specialty} in the {location}. They needed to be divided into {b} equal displays for the market. {question_each}",
+        "template": "{name} organized {a} {specialty} in the {location}. They needed to be divided into {b} equal displays for the market. How many in each display?",
         "themes": [
           "potion"
         ]
       },
       {
-        "template": "The wizard's {container} held {a} {item}. {name} needed to sort them into {b} equal portions for different potion recipes. {question_each}",
+        "template": "The wizard's {container} held {a} {item}. {name} needed to sort them into {b} equal portions for different potion recipes. How many in each portion?",
         "themes": [
           "potion"
         ]
@@ -1434,8 +1434,8 @@
       }
     ],
     "intermediate": [
-      "A group of {monster} threw a party. They had {a} dishes of food and ate {b}. How many dishes of leftovers did the {monster} send home with their guests?",
-      "A group of {monster} stole {a} {item} for their boss. Some adventurers reclaimed {b} {item}. How many were the {monster} able to present?",
+      "A group of {monster} threw a party. They had {a} dishes of food and ate {b}. How many dishes of leftovers did those {monster} send home with their guests?",
+      "A group of {monster} stole {a} {item} for their boss. Some adventurers reclaimed {b} {item}. How many were those {monster} able to present?",
       {
         "template": "{name} had {a} {ingredient}, but used {b} to make some {specialty}. How many {ingredient} did {name} have leftover?",
         "complexity": [],
@@ -2919,7 +2919,7 @@
     ],
     "intermediate": [
       "{name} had {a} {item}. {name} {verb_loss} {b}. {question_remaining}",
-      "The {container} held {a} {item}. {b} were removed. {question_remaining}",
+      "The {container} held {a} {item}. {b} {~was/were} removed. {question_remaining}",
       {
         "template": "{name} had {a} {specialty}. Sold {b} to travelers. {question_remaining}",
         "themes": [
@@ -3027,7 +3027,7 @@
     ],
     "intermediate": [
       "{name} collected {a} {item}. After giving away {b}, how many remain?",
-      "The {container} held {a} {item}. {b} were removed. {question_remaining}",
+      "The {container} held {a} {item}. {b} {~was/were} removed. {question_remaining}",
       {
         "template": "{name} brewed {a} {specialty}. After giving away {b}, {question_remaining}",
         "themes": [
@@ -3064,7 +3064,7 @@
     ],
     "intermediate": [
       "{name} found {a} {item} but could only carry {b} in their {container}. How many did {name} leave behind?",
-      "{a} {monster} arrived at {location} but only {b} could fit. How many {monster} had to go home?",
+      "{a} {monster} arrived at the {location} but only {b} could fit. How many {monster} had to go home?",
       {
         "template": "{name} had {a} {ingredient}, but used {b} to make some {specialty}. How many {ingredient} did {name} have leftover?",
         "complexity": [],
@@ -3102,8 +3102,8 @@
       }
     ],
     "intermediate": [
-      "A group of {monster} threw a party. They had {a} dishes of food and ate {b}. How many dishes of leftovers did the {monster} send home with their guests?",
-      "A group of {monster} stole {a} {item} for their boss. Some adventurers reclaimed {b} {item}. How many were the {monster} able to present?",
+      "A group of {monster} threw a party. They had {a} dishes of food and ate {b}. How many dishes of leftovers did those {monster} send home with their guests?",
+      "A group of {monster} stole {a} {item} for their boss. Some adventurers reclaimed {b} {item}. How many were those {monster} able to present?",
       {
         "template": "{name} had {a} {ingredient}, but used {b} to make some {specialty}. How many {ingredient} did {name} have leftover?",
         "complexity": [],
@@ -3198,7 +3198,7 @@
     ],
     "intermediate": [
       "{name} had {a} {item}. {name} {verb_loss} {b}. {question_remaining}",
-      "The {container} held {a} {item}. {b} were removed. {question_remaining}",
+      "The {container} held {a} {item}. {b} {~was/were} removed. {question_remaining}",
       {
         "template": "{name} had {a} {specialty}. Sold {b} to travelers. {question_remaining}",
         "complexity": [],
@@ -3460,7 +3460,7 @@
     ],
     "intermediate": [
       "{name} had {a} {item} in the {container}. They {verb_loss} {b}. {question_remaining}",
-      "The {location} contained {a} {item}. {b} were removed. {question_remaining}",
+      "The {location} contained {a} {item}. {b} {~was/were} removed. {question_remaining}",
       {
         "template": "{name} had {a} {specialty} in the {container}. Sold {b} to travelers. {question_remaining}",
         "themes": [

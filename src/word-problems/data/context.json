@@ -1210,7 +1210,6 @@
         "gave away",
         "used",
         "dropped",
-        "shared",
         "donated",
         "misplaced"
       ],
@@ -1302,11 +1301,7 @@
       "How many less?"
     ],
     "each": [
-      "How many does each get?",
-      "How many in each group?",
-      "How many per {container}?",
-      "How much for each explorer?",
-      "What does each one receive?"
+      "How many does each get?"
     ],
     "groups": [
       "How many groups?",
@@ -1318,8 +1313,7 @@
     "product": [
       "How many in all?",
       "What is the total?",
-      "How many altogether?",
-      "What is the product?"
+      "How many altogether?"
     ],
     "measurement": [
       "What is the length?",

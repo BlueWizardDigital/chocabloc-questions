@@ -3,6 +3,38 @@
 All notable changes to chocabloc-questions are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+**Patch** (Trello 450, word-problem wording the math tester robot found in Adventure 101): no
+API change; the engine's wording rules and the bundled templates and context change. Operands,
+answers and which templates a skill can pick are unchanged.
+
+### Fixed
+
+- **"an" before a vowel sound.** An article written directly before a slot now follows the
+  slot's sound: "sees 1 glowworm in an alcove", "An apothecary shop…". A capital "A" changes only
+  where it opens a sentence ("Point A" is a label). "a unicorn hair" stays "a". Literal template
+  text is left as written.
+- **A question after a comma continues the sentence.** "After giving 405 to Harper, what is left
+  over?" The question phrases are still written to open a sentence, and keep their capital there.
+- **Plural after "of".** "A group of skeletons", "a bag of gems", "the ratio of gems to
+  crystals". A nearer number or "the" still decides ("A group of 1 bat", "the edge of the
+  cavern"), so "the {location}" stays singular. Side effect: "A triangular bottle of luck
+  potions" (was "…luck potion") in two GEOM-VOLUME-TRIANGULAR-PRISM potion templates.
+- **Templates and pools:** "What is the product?" removed from the product endings; the "each"
+  pool keeps only "How many does each get?", and stories that split into piles, groups, batches,
+  shipments, displays, portions, apprentices or a `{container}` name that in their own ending;
+  "arrived at the {location}"; "A group of {a} {animal} passes by…" (was "A stampede…");
+  "1 was removed"; "those {monster}"; "split them equally"; "shared" removed from the loss verbs;
+  "How many did they find in all?", "When combined, how many are there in total?"; the
+  COMPARE-NUMBERS-WITHIN-100 container story asks "Which sign compares the first {container} to
+  the second: <, >, or =?". The decimal templates (DEC-ADD, DEC-DIV, DEC-MULT) measure in kg, g or
+  L instead of counting "19.32 coins".
+- **A dead "each" phrase is gone.** "How many per {container}?" could never render (the engine does
+  not fill a slot inside a question phrase), so drawing it threw the whole template away. About 1
+  in 5 DIV-BASIC-DIVISION-FACTS questions, in every theme, fell back to plain text for that
+  reason; they are now worded.
+
 ## [0.7.0-beta.3] — 2026-10-28
 
 **Minor**: a new `chocabloc-questions/lesson` entry point; nothing renamed or removed. Only the
