@@ -300,3 +300,100 @@ describe('renderTemplate "a group of {x}" (Trello 450)', () => {
       .toBe('A group of skeletons stole 742 urns.');
   });
 });
+
+// A slot inside a question phrase used to stay unfilled, so the whole template was thrown away.
+describe('renderTemplate slots inside a question phrase (Trello 450)', () => {
+  const ctxP: ContextData = {
+    themes: { cave: { item: ['gem/gems', 'ruby/rubies'], container: ['chest/chests', 'sack/sacks'] } },
+    characters: { names: ['Emma', 'Liam', 'Olivia'] },
+    question_phrases: {
+      total: ['How many does {name} have now?', 'How many in all?'],
+      groups: ['How many {container}?'],
+      only_slot: ['How many does {name} have now?'],
+    },
+  };
+  const r = (tpl: string, seed: string, math: Record<string, string> = { a: '5', b: '3' }) =>
+    renderTemplate(tpl, math, ctxP, 'cave', undefined, makeRng(seed));
+  const seeds = Array.from({ length: 40 }, (_, i) => `s${i}`);
+
+  it('fills the slot with the word the story bound', () => {
+    const outs = seeds.map((s) => r('{name} has {a} {item} and finds {b} more. {question_total}', s));
+    const filled = outs.filter((o) => o && /have now\?$/.test(o));
+    expect(filled.length).toBeGreaterThan(0); // the phrase is drawn, not thrown away
+    for (const o of filled) {
+      const [, story, asked] = /^(\w+) has .* How many does (\w+) have now\?$/.exec(o as string)!;
+      expect(asked).toBe(story);
+    }
+  });
+
+  it('fills a phrase that comes before the story slot with the same word', () => {
+    for (const s of seeds) {
+      const o = r('{question_only_slot} {name} had {a} {item}.', s) as string;
+      const [, asked, story] = /^How many does (\w+) have now\? (\w+) had 5 \w+\.$/.exec(o)!;
+      expect(story).toBe(asked);
+    }
+  });
+
+  it('inflects the slot for its place in the phrase', () => {
+    for (const s of seeds) {
+      const o = r('{name} packs {a} {item} into {b} {container}. {question_groups}', s) as string;
+      const [, story, asked] = /into 3 (\w+)\. How many (\w+)\?$/.exec(o)!;
+      expect(asked).toBe(story); // "How many sacks?" names the same, plural, word
+    }
+  });
+
+  it('skips a phrase whose slot the story never bound, and never adds a new name', () => {
+    for (const s of seeds) {
+      const o = r('There are {a} {item}. {b} more arrive. {question_total}', s);
+      expect(o).toMatch(/^There are 5 \w+\. 3 more arrive\. How many in all\?$/);
+    }
+  });
+
+  it('returns null only when no phrase in the pool can be used', () => {
+    expect(r('There are {a} {item}. {question_only_slot}', 's1')).toBeNull();
+  });
+
+  it('fills a math slot inside a phrase with the story number', () => {
+    const ctxM: ContextData = { themes: { cave: { item: ['gem/gems'] } }, question_phrases: { more: ['How many more than {a}?'] } };
+    expect(renderTemplate('{a} {item} and {b} more. {question_more}', { a: '5', b: '3' }, ctxM, 'cave', undefined, makeRng('s')))
+      .toBe('5 gems and 3 more. How many more than 5?');
+  });
+
+  it('reuses a fitting phrase when every fitting one is already used', () => {
+    for (const s of seeds) {
+      expect(r('There are {a} {item}. {question_total} {question_total2}', s))
+        .toBe(r('There are {a} {item}. {question_total} {question_total2}', s)); // deterministic
+      expect(r('There are {a} {item}. {question_total} {question_total2}', s)).toMatch(/How many in all\? How many in all\?$/);
+    }
+  });
+
+  it('gives up on the template when the bound slot itself has no words', () => {
+    const ctxN: ContextData = { themes: { cave: {} }, question_phrases: { total: ['How many {thing}?'] } };
+    expect(renderTemplate('{a} {thing}. {question_total}', { a: '5' }, ctxN, 'cave', undefined, makeRng('s'))).toBeNull();
+  });
+});
+
+// "0.1" and "3.1" used to read as a count of 1: the decimal point was taken as a sentence end.
+describe('pluralCount and decimals (Trello 450)', () => {
+  it('reads a decimal number as plural', () => {
+    expect(pluralCount('weighs 0.1 ')).toBe(2);
+    expect(pluralCount('found 3.1 ')).toBe(2);
+    expect(pluralCount('pours 1.0 ')).toBe(2);
+    expect(pluralCount('costs $0.01 ')).toBe(2);
+  });
+  it('does not end a sentence at a decimal point', () => {
+    // Read as a sentence end, the "1" after the point would be the nearest cue.
+    expect(pluralCount('Each sack holds 2.1 more ')).toBe(2);
+    expect(pluralCount('Each of the 4.1 kg ')).toBe(2);
+  });
+  it('still ends a sentence at a full stop after a number', () => {
+    expect(pluralCount('It held 7. How many ')).toBe(2);
+    expect(pluralCount('There is 1 gem. 1 ')).toBe(1);
+    expect(pluralCount('It weighs 0.5. The ')).toBe(1);
+  });
+  it('inflects a slot and a marker after a decimal', () => {
+    const ctxD: ContextData = { themes: { cave: { item: ['gem/gems'] } } };
+    expect(renderTemplate('{a} {item} and {b} {~kilogram/kilograms}.', { a: '3.1', b: '0.1' }, ctxD, 'cave', undefined, makeRng('s')))
+      .toBe('3.1 gems and 0.1 kilograms.');
+  });
+});

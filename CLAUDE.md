@@ -78,6 +78,8 @@ Wording rules in `parser.ts` (Trello 450):
 - Write question phrases capitalised; the engine lower-cases one that follows a comma.
 - "a {slot}" becomes "an" before a vowel sound: "a" stays before a "you" or "w" sound ("a uniform", "a one-eyed troll"), and a silent h takes "an" ("an hour").
 - "of" before a slot makes it plural ("a group of skeletons"), unless a nearer number or "the" decides.
+- A slot inside a question phrase takes the word the story bound for it; a phrase naming a slot the story never bound is skipped and another drawn. A shared pool phrase must still fit every template that can draw it, so check before adding one with a slot.
+- A decimal ("0.1", "3.1") is plural, and the point between its digits is not a sentence end.
 
 ### Tree-shaking
 
