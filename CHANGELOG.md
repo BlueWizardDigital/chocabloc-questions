@@ -8,8 +8,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [0.7.0-beta.4] — 2026-11-03
 
 **Patch** (Trello 450, word-problem wording the math tester robot found in Adventure 101): no
-API change; the engine's wording rules and the bundled templates and context change. Operands,
-answers and which templates a skill can pick are unchanged.
+API change; the engine's wording rules and the bundled templates and context change. Operands and
+answers are unchanged. Every template that rendered still renders; some that never could now do
+(see the last five entries).
 
 ### Fixed
 
@@ -33,10 +34,30 @@ answers and which templates a skill can pick are unchanged.
   COMPARE-NUMBERS-WITHIN-100 container story asks "Which sign compares the first {container} to
   the second: <, >, or =?". The decimal templates (DEC-ADD, DEC-DIV, DEC-MULT) measure in kg, g or
   L instead of counting "19.32 coins".
-- **A dead "each" phrase is gone.** "How many per {container}?" could never render (the engine does
+- **A dead "each" phrase is gone.** "How many per {container}?" could never render (the engine did
   not fill a slot inside a question phrase), so drawing it threw the whole template away. About 1
   in 5 DIV-BASIC-DIVISION-FACTS questions, in every theme, fell back to plain text for that
   reason; they are now worded.
+- **A slot inside a question phrase is filled.** It takes the word the story bound for that slot
+  ("How many {container}?" after "into 3 sacks" asks "How many sacks?"). A phrase naming a slot the
+  story never bound is skipped and another is drawn, so a phrase never brings in a new name or
+  object, never shows `{result}` unless the template does, and never throws a template away.
+  "How many does {name} have now?" left the total and remaining endings: in 14 of the 47 templates
+  it could join, the answer is a container's or a group's count, not that person's.
+- **A decimal is plural, and its point is not a sentence end.** "0.1 kilograms", "3.1 gems" (they
+  read as a count of 1). No bundled template changes wording from this; it guards new ones.
+- **Templates that could never render now do.** DEC-TO-FRAC ("Convert 0.125 to a fraction."),
+  DEC-TO-PERCENT and PERCENT-TO-DECIMAL named their target as `{target}`, which no pool fills; they
+  now say "fraction", "percent" or "decimal", and their stories read "{name} used {ingredient} to
+  fill {value} of a {container}. What percent of the {container} is filled?". The two sharing
+  stories that used `{recipient}` share among a `{role}`. The potion batch and portion stories
+  (DIV-BASIC-DIVISION-FACTS, DIV-BASIC-WITHIN-100-NO-REMAINDER) use `{ingredient}`: potion has no
+  `{item}`.
+- **Compare questions ask for the sign.** Every COMPARE-NUMBERS-WITHIN-100 and -1000 story keeps
+  one object word and asks "Which sign compares … to …: <, >, or =?", first value first.
+- **Smaller fixes:** "the greatest amount of {specialty} that {name} could brew" (the name read as a
+  title: "of flying potion Charlotte"); "A group of {role} purchased" (was "a group of … purcahsed");
+  the mountain "bigfoot", which had no plural, is now "yeti/yetis".
 
 ## [0.7.0-beta.3] — 2026-10-28
 
