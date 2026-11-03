@@ -148,6 +148,7 @@ export function renderTemplate(
   // a new name or object, and never shows {result} unless the template already does.
   const storyKeys = new Set<string>();
   for (const m of text.matchAll(PLACEHOLDER)) if (!(m[1] as string).startsWith('question_')) storyKeys.add(m[1] as string);
+  // shortcut: this checks only that the story binds the slot, not that a {name} phrase is about the person the answer counts (the dormant difference/groups/time/money pools), revisit before a template uses those pools.
   const phraseFits = (phrase: string): boolean => [...phrase.matchAll(PLACEHOLDER)].every((m) => storyKeys.has(m[1] as string));
 
   // Pass 1: math placeholders (numbers become literal for count detection).

@@ -77,10 +77,11 @@ is a separate entry. Pure/tree-shakeable — do NOT add it to `sideEffects`.
 Wording rules in `parser.ts` (Trello 450):
 - Write question phrases capitalised; the engine lower-cases one that follows a comma.
 - "a {slot}" becomes "an" before a vowel sound: "a" stays before a "you" or "w" sound ("a uniform", "a one-eyed troll"), and a silent h takes "an" ("an hour").
-- "of" or "many" before a slot makes it plural ("a group of skeletons", "how many torches"), unless a nearer number or "the" decides.
+- "of" or "many" before a slot makes it plural ("a group of skeletons", "how many torches"), unless a nearer number, or a/an/the/each/every/one, decides.
 - Markers read backwards, so a verb after a count takes one ("{b} {~was/were} removed"), and a sentence with the verb before the count ("There are {a} …") is reworded. `sample-wording.test.ts` sweeps the templates for both.
 - A slot inside a question phrase takes the word the story bound for it; a phrase naming a slot the story never bound is skipped and another drawn. A shared pool phrase must still fit every template that can draw it, so check before adding one with a slot.
 - A decimal ("0.1", "3.1") is plural, and the point between its digits is not a sentence end.
+- A sentence never opens with a lower-case slot (`{role}`, `{item}`, `{verb_*}`): no rule capitalises a slot's word. `sample-wording.test.ts` also checks that each ending pool stays in its operation (`{question_total}` in ADD skills, `{question_remaining}` in SUB, product in MULT, each in DIV) and that compare stories put `{a}` before `{b}`.
 
 ### Tree-shaking
 
