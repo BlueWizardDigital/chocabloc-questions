@@ -5,13 +5,15 @@ const PLACEHOLDER = /\{([a-z_0-9]+)\}/g; // lowercase-only by contract
 const MARKER = /\{~([^/}]+)\/([^}]+)\}/g;
 const NEXT_PLACEHOLDER = /^\s*\{([a-z_0-9]+)\}/; // lookahead for an apposed name slot
 const SINGULAR_WORDS = new Set(['a', 'an', 'each', 'every', 'the', 'one', '1']);
-// Flags a slot value that opens with a vowel sound, so the article before it can become "an".
-const AN_MARK = '';
-const AN_MARK_ALL = //g;
+// U+E000 (private use) flags a slot value that opens with a vowel sound, so the article before
+// it can become "an". Built from its code point so no invisible character sits in this file.
+const AN_MARK = String.fromCharCode(0xe000);
 // "a"/"A" right before a flagged slot. Group 1 tells a sentence-opening "A" from a label ("Point A").
-const ARTICLE_BEFORE_MARK = /(^|[.!?]["')\]]?\s+|\s)(a|A)(\s+)/g;
-// Vowel letter, consonant sound. Only words the shipped data puts after an article ("a unicorn hair").
-const VOWEL_LETTER_CONSONANT_SOUND = /^unicorn/i;
+const ARTICLE_BEFORE_MARK = new RegExp(`(^|[.!?]["')\\]]?\\s+|\\s)(a|A)(\\s+)${AN_MARK}`, 'g');
+// Vowel letter, consonant sound: "a unicorn", "a uniform", "a one-eyed troll", "a eulogy".
+const VOWEL_LETTER_CONSONANT_SOUND = /^(uni|use|usu|uti|eu|one|once)/i;
+// Silent h: "an hour", "an honest guide", "an heir".
+const SILENT_H = /^(hour|honest|honou?r|heir)/i;
 
 /**
  * Nearest cue in the same sentence wins: a number gives its count, a singular keyword gives 1,
@@ -30,8 +32,9 @@ export function pluralCount(before: string): number {
   return 2;
 }
 
-/** Does this value take "an"? By sound: a vowel letter, minus the data's "you"-sound words. */
+/** Does this value take "an"? By sound: a vowel letter or a silent h, minus "you" and "w" sounds. */
 function opensWithVowelSound(value: string): boolean {
+  if (SILENT_H.test(value)) return true;
   return /^[aeiou]/i.test(value) && !VOWEL_LETTER_CONSONANT_SOUND.test(value);
 }
 
@@ -153,7 +156,8 @@ export function renderTemplate(
     .replace(ARTICLE_BEFORE_MARK, (m, pre: string, art: string, gap: string) =>
       art === 'A' && /^\s+$/.test(pre) ? m : `${pre}${art}n${gap}`,
     )
-    .replace(AN_MARK_ALL, '');
+    .split(AN_MARK)
+    .join('');
 
   // Pass 3: inline {~singular/plural} markers.
   text = text.replace(MARKER, (_m, s: string, p: string, offset: number, full: string) =>

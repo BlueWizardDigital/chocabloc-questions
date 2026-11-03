@@ -13,8 +13,9 @@ answers and which templates a skill can pick are unchanged.
 
 - **"an" before a vowel sound.** An article written directly before a slot now follows the
   slot's sound: "sees 1 glowworm in an alcove", "An apothecary shop…". A capital "A" changes only
-  where it opens a sentence ("Point A" is a label). "a unicorn hair" stays "a". Literal template
-  text is left as written.
+  where it opens a sentence ("Point A" is a label). "a" stays before a "you" or "w" sound ("a
+  unicorn hair", "a uniform", "a one-eyed troll"), and a silent h takes "an" ("an hour"). Literal
+  template text is left as written.
 - **A question after a comma continues the sentence.** "After giving 405 to Harper, what is left
   over?" The question phrases are still written to open a sentence, and keep their capital there.
 - **Plural after "of".** "A group of skeletons", "a bag of gems", "the ratio of gems to

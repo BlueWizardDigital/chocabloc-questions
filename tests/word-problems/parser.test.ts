@@ -264,6 +264,15 @@ describe('renderTemplate "a" before a vowel sound (Trello 450)', () => {
   it('leaves literal template text alone', () => {
     expect(r('Point A is {a} steps away.', 'cave', { a: '5' })).toBe('Point A is 5 steps away.');
   });
+  it('goes by sound for "you", "w" and silent-h words', () => {
+    const ctxS: ContextData = {
+      themes: { cave: { item: ['uniform/uniforms'], monster: ['one-eyed troll/one-eyed trolls'], span: ['hour/hours'] } },
+    };
+    const rs = (tpl: string) => renderTemplate(tpl, {}, ctxS, 'cave', undefined, makeRng('s'));
+    expect(rs('Wear a {item}.')).toBe('Wear a uniform.');
+    expect(rs('A {monster} waits.')).toBe('A one-eyed troll waits.');
+    expect(rs('Rest for a {span}.')).toBe('Rest for an hour.');
+  });
 });
 
 describe('renderTemplate question phrase after a comma (Trello 450)', () => {

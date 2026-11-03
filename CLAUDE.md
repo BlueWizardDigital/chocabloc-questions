@@ -74,6 +74,11 @@ scalars only in v1; operation falls back to `row.format`. Placeholders are lower
 Determinism holds for the same input **and** the same dataset. Ships no data; `sample-data`
 is a separate entry. Pure/tree-shakeable — do NOT add it to `sideEffects`.
 
+Wording rules in `parser.ts` (Trello 450):
+- Write question phrases capitalised; the engine lower-cases one that follows a comma.
+- "a {slot}" becomes "an" before a vowel sound: "a" stays before a "you" or "w" sound ("a uniform", "a one-eyed troll"), and a silent h takes "an" ("an hour").
+- "of" before a slot makes it plural ("a group of skeletons"), unless a nearer number or "the" decides.
+
 ### Tree-shaking
 
 `package.json` declares `sideEffects` so consumer bundlers can tree-shake pure-logic imports. `helpers-only` and `index` are side-effect-free; `full`, the `elements/*` bundles, `bridge`, and `host` are listed as side-effectful (`elements/*` call `customElements.define()`; `bridge`/`host` set up the host channel at load). If a new entry point is added that registers custom elements, it must be added to the `sideEffects` array. Verify with `node tests/tree-shake-test.mjs` — it builds a helpers-only import and asserts no Web Component code leaks.

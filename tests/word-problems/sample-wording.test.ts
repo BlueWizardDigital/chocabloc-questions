@@ -23,9 +23,25 @@ const ROWS = [
   { skill: 'ADD-4DIGIT-NO-REGROUP', op: 'addition', ops: [4110, 5861] },
   { skill: 'COMPARE-NUMBERS-WITHIN-100', op: 'comparison', ops: [1, 64] },
   { skill: 'DEC-ADD-DECIMALS', op: 'decimal_addition', ops: [12.5, 6.82] },
-  { skill: 'DEC-MULT-WHOLE-BY-DECIMAL', op: 'decimal_multiplication', ops: [10, 1] },
+  { skill: 'DEC-MULT-WHOLE-BY-DECIMAL', op: 'decimal_multiplication', ops: [10, 0.3] },
   { skill: 'DEC-DIV-WHOLE-BY-DECIMAL', op: 'decimal_division', ops: [0.4, 0.1] },
+  { skill: 'DIV-BASIC-WITHIN-100-NO-REMAINDER', op: 'division', ops: [48, 6] },
 ];
+
+// Item and ingredient nouns, both number forms, longest first so "ancient coin" wins over "coin".
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const ITEM_WORDS = [
+  ...new Set(
+    Object.values(sampleContext.themes ?? {})
+      .flatMap((t) => [...(t.item ?? []), ...(t.ingredient ?? [])])
+      .flatMap((v) => v.split('/')),
+  ),
+].sort((a, b) => b.length - a.length);
+// A whole number (not part of a decimal) directly counting an item noun that ends its phrase
+// ("10 gems × 0.3"); "10 crystal caves" is a place, not crystals, so a following word excludes it.
+const WHOLE_NUMBER_COUNTS_ITEM = new RegExp(
+  `(?<![\\d.])\\b\\d+ (?!(kg|g|L)\\b)(${ITEM_WORDS.map(escapeRe).join('|')})(?= [^a-z]|[.,?!]|$)`,
+);
 
 const DEFECTS: Array<[string, RegExp]> = [
   ['1 "What is the product?"', /What is the product\?/],
@@ -68,6 +84,9 @@ describe('sample data wording (Trello 450)', () => {
             if (text === undefined) continue;
             worded++;
             for (const [label, re] of DEFECTS) if (re.test(text)) found.push(`${label}: ${text}`);
+            if (r.skill.startsWith('DEC-') && WHOLE_NUMBER_COUNTS_ITEM.test(text)) {
+              found.push(`5 a decimal skill counting whole objects: ${text}`);
+            }
           }
         }
       }
@@ -77,17 +96,29 @@ describe('sample data wording (Trello 450)', () => {
   });
 
   it('names what the story set up in its "each" ending', () => {
+    let matched = 0;
+    const kinds = new Set<string>();
     for (const r of ROWS.filter((x) => x.skill.startsWith('DIV-'))) {
       for (const theme of themes) {
-        for (let seed = 0; seed < 40; seed++) {
-          const text = render(r, theme, seed);
-          const unit = text && /How many (?:in|go in) each (\w+)\?|How many does each (\w+) get\?/.exec(text);
-          if (!unit) continue;
-          const noun = (unit[1] ?? unit[2]) as string;
-          // The story mentions the same noun before the question (any number form).
-          expect(text!.slice(0, unit.index), text).toMatch(new RegExp(`\\b${noun.slice(0, 4)}`));
+        for (const difficulty of ['beginner', 'intermediate', 'advanced'] as const) {
+          for (let seed = 0; seed < 40; seed++) {
+            const text = render(r, theme, seed, difficulty);
+            const unit = text && /How many (in|go in) each (\w+)\?|How many does each (\w+) get\?/.exec(text);
+            if (!unit) continue;
+            matched++;
+            const noun = (unit[2] ?? unit[3]) as string;
+            kinds.add(unit[1] === 'go in' ? 'go in each {container}' : noun);
+            // The story mentions the same noun before the question (any number form).
+            expect(text!.slice(0, unit.index), text).toMatch(new RegExp(`\\b${noun.slice(0, 4)}`));
+          }
         }
       }
+    }
+    expect(matched).toBeGreaterThan(0);
+    // Every story-specific ending that can render was reached. (The batch and portion stories are
+    // potion-only and use {item}, which potion has none of, so they never render.)
+    for (const k of ['pile', 'group', 'apprentice', 'shipment', 'display', 'go in each {container}']) {
+      expect([...kinds], k).toContain(k);
     }
   });
 });
