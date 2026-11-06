@@ -65,18 +65,25 @@ afterEach(() => {
   restore();
 });
 
-describe('HELP_STRATEGY_IDS (the bridge’s own copy of the catalog, Ruling 17)', () => {
-  it('equals STRATEGIES in src/help/catalog.ts, ids and families', async () => {
-    const { HELP_STRATEGY_IDS } = await import('../src/bridge');
-    const fromCatalog: Record<string, string[]> = {};
-    for (const s of STRATEGIES) (fromCatalog[s.family] ??= []).push(s.id);
-    expect(HELP_STRATEGY_IDS).toEqual(fromCatalog);
+// The bridge keeps its own copy of the catalog (Ruling 17). Every catalog id is
+// tried under every family: it must survive exactly where STRATEGIES lists it,
+// so an id missing from the bridge's copy, or filed under the wrong family, fails.
+describe('the bridge’s strategy list matches STRATEGIES in src/help/catalog.ts', () => {
+  const families = [...new Set(STRATEGIES.map((s) => s.family))];
+  const cases = STRATEGIES.flatMap((s) =>
+    families.map((family) => [s.id, family, s.family === family] as const)
+  );
+
+  it('covers both help families', () => {
+    expect([...families].sort()).toEqual(['div-facts', 'mult-facts']);
   });
 
-  it('is frozen, so a game cannot widen what the bridge accepts', async () => {
-    const { HELP_STRATEGY_IDS } = await import('../src/bridge');
-    expect(Object.isFrozen(HELP_STRATEGY_IDS)).toBe(true);
-    for (const ids of Object.values(HELP_STRATEGY_IDS)) expect(Object.isFrozen(ids)).toBe(true);
+  it.each(cases)('%s under %s is kept: %s', async (id, family, kept) => {
+    const { bridge } = await loadEmbedded();
+    const p = bridge.requestStrategyPicks();
+    const req = request('chocabloc:strategy:request');
+    deliver('chocabloc:strategy:deliver', req.requestId, { picks: { [family]: id } });
+    await expect(p).resolves.toEqual(kept ? { [family]: id } : {});
   });
 });
 
@@ -259,5 +266,28 @@ describe('reportHelpEvents', () => {
       throw new Error('parent gone');
     });
     await expect(bridge.reportHelpEvents([EVENT])).resolves.toEqual({ ok: false });
+  });
+});
+
+describe('the two help channels never answer each other', () => {
+  it('ignores a strategy deliver carrying a report requestId, and the reverse', async () => {
+    const { bridge } = await loadEmbedded();
+    const picks = bridge.requestStrategyPicks();
+    const report = bridge.reportHelpEvents([EVENT]);
+    const pickId = request('chocabloc:strategy:request').requestId;
+    const reportId = request('chocabloc:help-event:report').requestId;
+
+    let settled = 0;
+    void picks.then(() => settled++);
+    void report.then(() => settled++);
+    deliver('chocabloc:strategy:deliver', reportId, { picks: { 'mult-facts': 'mult.groups' }, ok: true });
+    deliver('chocabloc:help-event:deliver', pickId, { ok: true, picks: { 'mult-facts': 'mult.groups' } });
+    await Promise.resolve();
+    expect(settled).toBe(0);
+
+    deliver('chocabloc:strategy:deliver', pickId, { picks: { 'div-facts': 'div.array' } });
+    deliver('chocabloc:help-event:deliver', reportId, { ok: false, code: 'HELP_EVENT_INVALID' });
+    await expect(picks).resolves.toEqual({ 'div-facts': 'div.array' });
+    await expect(report).resolves.toEqual({ ok: false });
   });
 });

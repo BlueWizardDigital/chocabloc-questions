@@ -36,27 +36,16 @@ const CONCEPT_SESSION_TIMEOUT_MS = 5000;
 const STRATEGY_TIMEOUT_MS = 4000;
 const HELP_EVENT_TIMEOUT_MS = 5000;
 
-/**
- * The strategy ids each help family accepts: a copy of STRATEGIES in
- * src/help/catalog.ts, kept here so this file imports nothing at run time
- * (games copy it on its own; Ruling 17). tests/bridge-help.test.ts keeps the
- * two equal. The bridge passes on only a pick found here for its own family.
- */
-export const HELP_STRATEGY_IDS: Readonly<Record<HelpFamily, readonly StrategyId[]>> =
-  Object.freeze({
-    'mult-facts': Object.freeze([
-      'mult.groups',
-      'mult.skip-count',
-      'mult.known-fact',
-      'mult.nearby-fact',
-    ] as StrategyId[]),
-    'div-facts': Object.freeze([
-      'div.share',
-      'div.groups',
-      'div.think-mult',
-      'div.array',
-    ] as StrategyId[]),
-  });
+// The strategy ids each help family accepts: a copy of STRATEGIES in
+// src/help/catalog.ts, kept here so this file imports nothing at run time
+// (games copy it on its own; Ruling 17). Module-private, not public API.
+// `satisfies` makes tsc reject an id that isn't a StrategyId or a missing
+// family; tests/bridge-help.test.ts tries every catalog id under every family,
+// so a missing or wrong-family id fails there.
+const HELP_STRATEGY_IDS = {
+  'mult-facts': ['mult.groups', 'mult.skip-count', 'mult.known-fact', 'mult.nearby-fact'],
+  'div-facts': ['div.share', 'div.groups', 'div.think-mult', 'div.array'],
+} as const satisfies Record<HelpFamily, readonly StrategyId[]>;
 
 /** The kid's saved strategy for each help family that has one. */
 type StrategyPicks = Partial<Record<HelpFamily, StrategyId>>;

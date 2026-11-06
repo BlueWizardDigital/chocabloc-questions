@@ -492,8 +492,7 @@ const picks = await bridge.requestStrategyPicks();
 Posts `chocabloc:strategy:request` (`{ requestId }`); the host replies `chocabloc:strategy:deliver`
 with `{ requestId, picks }`. Resolves `{}` at once when standalone, and `{}` on timeout (4 s) or an
 error reply. **The bridge drops any pick that isn't a known strategy id for its own family**, so
-the game can use what it gets. Its list is `HELP_STRATEGY_IDS`, a copy of the help catalog kept in
-`bridge.ts` so the bridge imports nothing; a test keeps the two equal.
+the game can use what it gets.
 
 ### Report help events
 
