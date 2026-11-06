@@ -1,0 +1,67 @@
+{
+  "mult": {
+    "turn": "Turn it around: {givenRows} × {givenEach}.",
+    "one": "One group of {givenEach}. How many is that?",
+    "groups": {
+      "ask": "{givenRows} rows of {givenEach}. How many in all?",
+      "row": "Each row adds {givenEach}. Count row by row.",
+      "last": "{partialRows} rows make {partialSum}. One row is left.",
+      "ten": "{anchorRows} rows of {givenEach} make {anchorProduct}.",
+      "addOne": "Now add one more row of {givenEach}.",
+      "add": "Now add {partialMore} more rows of {givenEach}."
+    },
+    "skip-count": {
+      "ask": "Count by {givenEach}s, {givenTimes} times.",
+      "askTurn": "Turn it around: count by {givenEach}s, {givenTimes} times.",
+      "start": "Start at {givenEach}. Add {givenEach} each time.",
+      "next": "{givenEach}, {partialSecond}, … Keep counting.",
+      "ten": "{anchorRows} × {givenEach} is {anchorProduct}. Count on by {givenEach}s.",
+      "onOne": "Count on by {givenEach}s, one more time.",
+      "on": "Count on by {givenEach}s, {partialMore} more times."
+    },
+    "known-fact": {
+      "more": "{anchorRows} × {givenEach} is {anchorProduct}. {givenRows} × {givenEach} is {partialGroups} more {givenEach}s. What's that?",
+      "moreOne": "{anchorRows} × {givenEach} is {anchorProduct}. {givenRows} × {givenEach} is one more {givenEach}. What's that?",
+      "fewer": "{anchorRows} × {givenEach} is {anchorProduct}. {givenRows} × {givenEach} is {partialGroups} fewer {givenEach}s. What's that?",
+      "fewerOne": "{anchorRows} × {givenEach} is {anchorProduct}. {givenRows} × {givenEach} is one fewer {givenEach}. What's that?",
+      "on": "Count on {partialGroups} more groups of {givenEach} from {anchorProduct}.",
+      "onOne": "Count on one more {givenEach} from {anchorProduct}.",
+      "back": "Count back {partialGroups} groups of {givenEach} from {anchorProduct}.",
+      "backOne": "Count back one {givenEach} from {anchorProduct}."
+    },
+    "nearby-fact": {
+      "more": "{anchorA} × {anchorB} is {anchorProduct}. {givenA} × {givenB} is one more {givenEach}. What's that?",
+      "fewer": "{anchorA} × {anchorB} is {anchorProduct}. {givenA} × {givenB} is one fewer {givenEach}. What's that?",
+      "on": "Start at {anchorProduct}. Add one more {givenEach}.",
+      "back": "Start at {anchorProduct}. Take away one {givenEach}."
+    }
+  },
+  "div": {
+    "share": {
+      "ask": "Share {givenDividend} into {givenDivisor} equal rows.",
+      "one": "Put all {givenDividend} in one row. How many?",
+      "deal": "Give each row one. Keep going.",
+      "ten": "Give each row {anchorEach} first.",
+      "more": "Each row has {partialEach}. Keep sharing."
+    },
+    "groups": {
+      "ask": "How many {givenDivisor}s make {givenDividend}?",
+      "take": "Take out one group of {givenDivisor}.",
+      "ten": "Take out {anchorGroups} groups of {givenDivisor} first.",
+      "more": "Keep taking {givenDivisor}s. Count the groups."
+    },
+    "think-mult": {
+      "ask": "? × {givenDivisor} = {givenDividend}. What times {givenDivisor} makes {givenDividend}?",
+      "more": "{anchorRows} × {givenDivisor} is {anchorProduct}. How many more {givenDivisor}s to {givenDividend}?",
+      "fewer": "{anchorRows} × {givenDivisor} is {anchorProduct}. How many fewer {givenDivisor}s make {givenDividend}?",
+      "on": "Count on by {givenDivisor}s from {anchorProduct} to {givenDividend}.",
+      "back": "Count back by {givenDivisor}s from {anchorProduct} to {givenDividend}."
+    },
+    "array": {
+      "ask": "{givenDividend} dots in rows of {givenDivisor}. How many rows?",
+      "count": "Count by {givenDivisor}s until you reach {givenDividend}.",
+      "ten": "{anchorRows} rows make {anchorProduct}. Count on the rest.",
+      "more": "{partialSum} so far. How many rows make {givenDividend}?"
+    }
+  }
+}

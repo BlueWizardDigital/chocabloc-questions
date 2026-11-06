@@ -1,0 +1,10 @@
+[
+  { "id": "mult.groups", "family": "mult-facts", "fromGrade": 0 },
+  { "id": "mult.skip-count", "family": "mult-facts", "fromGrade": 0 },
+  { "id": "mult.known-fact", "family": "mult-facts", "fromGrade": 4 },
+  { "id": "mult.nearby-fact", "family": "mult-facts", "fromGrade": 4 },
+  { "id": "div.share", "family": "div-facts", "fromGrade": 0 },
+  { "id": "div.groups", "family": "div-facts", "fromGrade": 0 },
+  { "id": "div.think-mult", "family": "div-facts", "fromGrade": 4 },
+  { "id": "div.array", "family": "div-facts", "fromGrade": 4 }
+]
