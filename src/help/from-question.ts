@@ -1,6 +1,6 @@
+import { MAX_FACTOR } from './fact';
 import type { HelpFact } from './types';
 
-const MAX_FACTOR = 15;
 const MAX_DIVIDEND = MAX_FACTOR * MAX_FACTOR;
 
 const isInt = (n: unknown, hi: number): n is number =>

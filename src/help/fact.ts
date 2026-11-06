@@ -12,7 +12,8 @@ export interface Product {
 }
 /**
  * dividend ÷ divisor with the quotient hidden; also a missing factor (a × ? = c), which is
- * c ÷ a. `hidden` says which grid side the unknown is on (Cocoa Lab's Divide), null for ÷.
+ * c ÷ a. `hidden` names the fact's own a or b when that is the unknown (Cocoa Lab's Divide,
+ * or a ÷ ? = c), and is null when the unknown is c.
  */
 export interface Quotient {
   kind: 'quotient';
@@ -60,7 +61,9 @@ export function parseFact(fact: HelpFact): Parsed | null {
       return isFactor(a) && isFactor(b) ? { kind: 'product', a, b, unknown: a * b, shown } : null;
     return a === null ? quotient(c, b, 'a', shown) : quotient(c, a, 'b', shown);
   }
-  if (op === 'div' && a !== null) return quotient(a, b === null ? c : b, null, shown);
+  if (op === 'div' && a !== null) {
+    return b === null ? quotient(a, c, 'b', shown) : quotient(a, b, null, shown);
+  }
   return null;
 }
 
@@ -109,5 +112,9 @@ export function stepIsSafe(s: HelpStep, p: Parsed): boolean {
       return false;
   }
   const fine = (n: number) => n !== unknown || shown.includes(n);
-  return s.points.every((pt) => fine(pt.a) && fine(pt.b) && fine(pt.a * pt.b));
+  // A missing factor's row or column is never lit, even when that number is on screen.
+  const hidden = p.kind === 'quotient' ? p.hidden : null;
+  const offHiddenLine = (pt: SolvedFact) =>
+    !(hidden === 'a' && pt.a === unknown) && !(hidden === 'b' && pt.b === unknown);
+  return s.points.every((pt) => offHiddenLine(pt) && fine(pt.a) && fine(pt.b) && fine(pt.a * pt.b));
 }

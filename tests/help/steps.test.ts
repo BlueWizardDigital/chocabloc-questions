@@ -1,10 +1,11 @@
 import { describe, test, expect } from 'vitest';
 import { strategyOrder, buildSteps } from '../../src/help/strategies';
 import { STRATEGIES } from '../../src/help/catalog';
-import type { HelpFact, HelpStep, SolvedFact, StrategyId } from '../../src/help/types';
+import type { HelpFact, HelpPicture, HelpStep, SolvedFact, StrategyId } from '../../src/help/types';
 import en from '../../src/help/messages/en.json';
 import { interpolate, lookup } from '../../src/lesson/messages';
-import { leakCheckStep } from './leak-check';
+import { parseFact, stepIsSafe } from '../../src/help/fact';
+import { leakCheckStep, unknownOf, visibleOf } from './leak-check';
 
 const mult = (a: number | null, b: number | null, c: number | null): HelpFact => ({
   op: 'mult',
@@ -76,15 +77,20 @@ function solvedSets(f: HelpFact): SolvedFact[][] {
   return [all, all.filter((n) => n.a >= (f.a as number) && n.b >= (f.b as number))];
 }
 
-/** Every step of every offered strategy, for every fact with factors 0–15. */
+/**
+ * Every step of every strategy that builds, for every fact with factors 0–15. This is wider
+ * than strategyOrder: × 1 offers one strategy (Ruling 16), but a pick can reach the others.
+ */
 const SWEEP: { fact: HelpFact; id: StrategyId; steps: HelpStep[] }[] = [];
 for (const fact of allFacts(15)) {
   for (const solved of solvedSets(fact)) {
-    for (const id of strategyOrder(fact, opts(null, solved))) {
-      SWEEP.push({ fact, id, steps: buildSteps(id, fact, opts(null, solved)) ?? [] });
+    for (const id of ALL_IDS) {
+      const steps = buildSteps(id, fact, opts(null, solved));
+      if (steps) SWEEP.push({ fact, id, steps });
     }
   }
 }
+const isTimesOne = (f: HelpFact) => f.op === 'mult' && f.c === null && (f.a === 1 || f.b === 1);
 
 describe('strategyOrder', () => {
   test('grade 3 gets only from-grade-0 strategies; null grade gets all', () => {
@@ -190,6 +196,12 @@ describe('strategyOrder', () => {
           div(p, y, null),
           div(p, null, x),
         ]) {
+          if (isTimesOne(f)) {
+            // Ruling 16: × 1 offers only its first strategy.
+            expect(strategyOrder(f, opts(2)), label(f)).toEqual(['mult.groups']);
+            expect(strategyOrder(f, opts(null)), label(f)).toEqual(['mult.groups']);
+            continue;
+          }
           expect(strategyOrder(f, opts(2)).length, label(f)).toBe(2);
           // Every strategy applies at grade 4 and up (the nearby fact needs a solved neighbour).
           expect(strategyOrder(f, opts(null)), label(f)).toEqual(
@@ -277,13 +289,21 @@ describe('buildSteps: the step rules', () => {
     }
   });
 
-  test('× 1 is one group', () => {
+  test('× 1 is one group, and help offers it once (Ruling 16)', () => {
     for (const [f, n] of [
       [mult(1, 7, null), 7],
       [mult(7, 1, null), 7],
       [mult(1, 1, null), 1],
       [mult(1, 13, null), 13],
     ] as [HelpFact, number][]) {
+      expect(strategyOrder(f, opts()), label(f)).toEqual(['mult.groups']);
+      expect(strategyOrder(f, opts(2)), label(f)).toEqual(['mult.groups']);
+      // The pick moves first, then only the first is kept; a pick above the grade is still ignored.
+      expect(strategyOrder(f, opts(null, [], 'mult.known-fact')), label(f)).toEqual([
+        'mult.known-fact',
+      ]);
+      expect(strategyOrder(f, opts(2, [], 'mult.known-fact')), label(f)).toEqual(['mult.groups']);
+      // A picked strategy still shows the one group.
       for (const id of ['mult.groups', 'mult.skip-count', 'mult.known-fact'] as StrategyId[]) {
         expect(buildSteps(id, f, opts()), `${id} ${label(f)}`).toEqual([
           {
@@ -294,6 +314,14 @@ describe('buildSteps: the step rules', () => {
         ]);
       }
     }
+    // The nearby fact is left out too, even with a solved neighbour.
+    const oneByEight = mult(1, 8, null);
+    const solved = [{ a: 1, b: 9 }];
+    expect(buildSteps('mult.nearby-fact', oneByEight, opts(null, solved))).not.toBeNull();
+    expect(strategyOrder(oneByEight, opts(null, solved))).toEqual(['mult.groups']);
+    expect(strategyOrder(oneByEight, opts(null, solved, 'mult.nearby-fact'))).toEqual([
+      'mult.nearby-fact',
+    ]);
   });
 
   test('squares never offer turning around', () => {
@@ -347,11 +375,17 @@ describe('buildSteps: the step rules', () => {
   test('every step has at most 12 words in its en message (8 for grade 3 and below)', () => {
     for (const { fact, id, steps } of SWEEP) {
       const limit = (FROM_GRADE.get(id) ?? 0) === 0 ? 8 : 12;
-      for (const step of steps)
-        expect(
-          wordCount(render(step)),
-          `${id} ${label(fact)}: ${render(step)}`,
-        ).toBeLessThanOrEqual(limit);
+      const unknown = unknownOf(fact);
+      const shown = visibleOf(fact);
+      for (const step of steps) {
+        const text = render(step);
+        expect(wordCount(text), `${id} ${label(fact)}: ${text}`).toBeLessThanOrEqual(limit);
+        // The rendered English never writes the unknown unless the question shows it.
+        for (const token of text.match(/\d+/g) ?? []) {
+          const n = Number(token);
+          expect(n !== unknown || shown.includes(n), `${id} ${label(fact)}: ${text}`).toBe(true);
+        }
+      }
     }
     for (const fact of allFacts(12)) {
       for (const id of strategyOrder(fact, opts(3, around(fact)))) {
@@ -395,89 +429,101 @@ describe('answer hiding', () => {
         checked++;
       }
     }
-    // Strategies left out of the order really don't apply.
+    // The order is exactly the strategies that build, cut to one for × 1 (Ruling 16).
     for (const fact of allFacts(15)) {
-      const order = strategyOrder(fact, opts(null, around(fact)));
-      for (const id of ALL_IDS) {
-        if (!order.includes(id))
-          expect(buildSteps(id, fact, opts(null, around(fact))), `${id} ${label(fact)}`).toBeNull();
-      }
+      const o = opts(null, around(fact));
+      const builds = ALL_IDS.filter((id) => buildSteps(id, fact, o) !== null);
+      expect(strategyOrder(fact, o), label(fact)).toEqual(
+        isTimesOne(fact) ? builds.slice(0, 1) : builds,
+      );
     }
     expect(checked).toBeGreaterThan(5000);
   });
 
-  test('leakCheckStep catches deliberate leaks', () => {
+  test('the production guard keeps a point off the hidden factor’s row or column', () => {
+    const at = (a: number, b: number): HelpStep => ({
+      say: { key: 'x', params: {} },
+      picture: null,
+      points: [{ a, b }],
+    });
+    // 4 × ? = 16, ? × 4 = 16 and 16 ÷ ? = 4 all hide 4; the 4 on screen doesn't excuse it.
+    for (const [f, onLine, offLine] of [
+      [mult(4, null, 16), at(4, 4), at(4, 5)],
+      [mult(null, 4, 16), at(4, 4), at(5, 4)],
+      [div(16, null, 4), at(4, 4), at(4, 5)],
+    ] as [HelpFact, HelpStep, HelpStep][]) {
+      const p = parseFact(f);
+      if (!p) throw new Error(`unparsed ${label(f)}`);
+      expect(stepIsSafe(onLine, p), label(f)).toBe(false);
+      expect(stepIsSafe(offLine, p), label(f)).toBe(true);
+    }
+  });
+
+  test('leakCheckStep catches deliberate leaks, and names which', () => {
+    /** The codes of the problems the oracle reports, in order. */
+    const codes = (s: HelpStep, f: HelpFact) => leakCheckStep(s, f).map((p) => p.split(':')[0]);
+    const bare = (picture: HelpPicture | null, points: SolvedFact[] = []): HelpStep => ({
+      say: { key: 'x', params: {} },
+      picture,
+      points,
+    });
+    const rows = (r: number, perRow: number, counted: number): HelpPicture => ({
+      kind: 'rows',
+      rows: r,
+      perRow,
+      counted,
+    });
+    const deal = (total: number, r: number, dealt: number): HelpPicture => ({
+      kind: 'deal',
+      total,
+      rows: r,
+      dealt,
+    });
+    const take = (total: number, size: number, taken: number): HelpPicture => ({
+      kind: 'take',
+      total,
+      size,
+      taken,
+    });
+
+    // 7 × 8: unknown 56.
     const f = mult(7, 8, null);
     const clean: HelpStep = {
       say: { key: 'x', params: { givenRows: 7, givenEach: 8, partialSum: 48, anchorProduct: 40 } },
-      picture: { kind: 'rows', rows: 7, perRow: 8, counted: 6 },
+      picture: rows(7, 8, 6),
       points: [{ a: 5, b: 8 }],
     };
     expect(leakCheckStep(clean, f)).toEqual([]);
     const say = (params: Record<string, number>) => ({ ...clean, say: { key: 'x', params } });
-    // The product as a partial, a fully counted rows picture: the two required controls.
-    expect(leakCheckStep(say({ partialSum: 56 }), f)).not.toEqual([]);
-    expect(
-      leakCheckStep({ ...clean, picture: { kind: 'rows', rows: 7, perRow: 8, counted: 7 } }, f),
-    ).not.toEqual([]);
-    // And the other roles and pictures.
-    expect(leakCheckStep(say({ anchorProduct: 56 }), f)).not.toEqual([]);
-    expect(leakCheckStep(say({ givenProduct: 56 }), f)).not.toEqual([]);
-    expect(leakCheckStep(say({ total: 3 }), f)).not.toEqual([]);
-    expect(leakCheckStep(say({ answer: 3 }), f)).not.toEqual([]);
-    expect(leakCheckStep(say({ countRows: 3 }), f)).not.toEqual([]);
-    expect(leakCheckStep({ ...clean, points: [{ a: 8, b: 7 }] }, f)).not.toEqual([]);
-    const d = div(24, 4, null); // unknown 6
-    expect(
-      leakCheckStep(
-        {
-          ...clean,
-          say: { key: 'x', params: {} },
-          picture: { kind: 'rows', rows: 8, perRow: 3, counted: 2 },
-          points: [],
-        },
-        d,
-      ),
-    ).not.toEqual([]);
-    expect(
-      leakCheckStep(
-        {
-          ...clean,
-          say: { key: 'x', params: {} },
-          picture: { kind: 'deal', total: 24, rows: 4, dealt: 24 },
-          points: [],
-        },
-        d,
-      ),
-    ).not.toEqual([]);
-    expect(
-      leakCheckStep(
-        {
-          ...clean,
-          say: { key: 'x', params: {} },
-          picture: { kind: 'deal', total: 30, rows: 5, dealt: 0 },
-          points: [],
-        },
-        d,
-      ),
-    ).not.toEqual([]);
-    expect(
-      leakCheckStep(
-        {
-          ...clean,
-          say: { key: 'x', params: {} },
-          picture: { kind: 'take', total: 24, size: 4, taken: 6 },
-          points: [],
-        },
-        d,
-      ),
-    ).not.toEqual([]);
-    expect(
-      leakCheckStep(
-        { ...clean, say: { key: 'x', params: {} }, picture: null, points: [{ a: 6, b: 3 }] },
-        d,
-      ),
-    ).not.toEqual([]);
+    expect(codes(say({ partialSum: 56 }), f)).toEqual(['equals-unknown']);
+    expect(codes(say({ anchorProduct: 56 }), f)).toEqual(['equals-unknown']);
+    expect(codes(say({ givenProduct: 56 }), f)).toEqual(['given-not-shown']);
+    expect(codes(say({ total: 3 }), f)).toEqual(['banned-name']);
+    expect(codes(say({ answer: 3 }), f)).toEqual(['banned-name']);
+    expect(codes(say({ countRows: 3 }), f)).toEqual(['no-role']);
+    expect(codes({ ...clean, points: [{ a: 8, b: 7 }] }, f)).toEqual(['point-shows-unknown']);
+    // One row of 56: neither size is a number the question shows.
+    expect(codes(bare(rows(1, 56, 0)), f)).toEqual(['rows-count-not-shown', 'rows-size-not-shown']);
+    expect(codes(bare(rows(7, 56, 0)), f)).toEqual(['rows-size-not-shown']);
+
+    // 24 ÷ 4: unknown 6; a division rows picture may have the quotient's number of rows.
+    const d = div(24, 4, null);
+    expect(leakCheckStep(bare(rows(6, 4, 5)), d)).toEqual([]);
+    expect(codes(bare(rows(6, 4, 6)), d)).toEqual(['rows-fully-counted']);
+    expect(codes(bare(rows(8, 4, 0)), d)).toEqual(['rows-count-not-shown']);
+    expect(codes(bare(rows(6, 2, 3)), div(12, 2, null))).toEqual(['rows-total-is-unknown']);
+    expect(codes(bare(deal(24, 4, 24)), d)).toEqual(['deal-finished']);
+    expect(codes(bare(deal(30, 4, 0)), d)).toEqual(['deal-total-not-shown']);
+    expect(codes(bare(deal(24, 3, 0)), d)).toEqual(['deal-rows-not-shown']);
+    expect(codes(bare(take(24, 4, 6)), d)).toEqual(['take-finished']);
+    expect(codes(bare(take(30, 4, 0)), d)).toEqual(['take-total-not-shown']);
+    expect(codes(bare(take(24, 6, 0)), d)).toEqual(['take-size-not-shown']);
+    expect(codes(bare(null, [{ a: 6, b: 3 }]), d)).toEqual(['point-shows-unknown']);
+
+    // 4 × ? = 16: unknown 4, also shown. A point on the hidden factor's column fails anyway.
+    const m = mult(4, null, 16);
+    expect(leakCheckStep(bare(null, [{ a: 4, b: 5 }]), m)).toEqual([]);
+    expect(codes(bare(null, [{ a: 4, b: 4 }]), m)).toEqual(['point-on-hidden-line']);
   });
 });
 

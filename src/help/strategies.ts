@@ -57,9 +57,16 @@ export function buildSteps(
   return chosen ?? null;
 }
 
-/** The strategies that apply, in catalog order, with the kid's pick first when it applies. */
+/**
+ * The strategies that apply, in catalog order, with the kid's pick first when it applies.
+ * A product with a factor of 1 offers only the first of these (Ruling 16): its one answer-free
+ * picture is the one group, so a second strategy would repeat it.
+ */
 export function strategyOrder(fact: HelpFact, o: HelpOptions): StrategyId[] {
   const ids = STRATEGIES.map((s) => s.id).filter((id) => buildSteps(id, fact, o) !== null);
   const pick = o.pick;
-  return pick !== null && ids.includes(pick) ? [pick, ...ids.filter((id) => id !== pick)] : ids;
+  const ordered =
+    pick !== null && ids.includes(pick) ? [pick, ...ids.filter((id) => id !== pick)] : ids;
+  const p = parseFact(fact);
+  return p?.kind === 'product' && (p.a === 1 || p.b === 1) ? ordered.slice(0, 1) : ordered;
 }
