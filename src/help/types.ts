@@ -1,13 +1,5 @@
-export type HelpFamily = 'mult-facts' | 'div-facts';
-export type StrategyId =
-  | 'mult.groups'
-  | 'mult.skip-count'
-  | 'mult.known-fact'
-  | 'mult.nearby-fact'
-  | 'div.share'
-  | 'div.groups'
-  | 'div.think-mult'
-  | 'div.array';
+// Declared in src/types.ts so the bridge can use them without importing this folder (Ruling 17).
+export type { HelpFamily, StrategyId, HelpRecord, HelpEventReport } from '../types';
 /** mult: a × b = c. div: a ÷ b = c. Exactly one of a, b, c is null: the unknown. */
 export interface HelpFact {
   op: 'mult' | 'div';
@@ -36,11 +28,4 @@ export interface HelpStep {
   say: MsgRef;
   picture: HelpPicture | null;
   points: SolvedFact[];
-}
-export interface HelpRecord {
-  eventId: string;
-  family: HelpFamily;
-  strategy: StrategyId;
-  thumb: 'up' | 'down' | null;
-  fact: string;
 }

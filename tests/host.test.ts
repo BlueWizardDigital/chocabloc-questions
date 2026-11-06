@@ -5,6 +5,8 @@ const attempt = vi.fn();
 const score = vi.fn();
 const saveNotify = vi.fn();
 const started = vi.fn();
+const requestStrategyPicks = vi.fn();
+const reportHelpEvents = vi.fn();
 
 vi.mock('../src/bridge', () => ({
   bridge: {
@@ -16,11 +18,42 @@ vi.mock('../src/bridge', () => ({
     saveNotify,
     validateAnswer: vi.fn(),
     requestQuestions: vi.fn(),
+    requestStrategyPicks,
+    reportHelpEvents,
   },
 }));
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe('strategy help — fail-safe bridge wrappers', () => {
+  const EVENT = {
+    eventId: 'e1',
+    family: 'div-facts' as const,
+    strategy: 'div.share' as const,
+    thumb: null,
+    fact: '24÷4',
+    beforeAnswer: false,
+    triesBefore: 1,
+  };
+
+  it('passes the picks and the report result through', async () => {
+    requestStrategyPicks.mockResolvedValueOnce({ 'div-facts': 'div.share' });
+    reportHelpEvents.mockResolvedValueOnce({ ok: true });
+    const host = await import('../src/host');
+    await expect(host.requestStrategyPicks()).resolves.toEqual({ 'div-facts': 'div.share' });
+    await expect(host.reportHelpEvents([EVENT])).resolves.toEqual({ ok: true });
+    expect(reportHelpEvents).toHaveBeenCalledWith([EVENT]);
+  });
+
+  it('never throws: {} for picks and { ok: false } for a report when the bridge throws', async () => {
+    requestStrategyPicks.mockRejectedValueOnce(new Error('boom'));
+    reportHelpEvents.mockRejectedValueOnce(new Error('boom'));
+    const host = await import('../src/host');
+    await expect(host.requestStrategyPicks()).resolves.toEqual({});
+    await expect(host.reportHelpEvents([EVENT])).resolves.toEqual({ ok: false });
+  });
 });
 
 describe('reporting — fail-safe bridge wrappers', () => {

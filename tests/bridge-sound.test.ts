@@ -83,7 +83,7 @@ describe('bridge.onSound (Trello 383)', () => {
   it('announces the sound feature in chocabloc:ready', async () => {
     embed();
     await import('../src/bridge');
-    expect(postSpy).toHaveBeenCalledWith({ type: 'chocabloc:ready', payload: { features: ['sound'] } }, '*');
+    expect(postSpy).toHaveBeenCalledWith({ type: 'chocabloc:ready', payload: { features: ['sound', 'help'] } }, '*');
   });
 
   it('a handler registered before init fires once init says the host shows Mute', async () => {

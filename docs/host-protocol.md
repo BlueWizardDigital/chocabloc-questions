@@ -73,7 +73,7 @@ game boots
   bridge.exit()          chocabloc:exit                       (optional, on explicit quit)
 ```
 
-`chocabloc:ready` carries `payload: { features: ['sound'] }` from the Trello 383 release on; the host reads it to tell an updated game from an older one.
+`chocabloc:ready` carries `payload: { features: ['sound'] }` from the Trello 383 release on, and `['sound', 'help']` once the library has [strategy help](#strategy-help); the host reads it to tell an updated game from an older one.
 
 If `chocabloc:init` doesn't arrive within **2 seconds**, the bridge synthesizes a
 standalone context (`standalone: true`) so the game never hangs.
@@ -193,6 +193,14 @@ rules), or a `NO_CONCEPT` signal. See [Concepts](#concepts-grade-tiered-game-loo
 
 Reply to your `chocabloc:concept-session:report`. Carries the player's accumulated
 progress for the concept. See [Concepts](#concepts-grade-tiered-game-loop-rules).
+
+### `chocabloc:strategy:deliver` — the kid's saved strategies
+
+Reply to your `chocabloc:strategy:request`: `{ requestId, picks }`. See [Strategy help](#strategy-help).
+
+### `chocabloc:help-event:deliver` — help events saved or not
+
+Reply to your `chocabloc:help-event:report`: `{ requestId, ok, code? }`. See [Strategy help](#strategy-help).
 
 ### `chocabloc:sound` — the host's Mute (Trello 383)
 
@@ -464,6 +472,57 @@ without one.
 
 `chocabloc-questions/host` re-exports both as fail-safe wrappers: `requestGameConcept(opts?)` and
 `reportConceptSession(payload)` (thin pass-throughs for host-kit symmetry).
+
+---
+
+## Strategy help
+
+Help for a multiplication or division fact shows a strategy, such as skip counting or sharing out. A kid can
+save a favourite strategy for each help family (`mult-facts`, `div-facts`), and the game
+reports each time help was shown. Both calls **never throw** and have **no fetch fallback**:
+a page with no host has no session to read picks with or save events through.
+
+### Read the saved picks
+
+```ts
+const picks = await bridge.requestStrategyPicks();
+// Partial<Record<HelpFamily, StrategyId>>, e.g. { 'mult-facts': 'mult.skip-count' }
+```
+
+Posts `chocabloc:strategy:request` (`{ requestId }`); the host replies `chocabloc:strategy:deliver`
+with `{ requestId, picks }`. Resolves `{}` at once when standalone, and `{}` on timeout (4 s) or an
+error reply. **The bridge drops any pick that isn't a known strategy id for its own family**, so
+the game can use what it gets. Its list is `HELP_STRATEGY_IDS`, a copy of the help catalog kept in
+`bridge.ts` so the bridge imports nothing; a test keeps the two equal.
+
+### Report help events
+
+```ts
+const result = await bridge.reportHelpEvents([
+  { eventId, family, strategy, thumb, fact, beforeAnswer, triesBefore },
+]);   // { ok: boolean } | null
+```
+
+Posts `chocabloc:help-event:report` (`{ requestId, events }`); the host saves them and replies
+`chocabloc:help-event:deliver` with `{ requestId, ok, code? }`. Resolves `null` when standalone,
+`{ ok: false }` on timeout (5 s), a refusal or a malformed reply. The bridge passes the events on
+as given; the host and server check them. Send 1 to 20 events per call. The host sets the
+`gameId`, so don't send one.
+
+```ts
+interface HelpEventReport {
+  eventId: string;              // a UUID made in the browser
+  family: 'mult-facts' | 'div-facts';
+  strategy: StrategyId;         // must belong to `family`
+  thumb: 'up' | 'down' | null;
+  fact: string;                 // e.g. '7x8' or '24÷4'
+  beforeAnswer: boolean;        // help came before the kid answered
+  triesBefore: number | null;   // tries already made on the fact when the strategy was shown
+}
+```
+
+`chocabloc-questions/host` has the same two calls as fail-safe wrappers:
+`requestStrategyPicks()` and `reportHelpEvents(events)`.
 
 ---
 

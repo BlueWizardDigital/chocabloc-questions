@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Strategy help on the bridge** (minor): `bridge.requestStrategyPicks()` (`chocabloc:strategy:request`
+  / `:deliver`) reads the kid's saved strategy per help family. It resolves `{}` standalone, on
+  timeout or on an error, and keeps only a known strategy id for its own family.
+  `bridge.reportHelpEvents(events)` (`chocabloc:help-event:report` / `:deliver`) resolves
+  `null` standalone and `{ ok: false }` on timeout. Both are also in the host kit. New exports:
+  `HELP_STRATEGY_IDS` and the types `HelpFamily`, `StrategyId`, `HelpRecord`, `HelpEventReport`
+  (now declared in `src/types.ts`, so a copied `bridge.ts` + `types.ts` still compiles).
+  `chocabloc:ready` now advertises `features: ['sound', 'help']`.
+
 ## [0.7.0-beta.5] — 2026-11-03
 
 **Patch** (Trello 450, from the math tester robot's re-run on beta.4): data only, no API or

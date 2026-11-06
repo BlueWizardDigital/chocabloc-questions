@@ -19,7 +19,7 @@ import {
   type ConceptProgress,
 } from './bridge';
 import { normalizeBatch, normalizeQuestion } from './helpers/normalizer';
-import type { NormalizedQuestion } from './types';
+import type { HelpEventReport, HelpFamily, NormalizedQuestion, StrategyId } from './types';
 
 export type { BridgeContext, HostControls, AttemptPayload, ScorePayload } from './bridge';
 export type {
@@ -29,6 +29,7 @@ export type {
   ConceptProgress,
 } from './bridge';
 export type { NormalizedQuestion } from './types';
+export type { HelpFamily, StrategyId, HelpRecord, HelpEventReport } from './types';
 
 // ── Host context ────────────────────────────────────────────────────────────
 
@@ -164,6 +165,36 @@ export async function reportConceptSession(
     return await bridge.reportConceptSession(payload);
   } catch {
     return null; // never let telemetry crash the game
+  }
+}
+
+// ── Strategy help ───────────────────────────────────────────────────────────
+
+/**
+ * The kid's saved strategy for each help family that has one. `{}` standalone,
+ * on timeout or on an error; the bridge has already dropped any pick that isn't
+ * a known strategy for its family. Thin pass-through over
+ * `bridge.requestStrategyPicks`.
+ */
+export async function requestStrategyPicks(): Promise<Partial<Record<HelpFamily, StrategyId>>> {
+  try {
+    return await bridge.requestStrategyPicks();
+  } catch {
+    return {}; // help without a saved pick still works
+  }
+}
+
+/**
+ * Report help events for the host to save. `null` standalone, `{ ok: false }`
+ * on timeout or a refusal. Fail-safe: never throws.
+ */
+export async function reportHelpEvents(
+  events: HelpEventReport[],
+): Promise<{ ok: boolean } | null> {
+  try {
+    return await bridge.reportHelpEvents(events);
+  } catch {
+    return { ok: false }; // never let telemetry crash the game
   }
 }
 

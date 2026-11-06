@@ -468,3 +468,27 @@ export type ValidateAnswer = (
   question: NormalizedQuestion,
   studentAnswer: AnswerValue,
 ) => Promise<ValidationResult>;
+
+// ── Strategy help ────────────────────────────────────────────────────────────
+// Here, not in help/types.ts (which re-exports them), because bridge.ts uses them
+// and games that copy the bridge copy bridge.ts with this file only (Ruling 17).
+
+export type HelpFamily = 'mult-facts' | 'div-facts';
+export type StrategyId =
+  | 'mult.groups'
+  | 'mult.skip-count'
+  | 'mult.known-fact'
+  | 'mult.nearby-fact'
+  | 'div.share'
+  | 'div.groups'
+  | 'div.think-mult'
+  | 'div.array';
+export interface HelpRecord {
+  eventId: string;
+  family: HelpFamily;
+  strategy: StrategyId;
+  thumb: 'up' | 'down' | null;
+  fact: string;
+}
+/** A help record as the game reports it: whether help came before the answer, and the tries before it. */
+export type HelpEventReport = HelpRecord & { beforeAnswer: boolean; triesBefore: number | null };

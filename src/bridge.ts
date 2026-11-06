@@ -14,10 +14,15 @@
 
 import type {
   AnswerValue,
+  HelpEventReport,
+  HelpFamily,
   NormalizedQuestion,
+  StrategyId,
   ValidateAnswer,
   ValidationResult,
 } from './types';
+
+export type { HelpFamily, StrategyId, HelpRecord, HelpEventReport } from './types';
 
 const INIT_TIMEOUT_MS = 2000;
 const REQUEST_TIMEOUT_MS = 3000;
@@ -27,6 +32,34 @@ const CONCEPT_TIMEOUT_MS = 4000;
 // Session report is a write (POST /concepts/:id/sessions). Give it the same
 // slack as validate rather than the read-path questions timeout.
 const CONCEPT_SESSION_TIMEOUT_MS = 5000;
+// Strategy help: picks are a read, help events a write (same split as concepts).
+const STRATEGY_TIMEOUT_MS = 4000;
+const HELP_EVENT_TIMEOUT_MS = 5000;
+
+/**
+ * The strategy ids each help family accepts: a copy of STRATEGIES in
+ * src/help/catalog.ts, kept here so this file imports nothing at run time
+ * (games copy it on its own; Ruling 17). tests/bridge-help.test.ts keeps the
+ * two equal. The bridge passes on only a pick found here for its own family.
+ */
+export const HELP_STRATEGY_IDS: Readonly<Record<HelpFamily, readonly StrategyId[]>> =
+  Object.freeze({
+    'mult-facts': Object.freeze([
+      'mult.groups',
+      'mult.skip-count',
+      'mult.known-fact',
+      'mult.nearby-fact',
+    ] as StrategyId[]),
+    'div-facts': Object.freeze([
+      'div.share',
+      'div.groups',
+      'div.think-mult',
+      'div.array',
+    ] as StrategyId[]),
+  });
+
+/** The kid's saved strategy for each help family that has one. */
+type StrategyPicks = Partial<Record<HelpFamily, StrategyId>>;
 
 // Input shapes mirror the host's own validators (GamePageWrapper /
 // useNextGameQuestion). Applied ONLY on the no-host fetch fallback — the
@@ -311,7 +344,7 @@ export interface AttachValidatorQuestion {
 export type SoundCallback = (muted: boolean) => void;
 
 /** What this library can do, sent with chocabloc:ready so the host can tell. */
-const BRIDGE_FEATURES = ['sound'];
+const BRIDGE_FEATURES = ['sound', 'help'];
 
 /** The server's adaptive block for a switched-on game's batch (spec §8.2). */
 export interface AdaptiveInfo {
@@ -339,6 +372,8 @@ export interface Bridge {
   reportConceptSession(
     payload: ConceptSessionPayload
   ): Promise<ConceptProgress | null>;
+  requestStrategyPicks(): Promise<StrategyPicks>;
+  reportHelpEvents(events: HelpEventReport[]): Promise<{ ok: boolean } | null>;
   validateAnswer(opts: ValidateAnswerOptions): Promise<ValidateAnswerResult>;
   attachValidator(
     el: ChocablocQuestionLike,
@@ -424,6 +459,15 @@ interface PendingConceptSessions {
   timer: ReturnType<typeof setTimeout>;
 }
 const pendingConceptSessions = new Map<string, PendingConceptSessions>();
+
+// In-flight strategy-help requests keyed by requestId: chocabloc:strategy:request
+// and chocabloc:help-event:report. Same shape as the concept channels.
+interface PendingHelp {
+  resolve: (payload: Record<string, unknown> | null) => void;
+  timer: ReturnType<typeof setTimeout>;
+}
+const pendingStrategyPicks = new Map<string, PendingHelp>();
+const pendingHelpEvents = new Map<string, PendingHelp>();
 
 // Anything but a literal true is false: a malformed or missing field must not
 // make a game hide a button the host doesn't show.
@@ -541,6 +585,14 @@ function handleHostMessage(e: MessageEvent): void {
       handleConceptSessionDeliver(msg.payload);
       return;
     }
+    case 'chocabloc:strategy:deliver': {
+      settleHelpReply(pendingStrategyPicks, msg.payload);
+      return;
+    }
+    case 'chocabloc:help-event:deliver': {
+      settleHelpReply(pendingHelpEvents, msg.payload);
+      return;
+    }
     default:
       return;
   }
@@ -591,6 +643,20 @@ function handleConceptSessionDeliver(payload: unknown): void {
 
   clearTimeout(pending.timer);
   pendingConceptSessions.delete(p.requestId);
+  pending.resolve(p);
+}
+
+function settleHelpReply(pendingMap: Map<string, PendingHelp>, payload: unknown): void {
+  // Mirror handleQuestionsDeliver: ignore late / duplicate / malformed replies.
+  if (!payload || typeof payload !== 'object') return;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.requestId !== 'string') return;
+
+  const pending = pendingMap.get(p.requestId);
+  if (!pending) return;
+
+  clearTimeout(pending.timer);
+  pendingMap.delete(p.requestId);
   pending.resolve(p);
 }
 
@@ -1044,6 +1110,83 @@ async function reportConceptSession(
   return progress ? (progress as unknown as ConceptProgress) : null;
 }
 
+// Post a strategy-help message to the host and await the reply with the same
+// requestId. Resolves to the reply payload, or null on timeout / parent gone.
+// Never rejects. Mirrors postConceptRequest.
+function postHelpMessage(
+  type: string,
+  payload: Record<string, unknown>,
+  pendingMap: Map<string, PendingHelp>,
+  timeoutMs: number
+): Promise<Record<string, unknown> | null> {
+  return new Promise((resolve) => {
+    const requestId = makeRequestId();
+    const timer = setTimeout(() => {
+      pendingMap.delete(requestId);
+      resolve(null);
+    }, timeoutMs);
+    pendingMap.set(requestId, { resolve, timer });
+    try {
+      window.parent.postMessage({ type, payload: { requestId, ...payload } }, parentOrigin || '*');
+    } catch {
+      clearTimeout(timer);
+      pendingMap.delete(requestId);
+      resolve(null);
+    }
+  });
+}
+
+// Keep only a known strategy id under its own family. Reads just the help
+// families' own keys into a fresh object, so nothing else in the host's reply
+// (another family, a stray key, __proto__) reaches the game.
+function readStrategyPicks(raw: unknown): StrategyPicks {
+  const picks: StrategyPicks = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return picks;
+  const r = raw as Record<string, unknown>;
+  for (const family of Object.keys(HELP_STRATEGY_IDS) as HelpFamily[]) {
+    if (!Object.prototype.hasOwnProperty.call(r, family)) continue;
+    const id = r[family];
+    if ((HELP_STRATEGY_IDS[family] as readonly unknown[]).includes(id)) {
+      picks[family] = id as StrategyId;
+    }
+  }
+  return picks;
+}
+
+// The kid's saved strategy for each help family, from the host. Resolves {} at
+// once with no host: there is no fetch fallback, because a page with no host has
+// no session to read picks with. Also {} on timeout or an error reply. Never
+// throws. A pick that isn't a known strategy id for its family is dropped.
+// Call after bridge.onReady.
+async function requestStrategyPicks(): Promise<StrategyPicks> {
+  if (!ctx || ctx.standalone) return {};
+  const deliver = await postHelpMessage(
+    'chocabloc:strategy:request',
+    {},
+    pendingStrategyPicks,
+    STRATEGY_TIMEOUT_MS
+  );
+  if (!deliver || deliver.error) return {};
+  return readStrategyPicks(deliver.picks);
+}
+
+// Report help events to the host, which saves them. Resolves null with no host
+// (no fetch fallback: the write needs the host's session + CSRF), { ok: false }
+// on timeout, a refusal or a malformed reply, and { ok: true } when saved.
+// Never throws. The host and server check every event. Call after bridge.onReady.
+async function reportHelpEvents(
+  events: HelpEventReport[]
+): Promise<{ ok: boolean } | null> {
+  if (!ctx || ctx.standalone) return null;
+  const deliver = await postHelpMessage(
+    'chocabloc:help-event:report',
+    { events },
+    pendingHelpEvents,
+    HELP_EVENT_TIMEOUT_MS
+  );
+  return { ok: deliver?.ok === true };
+}
+
 export const bridge: Bridge = {
   get ctx() {
     return ctx;
@@ -1102,6 +1245,12 @@ export const bridge: Bridge = {
   },
   reportConceptSession(payload: ConceptSessionPayload) {
     return reportConceptSession(payload);
+  },
+  requestStrategyPicks() {
+    return requestStrategyPicks();
+  },
+  reportHelpEvents(events: HelpEventReport[]) {
+    return reportHelpEvents(events);
   },
   validateAnswer(opts: ValidateAnswerOptions) {
     return validateAnswer(opts);

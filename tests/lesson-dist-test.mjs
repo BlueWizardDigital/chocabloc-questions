@@ -3,6 +3,7 @@
  * Checks the built lesson entry exists, that it loads the practice code (and
  * with it <chocabloc-question>) only through one dynamic import, and that a
  * consumer bundle importing it carries the parser and registers both elements.
+ * Also checks that dist/bridge.mjs and dist/bridge.cjs import nothing.
  *
  * Run after `npm run build`: node tests/lesson-dist-test.mjs
  */
@@ -83,6 +84,14 @@ try {
     }
   }
 
+  // The built bridge imports nothing: Phish Tank and Smush copy dist/bridge.mjs on its own (Ruling 17).
+  for (const f of ['bridge.mjs', 'bridge.cjs']) {
+    const bridgeCode = readFileSync(resolve(dist, f), 'utf8');
+    if (staticImports(bridgeCode).length > 0 || /\bimport\s*\(|\brequire\s*\(/.test(bridgeCode)) {
+      fail(`dist/${f} imports another file; games copy it on its own, so it must import nothing`);
+    }
+  }
+
   writeFileSync(resolve(tmpDir, 'entry.js'), `
     import { loadLesson, parseLesson } from '../dist/lesson.mjs';
     console.log(loadLesson, parseLesson);
@@ -121,7 +130,7 @@ try {
   }
   if (process.exitCode !== 1) {
     console.log(
-      'PASS: lesson entry built, bundles the parser, registers <chocabloc-lesson>, and loads <chocabloc-question> only through the lazy practice chunk.',
+      'PASS: lesson entry built, bundles the parser, registers <chocabloc-lesson>, and loads <chocabloc-question> only through the lazy practice chunk. The bridge imports nothing.',
     );
   }
 } catch (e) {
