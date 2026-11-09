@@ -405,6 +405,7 @@ help.addEventListener('help-close', () => { clearLights(); helpButton.focus(); }
 - **`pick`** goes first when it fits this kid and this fact.
 - **`draw`:** `'card'` (the default) draws the panel's own picture. `'strip'` draws none, for a game that lights up its own grid from `help-step`.
 - **`solved`:** facts already solved on screen, `[{ a, b }]`. Without one next door, the nearby-fact strategy is skipped.
+- **`muted`** (or the `muted` attribute) follows the game's Mute, such as `bridge.onSound((m) => { help.muted = m; })`. While it is on, a young kid hears nothing and sees no Tap to hear, and turning it on stops the voice at once. Turning it off waits for the next step. Words and pictures don't change.
 - **Numbers help can't use** (a zero, out of range, or no fact at all) show "Let's ask your teacher about this one." with no thumbs, and no `help-record`.
 - **`help-record`** fires once each time a strategy is left. Report these with `bridge.reportHelpEvents`; the game adds `beforeAnswer` and `triesBefore`.
 - **Words** are English by default. Give `translator(key, vars)` to answer first for any of them, as in the lesson.

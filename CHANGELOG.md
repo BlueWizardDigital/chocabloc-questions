@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`muted` on `<chocabloc-help>`** (minor): a property, mirrored by a `muted` attribute, for the
+  game's Mute. While it is on, a young kid's panel says nothing by itself and shows no Tap to hear,
+  and turning it on stops any speech at once. Turning it off doesn't say the step on screen again;
+  the next step speaks as usual. Words and pictures don't change, and a grade 4 and up panel, which
+  never speaks, is unchanged. The lesson player doesn't pass it yet.
+
 ## [0.7.0-beta.6] — 2026-11-09
 
 **Minor** (strategy help, slice 1): a new `chocabloc-questions/help` entry, two bridge calls, and help in the fact lessons' Try again; nothing renamed or removed. Only Cocoa Lab moves to this release now.

@@ -38,7 +38,7 @@ interface Run {
   recorded: boolean;
 }
 
-const PROPS = ['fact', 'grade', 'pick', 'solved', 'draw', 'translator', 'pictureBase'] as const;
+const PROPS = ['fact', 'grade', 'pick', 'solved', 'draw', 'translator', 'pictureBase', 'muted'] as const;
 
 const BODY = 'var(--cl-font-body, var(--cq-font, system-ui))';
 const BG = 'var(--cl-bg, #fff8ec)';
@@ -242,6 +242,26 @@ export class ChocaHelp extends HTMLElement {
     this._pictureBase = typeof b === 'string' && b !== '' ? (b.endsWith('/') ? b : `${b}/`) : null;
   }
 
+  static get observedAttributes(): string[] {
+    return ['muted'];
+  }
+
+  /** The game's Mute, mirrored by the `muted` attribute: no voice and no Tap to hear. Words and pictures don't change. */
+  get muted(): boolean {
+    return this.hasAttribute('muted');
+  }
+
+  set muted(m: boolean) {
+    this.toggleAttribute('muted', m);
+  }
+
+  /** Muting stops the voice at once. Unmuting waits for the next step: the one on screen isn't said again. */
+  attributeChangedCallback(): void {
+    if (!this.muted) return;
+    this._run?.speaker?.cancel();
+    this._tap.replaceChildren();
+  }
+
   disconnectedCallback(): void {
     this.close();
   }
@@ -388,10 +408,10 @@ export class ChocaHelp extends HTMLElement {
     this._emit('help-step', { strategy: way.id, index: run.step, points: step.points });
   }
 
-  /** A young kid hears what is shown, once the voice is allowed; before that, Tap to hear. */
+  /** A young kid hears what is shown, once the voice is allowed; before that, Tap to hear. Muted, neither. */
   private _voice(run: Run, line: string): void {
     const { speaker, msg } = run;
-    if (!speaker?.supported) return;
+    if (!speaker?.supported || this.muted) return;
     speaker.cancel();
     const words = speakableText(line, msg);
     if (voiceUnlocked(this._tapped)) {

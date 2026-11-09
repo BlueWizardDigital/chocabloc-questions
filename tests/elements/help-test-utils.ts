@@ -9,7 +9,7 @@ export const mult = (a: number | null, b: number | null, c: number | null = null
 export const div = (a: number | null, b: number | null, c: number | null = null): HelpFact => ({ op: 'div', a, b, c });
 export const BASE = new URL('../fixtures/animals/', import.meta.url).pathname;
 
-export type Props = Partial<Pick<ChocaHelp, 'fact' | 'grade' | 'pick' | 'solved' | 'draw' | 'translator' | 'pictureBase'>>;
+export type Props = Partial<Pick<ChocaHelp, 'fact' | 'grade' | 'pick' | 'solved' | 'draw' | 'translator' | 'pictureBase' | 'muted'>>;
 
 export function mountHelp(props: Props = {}): ChocaHelp {
   const el = document.createElement('chocabloc-help') as ChocaHelp;

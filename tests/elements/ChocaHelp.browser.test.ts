@@ -1,8 +1,9 @@
 import { expect } from '@esm-bundle/chai';
 import { ChocaHelp } from '../../src/help/index';
 import type { HelpRecord } from '../../src/help/index';
-import { captureConsole, cleanup, firstArgs, holder, stubSpeech, tick } from './lesson-test-utils';
+import { captureConsole, cleanup, firstArgs, holder, parts, stubSpeech, tick } from './lesson-test-utils';
 import { BASE, click, div, events, focusedPart, hasTap, isOpen, mountHelp, mult, opened, roles, say, the, way } from './help-test-utils';
+import type { Props } from './help-test-utils';
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -229,12 +230,15 @@ describe('<chocabloc-help>: the flow', () => {
   });
 
   it('properties set before the element is defined still count', () => {
+    const s = stubSpeech();
     const el = document.createElement('chocabloc-help-early') as ChocaHelp;
-    Object.assign(el, { fact: mult(7, 8), grade: '3' });
+    Object.assign(el, { fact: mult(7, 8), grade: '3', muted: true });
     holder().append(el);
     customElements.define('chocabloc-help-early', class extends ChocaHelp {});
     el.open();
     expect(way(el)).to.equal('Way 1 of 2: Equal groups');
+    expect(el.hasAttribute('muted')).to.equal(true);
+    expect(s.spoken).to.deep.equal([]);
   });
 
   it('reads nothing of the fact but its op and numbers', () => {
@@ -386,6 +390,124 @@ describe('<chocabloc-help>: voice', () => {
     const before = s.cancels();
     click(el, 'thumb-up');
     expect(s.cancels()).to.be.greaterThan(before);
+  });
+});
+
+describe('<chocabloc-help>: muted', () => {
+  /** What the kid sees on each step of the first way, then on the second way's first step, as strings. */
+  const seen = (props: Props): string[] => {
+    const el = opened({ pictureBase: BASE, ...props });
+    const out: string[] = [];
+    const note = (): void => void out.push(`${way(el)} | ${say(el)} | ${the(el, 'picture').hidden} | ${the(el, 'picture').innerHTML}`);
+    note();
+    while (!(the(el, 'more') as HTMLButtonElement).disabled) {
+      click(el, 'more');
+      note();
+    }
+    click(el, 'thumb-down');
+    note();
+    el.close();
+    return out;
+  };
+  /** Every button's words, hidden or not. */
+  const buttonWords = (el: HTMLElement): string[] =>
+    Array.from((el.shadowRoot as ShadowRoot).querySelectorAll('button')).map((b) => (b.textContent ?? '').trim());
+
+  it('a young kid hears nothing while muted', () => {
+    const s = stubSpeech();
+    expect(mountHelp().muted, 'off by default').to.equal(false);
+    const el = opened({ fact: mult(4, 6), grade: '2', muted: true });
+    expect(say(el)).to.equal('4 rows of 6. How many in all?');
+    click(el, 'more');
+    click(el, 'thumb-down');
+    click(el, 'thumb-down');
+    el.close();
+    // The fallback line too.
+    el.fact = mult(0, 5);
+    el.open();
+    expect(say(el)).to.equal("Let's ask your teacher about this one.");
+    // The attribute does the same.
+    const byAttr = mountHelp({ fact: mult(4, 6), grade: '2' });
+    byAttr.setAttribute('muted', '');
+    expect(byAttr.muted).to.equal(true);
+    byAttr.open();
+    expect(s.spoken).to.deep.equal([]);
+    // Words and pictures are what an unmuted kid sees.
+    const young = { fact: mult(4, 6), grade: '2' };
+    expect(seen({ ...young, muted: true })).to.deep.equal(seen(young));
+  });
+
+  it('muting mid-step cancels speech', () => {
+    const s = stubSpeech();
+    const el = opened({ fact: mult(4, 6), grade: '2' });
+    expect(s.spoken).to.deep.equal(['4 rows of 6. How many in all?']);
+    const before = s.cancels();
+    el.muted = true;
+    expect(s.cancels()).to.equal(before + 1);
+    expect(s.log[s.log.length - 1]).to.equal('cancel');
+    expect(el.hasAttribute('muted'), 'the property sets the attribute').to.equal(true);
+    click(el, 'more');
+    expect(s.spoken).to.have.length(1);
+
+    // The attribute, mid-step, cancels too.
+    const other = opened({ fact: mult(4, 6), grade: '2' });
+    const was = s.cancels();
+    other.setAttribute('muted', '');
+    expect(s.cancels()).to.equal(was + 1);
+  });
+
+  it('unmuting speaks from the next step', () => {
+    const s = stubSpeech();
+    const el = opened({ fact: mult(4, 6), grade: '2', muted: true });
+    el.muted = false;
+    expect(el.hasAttribute('muted')).to.equal(false);
+    expect(s.spoken, 'the step on screen is not replayed').to.deep.equal([]);
+    click(el, 'more');
+    expect(s.spoken).to.deep.equal(['Each row adds 6. Count row by row.']);
+    cleanup();
+
+    // A page never tapped: Tap to hear comes back with the next step, not the current one.
+    const locked = stubSpeech(true, false);
+    const el2 = opened({ fact: mult(4, 6), grade: '2' });
+    el2.setAttribute('muted', '');
+    el2.removeAttribute('muted');
+    expect(el2.muted).to.equal(false);
+    expect(hasTap(el2)).to.equal(false);
+    click(el2, 'more');
+    expect(hasTap(el2)).to.equal(true);
+    click(el2, 'tap-to-hear');
+    expect(locked.spoken).to.deep.equal(['Each row adds 6. Count row by row.']);
+  });
+
+  it('muted hides Read to me and Tap to hear', () => {
+    stubSpeech(true, false);
+    const el = opened({ fact: mult(4, 6), grade: '2' });
+    expect(hasTap(el)).to.equal(true);
+    el.muted = true;
+    expect(hasTap(el)).to.equal(false);
+    click(el, 'more');
+    click(el, 'thumb-down');
+    expect(hasTap(el)).to.equal(false);
+    const fresh = opened({ fact: mult(4, 6), grade: '2', muted: true });
+    expect(hasTap(fresh)).to.equal(false);
+    for (const e of [el, fresh]) {
+      expect(parts(e, 'read-to-me').length).to.equal(0);
+      for (const words of ['Read to me', 'Tap to hear']) expect(buttonWords(e)).not.to.include(words);
+    }
+  });
+
+  it('standard kids are unchanged', () => {
+    const s = stubSpeech(true, false);
+    const el = opened({ fact: mult(7, 8), grade: '5' });
+    el.muted = true;
+    click(el, 'more');
+    el.muted = false;
+    click(el, 'thumb-down');
+    el.close();
+    expect(hasTap(el)).to.equal(false);
+    expect(s.log, 'the panel leaves speech alone').to.deep.equal([]);
+    const standard = { fact: mult(7, 8), grade: '5', solved: [{ a: 7, b: 7 }] };
+    expect(seen({ ...standard, muted: true })).to.deep.equal(seen(standard));
   });
 });
 

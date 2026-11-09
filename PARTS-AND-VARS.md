@@ -264,7 +264,11 @@ totals), so a game themes both at once. It adds no vars. The blocks keep the cou
 | `thumb-up` | 👍 (also a `button`) |
 | `thumb-down` | 👎 (also a `button`) |
 | `close` | Close help (also a `button`) |
-| `tap-to-hear` | The big Tap to hear button (also a `button`), shown to a young kid until the page has been tapped. Absent where the browser has no speech |
+| `tap-to-hear` | The big Tap to hear button (also a `button`), shown to a young kid until the page has been tapped. Absent where the browser has no speech, and while `muted` |
+
+| Attribute | Type | Purpose |
+|-----------|------|---------|
+| `muted` | boolean | The game's Mute, mirrored by the `muted` property. While it is set, a young kid's panel says nothing by itself and shows no Tap to hear, and setting it stops any speech at once. Removing it doesn't say the step on screen again; the next step speaks as usual. Words and pictures don't change. The panel has no Read to me of its own |
 
 **`data-help-role`.** Every number the panel prints in the words or on a picture sits in an element with
 `data-help-role`: `given` (the question shows it), `anchor` (a fact help starts from) or `partial` (a running
