@@ -5,6 +5,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.7.0-beta.7] — 2026-11-09
+
+**Minor**: the help panel obeys the game's Mute; nothing renamed or removed. Only Cocoa Lab moves to this release now.
+
 ### Added
 
 - **`muted` on `<chocabloc-help>`** (minor): a property, mirrored by a `muted` attribute, for the
