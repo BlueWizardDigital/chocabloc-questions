@@ -267,8 +267,9 @@ totals), so a game themes both at once. It adds no vars. The blocks keep the cou
 
 **`data-help-role`.** Every number the panel prints in the words or on a picture sits in an element with
 `data-help-role`: `given` (the question shows it), `anchor` (a fact help starts from) or `partial` (a running
-total or a count so far). It is there so tests can check numbers by role. Only the way line's numbers have
-none: they count strategies.
+total or a count so far). It is there so tests can check numbers by role. A number with two roles takes the
+non-given one. The "Way 1 of 4" line is the one place with no role: it is a position count, not a math number
+(Ruling 25, approved by David).
 
 | Event | Detail shape | Fires |
 |-------|--------------|-------|
@@ -277,3 +278,6 @@ none: they count strategies.
 | `help-close` | `{}` | When the panel closes. Clear any highlight here |
 
 All events use `bubbles: true, composed: true`. None carries anything about the answer.
+
+A `help-record` and `help-close` sent because the element was removed reach only listeners on the element
+itself: by then it is off the page, so they can't bubble to a parent or `document`.

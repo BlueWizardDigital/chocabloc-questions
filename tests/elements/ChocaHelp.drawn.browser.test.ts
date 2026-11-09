@@ -1,7 +1,7 @@
 import { expect } from '@esm-bundle/chai';
 import { STRATEGIES, buildSteps, strategyOrder } from '../../src/help/index';
 import type { ChocaHelp, HelpFact, HelpPicture, SolvedFact, StrategyId } from '../../src/help/index';
-import { drawPicture } from '../../src/help/dom/picture';
+import { drawPicture, roleNodes } from '../../src/help/dom/picture';
 import { lookup } from '../../src/lesson/messages';
 import en from '../../src/help/messages/en.json';
 import { captureConsole, cleanup, firstArgs, holder, stubSpeech, until } from './lesson-test-utils';
@@ -209,14 +209,14 @@ describe('the drawn-output checker catches deliberate leaks', () => {
   });
 
   it('the product in a spoken string', () => {
-    expect(codes(check(sevenEights(), F, ['Six rows make 48. The answer is 56.'], PIC, WAY))).to.deep.equal(['spoken-shows-unknown']);
+    expect(codes(check(sevenEights(), F, ['Six rows make 48. The answer is 56.'], PIC, WAY))).to.deep.equal(['spoken-differs']);
   });
 
   for (const attr of ['aria-label', 'alt', 'title']) {
     it(`the product in an ${attr}`, () => {
       const el = sevenEights();
       the(el, 'picture').setAttribute(attr, '56 in all');
-      expect(codes(check(el, F, [], PIC, WAY))).to.deep.equal(['attribute-shows-unknown']);
+      expect(codes(check(el, F, [], PIC, WAY))).to.deep.equal(['attribute-no-role', 'attribute-shows-unknown']);
     });
   }
 
@@ -268,12 +268,63 @@ describe('the drawn-output checker catches deliberate leaks', () => {
     const f = mult(1, 6);
     const line = 'Way 1 of 1: Equal groups';
     const el = opened({ fact: f, grade: '5' });
-    expect(check(el, f, ['One group of 6.'], undefined, line)).to.deep.equal([]);
+    expect(check(el, f, ['One group of 6. How many is that?'], undefined, line)).to.deep.equal([]);
     the(el, 'picture').append(span('given', '6'));
     expect(check(el, f, [], undefined, line)).to.deep.equal([]);
     the(el, 'picture').append(span('partial', '6'));
     expect(codes(check(el, f, [], undefined, line))).to.deep.equal(['shows-unknown']);
   });
+
+  it('roleNodes keeps a partial or anchor 6 from hiding behind a given 6 on 1 × 6, in any order', () => {
+    const f = mult(1, 6);
+    const line = 'Way 1 of 1: Equal groups';
+    const words = 'One group of 6. 1 row makes 6.';
+    for (const params of [
+      { givenEach: 6, partialRows: 1, partialSum: 6 },
+      { partialSum: 6, partialRows: 1, givenEach: 6 },
+      { givenEach: 6, anchorRows: 1, anchorProduct: 6 },
+    ]) {
+      const el = opened({ fact: f, grade: '5' });
+      the(el, 'text').replaceChildren(...roleNodes(words, params));
+      expect(codes(check(el, f, [], undefined, line)), JSON.stringify(params)).to.deep.equal(['shows-unknown', 'shows-unknown']);
+    }
+    // A given 6 with nothing else behind it is fine.
+    const el = opened({ fact: f, grade: '5' });
+    the(el, 'text').replaceChildren(...roleNodes('One group of 6.', { givenEach: 6 }));
+    expect(check(el, f, [], undefined, line)).to.deep.equal([]);
+  });
+
+  // The question shows the unknown on these, so "is it on screen" can't catch a leak: only the role can.
+  for (const [name, fact, unknown] of [
+    ['1 × 6', mult(1, 6), 6],
+    ['6 × 1', mult(6, 1), 6],
+    ['6 ÷ 1', div(6, 1), 6],
+    ['49 ÷ 7', div(49, 7), 7],
+    ['7 × ? = 49', mult(7, null, 49), 7],
+  ] as [string, HelpFact, number][]) {
+    it(`${name}: the unknown fails outside a given element, in an attribute, in speech and as a label`, () => {
+      const drawn = (change: (el: ChocaHelp) => void, spoken: string[] = []): string[] => {
+        const el = opened({ fact, grade: '5' });
+        const line = way(el) as string;
+        change(el);
+        return codes(check(el, fact, spoken, undefined, line));
+      };
+      const clean = opened({ fact, grade: '5' });
+      expect(check(clean, fact, [say(clean) as string], undefined, way(clean) as string), 'as drawn').to.deep.equal([]);
+      for (const attr of ['aria-label', 'alt', 'title']) {
+        expect(drawn((el) => the(el, 'picture').setAttribute(attr, `${unknown} in all`)), attr).to.deep.equal(['attribute-no-role', 'attribute-shows-unknown']);
+        const labelled = (role: string): ((el: ChocaHelp) => void) => (el) => {
+          const s = span(role, '');
+          s.setAttribute(attr, String(unknown));
+          the(el, 'picture').append(s);
+        };
+        expect(drawn(labelled('partial')), `${attr} on a partial`).to.deep.equal(['attribute-shows-unknown']);
+        expect(drawn(labelled('given')), `${attr} on a given`).to.deep.equal([]);
+      }
+      expect(drawn(() => undefined, [`The answer is ${unknown}.`]), 'spoken').to.deep.equal(['spoken-differs']);
+      expect(drawn((el) => the(el, 'picture').append(span('partial', String(unknown)))), 'a partial label').to.deep.equal(['shows-unknown']);
+    });
+  }
 
   it('the way line is excused only when it is exactly what it should be', () => {
     // 8 ÷ 2 has 4 ways, and its unknown is 4.
@@ -284,6 +335,32 @@ describe('the drawn-output checker catches deliberate leaks', () => {
     expect(check(el, f, [], undefined, right)).to.deep.equal([]);
     expect(codes(check(el, f))).to.include('shows-unknown');
     expect(codes(check(el, f, [], undefined, 'Way 1 of 5: Share into equal groups'))).to.include('shows-unknown');
+
+    // The excuse covers the line's own text and nothing else on it.
+    const seven = mult(7, 8);
+    const line = 'Way 1 of 3: Equal groups';
+    const onWay = (change: (w: HTMLElement) => void): string[] => {
+      const e = opened({ fact: seven, grade: '5' });
+      expect(way(e)).to.equal(line);
+      change(the(e, 'way'));
+      return codes(check(e, seven, [], undefined, line));
+    };
+    expect(onWay(() => undefined)).to.deep.equal([]);
+    expect(onWay((w) => w.setAttribute('aria-label', '56 in all')), 'its aria-label').to.deep.equal(['attribute-no-role', 'attribute-shows-unknown']);
+    expect(
+      onWay((w) => {
+        const img = document.createElement('img');
+        img.alt = '56';
+        w.append(img);
+      }),
+      'a child alt',
+    ).to.deep.equal(['attribute-no-role', 'attribute-shows-unknown']);
+    expect(
+      onWay((w) => {
+        w.attachShadow({ mode: 'open' }).textContent = 'The answer is 56';
+      }),
+      'its shadow root',
+    ).to.deep.equal(['no-role', 'shows-unknown']);
   });
 });
 
@@ -397,7 +474,9 @@ describe('drawn output never shows the unknown', () => {
             if (labels(el).join() !== before.join()) problems.push(`${JSON.stringify(fact)} ${id} step ${i}: labels changed in the fallback`);
             counts.fellBack++;
           }
-          for (const p of check(el, fact, heard.spoken, step.picture, line)) {
+          // One utterance per step opened so far; the words on screen are only the last one's.
+          if (heard.spoken.length !== i + 1) problems.push(`${JSON.stringify(fact)} ${id} step ${i}: heard ${heard.spoken.length} utterances`);
+          for (const p of check(el, fact, heard.spoken.slice(-1), step.picture, line)) {
             problems.push(`${JSON.stringify(fact)} ${id} step ${i} (failed animal): ${p}`);
           }
           heard.spoken.length = 0;

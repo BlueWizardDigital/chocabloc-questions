@@ -214,9 +214,15 @@ describe('<chocabloc-help>: the flow', () => {
     const s = stubSpeech();
     const el = opened({ fact: mult(4, 6), grade: '2' });
     const records = events<HelpRecord>(el, 'help-record');
+    const atDocument: Event[] = [];
+    const note = (e: Event): void => void atDocument.push(e);
+    document.addEventListener('help-record', note);
     const before = s.cancels();
     el.remove();
+    document.removeEventListener('help-record', note);
     expect(records.map((r) => r.thumb)).to.deep.equal([null]);
+    // Off the page the event goes no further than the element itself (PARTS-AND-VARS.md says so).
+    expect(atDocument.length).to.equal(0);
     expect(s.cancels()).to.be.greaterThan(before);
     holder().append(el);
     expect(isOpen(el), 'it never opens by itself').to.equal(false);
@@ -482,16 +488,16 @@ describe('<chocabloc-help>: words', () => {
     ]);
   });
 
-  it('a number with two roles is read as given', () => {
+  it('a number with two roles takes the non-given one', () => {
     const el = opened({ fact: mult(7, 8), grade: '5', pick: 'mult.nearby-fact', solved: [{ a: 7, b: 7 }] });
     expect(say(el)).to.equal("7 × 7 is 49. 7 × 8 is one more 7. What's that?");
     expect(roles(el)).to.deep.equal([
-      ['7', 'given'],
-      ['7', 'given'],
+      ['7', 'anchor'],
+      ['7', 'anchor'],
       ['49', 'anchor'],
-      ['7', 'given'],
+      ['7', 'anchor'],
       ['8', 'given'],
-      ['7', 'given'],
+      ['7', 'anchor'],
     ]);
   });
 });

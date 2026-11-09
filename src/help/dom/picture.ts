@@ -54,8 +54,9 @@ export function roleNodes(line: string, params: Record<string, number>): Node[] 
   const roles = new Map<number, HelpRole>();
   for (const [name, value] of Object.entries(params)) {
     const role = /^(given|anchor|partial)/.exec(name)?.[1] as HelpRole | undefined;
-    // A number the question shows stays given, even where it is also an anchor (7 × 7, for 7 × 8).
-    if (role && roles.get(value) !== 'given') roles.set(value, role);
+    // Roles go by value, so one number can have two. The non-given one wins: a running total that
+    // equals the unknown must not pass as given because the question also shows that number (1 × 6).
+    if (role && (role !== 'given' || !roles.has(value))) roles.set(value, role);
   }
   return line.split(/(\d+)/).map((piece, i) => {
     const role = i % 2 === 1 ? roles.get(Number(piece)) : undefined;

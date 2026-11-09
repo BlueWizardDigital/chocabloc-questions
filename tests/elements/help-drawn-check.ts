@@ -9,14 +9,22 @@ import { unknownOf, visibleOf } from '../help/leak-check';
 const ROLES = ['given', 'anchor', 'partial'];
 const ATTRIBUTES = ['aria-label', 'alt', 'title'];
 const numbersIn = (s: string): number[] => (s.match(/\d+/g) ?? []).map(Number);
+/** The words as the voice should say them: the same words, with the symbols read out. */
+const voiced = (words: string): string =>
+  words
+    .replace(/×/g, ' times ')
+    .replace(/=/g, ' is equal to ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 export interface Drawn {
   fact: HelpFact;
-  /** Every utterance the voice was given for this step. */
+  /** The utterances to check. Each must be this step's words, so leave out an earlier step's. */
   spoken: string[];
   /**
-   * The exact "Way 1 of 4: name" line this step should show. Its numbers count strategies, so one can
-   * match the unknown by chance (8 ÷ 2 has 4 ways); only that exact text is excused, nothing else.
+   * The exact "Way 1 of 4: name" line this step should show. It is a position count, not a math number
+   * (Ruling 25), so one can match the unknown by chance (8 ÷ 2 has 4 ways). Only that exact text is
+   * excused: the line's attributes, children and shadow root are checked like anything else.
    */
   way?: string;
   /** The picture the step asks for: then the printed labels must be exactly its running totals. */
@@ -27,45 +35,49 @@ export interface Drawn {
 export function drawnProblems(host: HTMLElement, d: Drawn): string[] {
   const unknown = unknownOf(d.fact);
   const shown = visibleOf(d.fact);
-  const hidden = (n: number): boolean => n === unknown && !shown.includes(n);
   const problems: string[] = [];
+
+  /** The role rule, for text and attributes alike. `prefix` says which one a problem came from. */
+  const read = (text: string, role: string | null, prefix: string): void => {
+    for (const n of numbersIn(text)) {
+      if (role === null) problems.push(`${prefix}no-role: ${n} in "${text}"`);
+      if (role === 'given' && !shown.includes(n)) problems.push(`${prefix}given-not-shown: ${n}`);
+      if (n === unknown && !(role === 'given' && shown.includes(n)))
+        problems.push(`${prefix}shows-unknown: ${n} with role ${role} in "${text}"`);
+    }
+  };
 
   const visit = (node: Node, role: string | null): void => {
     if (node.nodeType === Node.TEXT_NODE) {
-      const text = node.textContent ?? '';
-      for (const n of numbersIn(text)) {
-        if (role === null) problems.push(`no-role: ${n} in "${text}"`);
-        if (role === 'given' && !shown.includes(n)) problems.push(`given-not-shown: ${n}`);
-        if (n === unknown && !(role === 'given' && shown.includes(n)))
-          problems.push(`shows-unknown: ${n} with role ${role} in "${text}"`);
-      }
+      read(node.textContent ?? '', role, '');
       return;
     }
     let inner = role;
+    let wayText = false;
     if (node instanceof Element) {
       if (node.tagName === 'STYLE') return;
-      const isWay = node.getAttribute('part')?.split(' ').includes('way');
-      if (isWay && d.way !== undefined && node.textContent === d.way) return;
-      for (const name of ATTRIBUTES) {
-        for (const n of numbersIn(node.getAttribute(name) ?? '')) {
-          if (hidden(n)) problems.push(`attribute-shows-unknown: ${name}="${node.getAttribute(name)}"`);
-        }
-      }
       const own = node.getAttribute('data-help-role');
       if (own !== null) {
         if (!ROLES.includes(own)) problems.push(`bad-role: ${own}`);
         inner = own;
       }
+      for (const name of ATTRIBUTES) read(node.getAttribute(name) ?? '', inner, 'attribute-');
       if (node.shadowRoot) visit(node.shadowRoot, inner);
+      const isWay = node.getAttribute('part')?.split(' ').includes('way');
+      wayText = isWay === true && d.way !== undefined && node.textContent === d.way;
     }
-    node.childNodes.forEach((c) => visit(c, inner));
+    node.childNodes.forEach((c) => {
+      if (!(wayText && c.nodeType === Node.TEXT_NODE)) visit(c, inner);
+    });
   };
   visit(host, null);
 
-  for (const text of d.spoken) {
-    for (const n of numbersIn(text)) {
-      if (hidden(n)) problems.push(`spoken-shows-unknown: "${text}"`);
-    }
+  // Saying the words on screen, and nothing else, is stricter than matching their numbers: on 1 × 6
+  // "The answer is 6." has the same numbers as "One group of 6.", and it gives the answer away.
+  // shortcut: a wrapped panel's voice adds "Let's look at this one again.", which this would flag; the sweep stops before a wrap, revisit if it goes past one.
+  const words =host.shadowRoot?.querySelector('[part~="text"]')?.textContent ?? '';
+  for (const said of d.spoken) {
+    if (said !== voiced(words)) problems.push(`spoken-differs: said "${said}", the words are "${words}"`);
   }
 
   const picture = host.shadowRoot?.querySelector('[part~="picture"]');
