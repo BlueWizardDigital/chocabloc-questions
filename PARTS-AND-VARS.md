@@ -241,3 +241,39 @@ The long division's text and lines use `--cl-ink`, and each part's digits and li
 | `lesson-error` | `{ reason }` | `unsupported-version` or `invalid` (the lesson file), `no-questions` (nothing arrived, or the practice code did not load), `no-validator` (no `validateAnswer`), `validation-unavailable` (a check failed; the kid can try again) |
 
 All events use `bubbles: true, composed: true`.
+
+## `<chocabloc-help>`
+
+Entry `chocabloc-questions/help`. `:host([hidden])` is `display: none`, and a closed panel takes no space.
+It takes its look from the same `--cl-*` vars as `<chocabloc-lesson>` (`--cl-font-display`, `--cl-font-body`,
+`--cl-bg`, `--cl-ink`, `--cl-accent`, `--cl-border`, `--cl-radius`, and `--cl-left` for the rings and running
+totals), so a game themes both at once. It adds no vars. The blocks keep the counted dots' fixed blues.
+
+| Part | What it targets |
+|------|-----------------|
+| `panel` | The whole panel: border, background, padding. It has class `young` for grades K to 3 (bigger words and objects) |
+| `way` | The line above the nudge, such as "Way 1 of 4: Equal groups", with "Let's look at this one again." in front once 👎 has wrapped |
+| `text` | The nudge. It takes focus on `open()`, and is a polite live region |
+| `picture` | The box around the step's picture. Hidden when the step has none, and always with `draw: 'strip'`. `aria-hidden`: the words say what a kid needs to hear |
+| `row` | One row of a rows or deal picture. In a rows picture it has class `on` once counted, `now` on the newest counted row, and `faded` after the counted rows |
+| `row-total` | The running total right of a row. Empty until the row is counted, and always empty on the last row |
+| `button` | Every button |
+| `back` | Back (also a `button`). Disabled on a way's first step |
+| `more` | Show me more (also a `button`). Disabled on a way's last step |
+| `thumb-up` | 👍 (also a `button`) |
+| `thumb-down` | 👎 (also a `button`) |
+| `close` | Close (also a `button`) |
+| `tap-to-hear` | The big Tap to hear button (also a `button`), shown to a young kid until the page has been tapped. Absent where the browser has no speech |
+
+**`data-help-role`.** Every number the panel prints in the words or on a picture sits in an element with
+`data-help-role`: `given` (the question shows it), `anchor` (a fact help starts from) or `partial` (a running
+total or a count so far). It is there so tests can check numbers by role. Only the way line's numbers have
+none: they count strategies.
+
+| Event | Detail shape | Fires |
+|-------|--------------|-------|
+| `help-step` | `{ strategy, index, points }` (`index` counts from 0; `points` are `{ a, b }` facts for a game's own grid) | Each time a step shows |
+| `help-record` | `{ eventId, family, strategy, thumb, fact }` (`eventId` is a UUID v4; `thumb` is `up`, `down` or `null`; `fact` is `7x8` or `24÷4`) | Once each time a strategy is left: 👍, 👎, Close, `close()`, a new `fact`, or removing the element. Not for the fallback line, which shows no strategy |
+| `help-close` | `{}` | When the panel closes. Clear any highlight here |
+
+All events use `bubbles: true, composed: true`. None carries anything about the answer.

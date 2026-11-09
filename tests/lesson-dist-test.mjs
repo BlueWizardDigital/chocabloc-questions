@@ -84,6 +84,22 @@ try {
     }
   }
 
+  // The help panel and the lesson share only small helpers: neither loads the other, and neither carries
+  // the other's words. Lesson Help's size line (13.5 KB) depends on this.
+  for (const f of ['../dist/help.mjs', '../dist/help/index.d.ts']) {
+    if (!existsSync(resolve(__dirname, f))) fail(`${f.slice(3)} is missing`);
+  }
+  const allOf = (files) => files.map((f) => readFileSync(f, 'utf8')).join('\n');
+  const lessonLoads = allOf(helpFiles);
+  const helpLoads = allOf(staticClosure(resolve(dist, 'help.mjs')));
+  if (!defines(helpLoads, 'chocabloc-help')) fail('dist/help.mjs does not register <chocabloc-help>');
+  if (defines(lessonLoads, 'chocabloc-help')) fail('what Lesson Help loads registers <chocabloc-help>');
+  if (lessonLoads.includes('Show me more')) fail("what Lesson Help loads carries help's words");
+  for (const tag of ['chocabloc-lesson', 'chocabloc-question']) {
+    if (defines(helpLoads, tag)) fail(`what dist/help.mjs loads registers <${tag}>`);
+  }
+  if (helpLoads.includes('Back to the game')) fail("what dist/help.mjs loads carries the lesson's words");
+
   // The built bridge imports nothing: Phish Tank and Smush copy dist/bridge.mjs on its own (Ruling 17).
   for (const f of ['bridge.mjs', 'bridge.cjs']) {
     const bridgeCode = readFileSync(resolve(dist, f), 'utf8');
@@ -128,9 +144,32 @@ try {
   for (const tag of ['chocabloc-question', 'choca-choice-pad']) {
     if (!defines(code, tag)) fail(`lesson consumer bundle does not register <${tag}>`);
   }
+  // A consumer that imports only a helper from the help entry still gets the element
+  // (package.json sideEffects lists dist/help.mjs).
+  writeFileSync(resolve(tmpDir, 'entry-help.js'), `
+    import { helpFactFromQuestion } from '../dist/help.mjs';
+    console.log(helpFactFromQuestion);
+  `);
+  const helpResult = await build({
+    root: tmpDir,
+    logLevel: 'silent',
+    build: {
+      write: true,
+      outDir: resolve(tmpDir, 'out-help'),
+      lib: { entry: resolve(tmpDir, 'entry-help.js'), formats: ['es'] },
+      minify: false,
+      rollupOptions: { external: [] },
+    },
+  });
+  const helpCode = (Array.isArray(helpResult) ? helpResult : [helpResult])
+    .flatMap((r) => r.output)
+    .map((o) => (o.type === 'chunk' ? o.code : ''))
+    .join('\n');
+  if (!defines(helpCode, 'chocabloc-help')) fail('help consumer bundle does not register <chocabloc-help>');
+
   if (process.exitCode !== 1) {
     console.log(
-      'PASS: lesson entry built, bundles the parser, registers <chocabloc-lesson>, and loads <chocabloc-question> only through the lazy practice chunk. The bridge imports nothing.',
+      'PASS: lesson entry built, bundles the parser, registers <chocabloc-lesson>, and loads <chocabloc-question> only through the lazy practice chunk. The help entry registers <chocabloc-help>, and neither loads the other. The bridge imports nothing.',
     );
   }
 } catch (e) {

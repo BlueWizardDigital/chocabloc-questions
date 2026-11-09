@@ -407,13 +407,13 @@ describe('buildSteps: the step rules', () => {
         used.add(step.say.key);
       }
     }
-    // Every message in en.json is reachable.
+    // Every step message in en.json is reachable. (The panel's own words are tested in messages.test.ts.)
     const keys: string[] = [];
     const walk = (node: unknown, path: string[]) => {
       if (typeof node === 'string') keys.push(path.join('.'));
       else for (const [k, v] of Object.entries(node as object)) walk(v, [...path, k]);
     };
-    walk(en, []);
+    walk({ mult: en.mult, div: en.div }, []);
     expect(new Set(keys)).toEqual(used);
   });
 });

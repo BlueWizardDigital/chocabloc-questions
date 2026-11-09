@@ -63,5 +63,34 @@
       "ten": "{anchorRows} rows make {anchorProduct}. Count on the rest.",
       "more": "{partialSum} so far. How many rows make {givenDividend}?"
     }
+  },
+  "name": {
+    "mult": {
+      "groups": "Equal groups",
+      "skip-count": "Skip counting",
+      "known-fact": "Start from a fact you know",
+      "nearby-fact": "Look at a nearby fact"
+    },
+    "div": {
+      "share": "Share into equal groups",
+      "groups": "How many groups?",
+      "think-mult": "Think multiplication",
+      "array": "Array"
+    }
+  },
+  "panel": {
+    "way": "Way {index} of {count}: {name}",
+    "again": "Let's look at this one again.",
+    "more": "Show me more",
+    "back": "Back",
+    "close": "Close",
+    "thumbUp": "That helped",
+    "thumbDown": "Show another way",
+    "fallback": "Let's ask your teacher about this one."
+  },
+  "tapToHear": "Tap to hear",
+  "symbols": {
+    "equals": "is equal to",
+    "times": "times"
   }
 }

@@ -2,7 +2,7 @@ import { expect } from '@esm-bundle/chai';
 import '../../src/lesson/index';
 import type { ChocaLesson, Lesson } from '../../src/lesson/index';
 import { timing } from '../../src/lesson/dom/question-view';
-import { anyButton, button, choose, cleanup, cmp, fakeHost, heading, mount, part, questionId, until } from './lesson-test-utils';
+import { anyButton, button, choose, cleanup, cmp, fakeHost, heading, mount, part, questionId, stubSpeech, until } from './lesson-test-utils';
 
 let fixture: Lesson;
 const advanceMs = timing.advanceMs;
@@ -17,42 +17,9 @@ after(() => {
   timing.advanceMs = advanceMs;
 });
 
-const restore: (() => void)[] = [];
 afterEach(() => {
-  restore.splice(0).reverse().forEach((fn) => fn());
   cleanup();
 });
-
-/**
- * Replaces window.speechSynthesis (or removes it) and logs every cancel and speak, in order. `tapped`
- * is what navigator.userActivation says: false is a page nobody has touched yet.
- */
-function stubSpeech(present = true, tapped = true): { log: string[]; spoken: string[]; cancels(): number } {
-  const log: string[] = [];
-  const spoken: string[] = [];
-  const synth = {
-    speak(u: SpeechSynthesisUtterance) {
-      log.push('speak');
-      spoken.push(u.text);
-    },
-    cancel() {
-      log.push('cancel');
-    },
-  };
-  const own = Object.getOwnPropertyDescriptor(window, 'speechSynthesis');
-  Object.defineProperty(window, 'speechSynthesis', { configurable: true, get: () => (present ? synth : undefined) });
-  restore.push(() => {
-    if (own) Object.defineProperty(window, 'speechSynthesis', own);
-    else Reflect.deleteProperty(window, 'speechSynthesis');
-  });
-  const ua = Object.getOwnPropertyDescriptor(navigator, 'userActivation');
-  Object.defineProperty(navigator, 'userActivation', { configurable: true, get: () => ({ hasBeenActive: tapped }) });
-  restore.push(() => {
-    if (ua) Object.defineProperty(navigator, 'userActivation', ua);
-    else Reflect.deleteProperty(navigator, 'userActivation');
-  });
-  return { log, spoken, cancels: () => log.filter((l) => l === 'cancel').length };
-}
 
 function help(grade: string | null): ChocaLesson {
   const el = mount();

@@ -3,10 +3,11 @@ import { join } from 'node:path';
 import { LESSON_CSS } from '../../src/lesson/dom/styles';
 import { CSS as YOUNG_CSS } from '../../src/lesson/dom/young';
 import { CSS as PICTURES_CSS } from '../../src/lesson/dom/more-pictures';
+import { PICTURE_CSS as HELP_PICTURE_CSS } from '../../src/help/dom/picture';
 
 // Old Chromebooks run Chrome 103. Every API and CSS feature below arrived after it
 // (source: MDN browser compatibility data). structuredClone (98) and findLast (97) are fine.
-const root = join(__dirname, '../../src/lesson');
+const root = join(__dirname, '../../src');
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -15,7 +16,7 @@ function sources(dir: string): string[] {
   });
 }
 
-const files = sources(root).filter((f) => f.endsWith('.ts'));
+const files = [...sources(join(root, 'lesson')), ...sources(join(root, 'help'))].filter((f) => f.endsWith('.ts'));
 
 const CSS_TOO_NEW = ['dvh', 'svh', 'lvh', ':has(', '@container', 'container-type', 'color-mix('];
 const JS_TOO_NEW = [
@@ -32,7 +33,7 @@ const JS_TOO_NEW = [
   '.intersection(',
 ];
 
-describe('Chrome 103 scan of src/lesson', () => {
+describe('Chrome 103 scan of src/lesson and src/help', () => {
   test('finds the lesson sources it is meant to scan', () => {
     expect(files.length).toBeGreaterThan(10);
   });
@@ -49,6 +50,7 @@ describe('Chrome 103 scan of src/lesson', () => {
     ['the player stylesheet', LESSON_CSS],
     ["the young chunk's stylesheet", YOUNG_CSS],
     ["the pictures chunk's stylesheet, counted rows included", PICTURES_CSS],
+    ["the help panel's picture stylesheet", HELP_PICTURE_CSS],
   ])('%s has no CSS nesting (a rule inside a rule, or a leading &) and nothing newer than Chrome 103', (_name, css) => {
     for (const bad of CSS_TOO_NEW) expect(css, bad).not.toContain(bad);
     expect(css).not.toMatch(/&/);

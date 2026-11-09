@@ -70,6 +70,12 @@ module.exports = [
     },
   },
   {
+    name: 'help panel (strategies, words, pictures, voice)',
+    path: 'dist/help.mjs',
+    limit: '10 KB',
+    gzip: true,
+  },
+  {
     name: 'lesson young look and count pictures (lazy)',
     path: lazyChunk('young'),
     limit: '3 KB',

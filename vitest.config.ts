@@ -20,6 +20,8 @@ export default defineConfig({
         'src/word-problems/index.ts',       // re-export only
         'src/word-problems/sample-data.ts', // re-export of vendored JSON
         'src/lesson/dom/**',                // covered by browser tests
+        'src/help/dom/**',                  // covered by browser tests
+        'src/help/index.ts',                // re-export only
       ],
       thresholds: {
         lines: 90,

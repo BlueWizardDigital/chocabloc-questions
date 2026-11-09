@@ -32,10 +32,10 @@ export function listen(type: string): Detail[] {
   return got;
 }
 
-export const root = (el: ChocaLesson): ShadowRoot => el.shadowRoot as ShadowRoot;
-export const part = (el: ChocaLesson, name: string): HTMLElement | null =>
+export const root = (el: HTMLElement): ShadowRoot => el.shadowRoot as ShadowRoot;
+export const part = (el: HTMLElement, name: string): HTMLElement | null =>
   root(el).querySelector<HTMLElement>(`[part~="${name}"]`);
-export const parts = (el: ChocaLesson, name: string): HTMLElement[] =>
+export const parts = (el: HTMLElement, name: string): HTMLElement[] =>
   Array.from(root(el).querySelectorAll<HTMLElement>(`[part~="${name}"]`));
 export const heading = (el: ChocaLesson): string | null | undefined => part(el, 'heading')?.textContent;
 export const feedback = (el: ChocaLesson): string => part(el, 'feedback')?.textContent ?? '';
@@ -113,6 +113,37 @@ export function captureConsole(): { warn: unknown[][]; error: unknown[][] } {
   console.error = (...args: unknown[]) => got.error.push(args);
   cleanups.push(() => Object.assign(console, { warn, error }));
   return got;
+}
+
+/**
+ * Replaces window.speechSynthesis (or removes it) and logs every cancel and speak, in order; restored in
+ * cleanup(). `tapped` is what navigator.userActivation says: false is a page nobody has touched yet.
+ */
+export function stubSpeech(present = true, tapped = true): { log: string[]; spoken: string[]; cancels(): number } {
+  const log: string[] = [];
+  const spoken: string[] = [];
+  const synth = {
+    speak(u: SpeechSynthesisUtterance) {
+      log.push('speak');
+      spoken.push(u.text);
+    },
+    cancel() {
+      log.push('cancel');
+    },
+  };
+  const own = Object.getOwnPropertyDescriptor(window, 'speechSynthesis');
+  Object.defineProperty(window, 'speechSynthesis', { configurable: true, get: () => (present ? synth : undefined) });
+  cleanups.push(() => {
+    if (own) Object.defineProperty(window, 'speechSynthesis', own);
+    else Reflect.deleteProperty(window, 'speechSynthesis');
+  });
+  const ua = Object.getOwnPropertyDescriptor(navigator, 'userActivation');
+  Object.defineProperty(navigator, 'userActivation', { configurable: true, get: () => ({ hasBeenActive: tapped }) });
+  cleanups.push(() => {
+    if (ua) Object.defineProperty(navigator, 'userActivation', ua);
+    else Reflect.deleteProperty(navigator, 'userActivation');
+  });
+  return { log, spoken, cancels: () => log.filter((l) => l === 'cancel').length };
 }
 
 /** The first argument of each captured console call. */

@@ -36,6 +36,10 @@
       "types": "./dist/lesson/index.d.ts",
       "import": "./dist/lesson.mjs"
     },
+    "./help": {
+      "types": "./dist/help/index.d.ts",
+      "import": "./dist/help.mjs"
+    },
     "./bridge": {
       "types": "./dist/bridge.d.ts",
       "import": "./dist/bridge.mjs",
@@ -75,6 +79,7 @@
     "./dist/lesson.mjs",
     "./dist/chunks/practice.*.mjs",
     "./dist/chunks/young.*.mjs",
+    "./dist/help.mjs",
     "./dist/bridge.mjs",
     "./dist/bridge.cjs",
     "./dist/host.mjs",

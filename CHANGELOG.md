@@ -17,6 +17,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `StrategyId`, `HelpRecord`, `HelpEventReport` (declared in `src/types.ts`, so a copied
   `bridge.ts` + `types.ts` still compiles). `chocabloc:ready` now advertises
   `features: ['sound', 'help']`.
+- **`<chocabloc-help>`** (minor): a new `chocabloc-questions/help` entry with the help panel and the
+  strategy catalog and step builders. A stuck kid gets one short nudge on the question they are on,
+  with 👎 for another way and 👍 when one helped. It never draws or says the final number: pictures
+  print running totals up to the last row only, and every printed number carries `data-help-role`.
+  Properties `fact`, `grade`, `pick`, `solved`, `draw`, `translator`, `pictureBase`; methods `open()`,
+  `close()`; events `help-step`, `help-record`, `help-close`. See the README and `PARTS-AND-VARS.md`.
+
+### Changed
+
+- The lesson's message formatter moved to `src/lesson/message-format.ts`, and the speaker icon and
+  the "may the voice start" rule to `src/lesson/dom/tap-to-hear.ts`, so the panel can use them. No
+  change to the lesson's behaviour or to its public API.
 
 ## [0.7.0-beta.5] — 2026-11-03
 

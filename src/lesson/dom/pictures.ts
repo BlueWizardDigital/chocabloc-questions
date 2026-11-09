@@ -5,12 +5,12 @@ import { numberLineLayout } from '../layout/number-line';
 import { columnsLayout } from '../layout/columns';
 import type { LessonPicture, Place } from '../types';
 import type { Msg } from '../messages';
+import { svg } from './svg';
 
 type Pic<K extends LessonPicture['kind']> = Extract<LessonPicture, { kind: K }>;
 type Draw = (ctx: CanvasRenderingContext2D, w: number, h: number) => void;
 
 const CANVAS_H = 140;
-const SVG_NS = 'http://www.w3.org/2000/svg';
 const NL_W = 360;
 const NL_H = 90;
 /** Each extra label row (forced labels that would touch) adds this much height. */
@@ -28,18 +28,6 @@ export function h<K extends keyof HTMLElementTagNameMap>(
   const e = document.createElement(tag);
   if (part) e.setAttribute('part', part);
   if (cls) e.className = cls;
-  if (text != null) e.textContent = text;
-  return e;
-}
-
-/** An SVG element made with createElementNS. */
-export function svg<K extends keyof SVGElementTagNameMap>(
-  tag: K,
-  attrs: Record<string, string | number>,
-  text?: string,
-): SVGElementTagNameMap[K] {
-  const e = document.createElementNS(SVG_NS, tag);
-  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v));
   if (text != null) e.textContent = text;
   return e;
 }

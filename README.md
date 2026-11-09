@@ -376,6 +376,40 @@ Rules for the host (session 4 builds on these):
 
 Look: it takes headings from `--cl-font-display` and body text from `--cl-font-body`, then `--cq-font`, then `system-ui`. Parts, vars and events: [`PARTS-AND-VARS.md`](./PARTS-AND-VARS.md).
 
+## Strategy help
+
+`chocabloc-questions/help` gives a stuck kid one short nudge, in a way a teacher would use, on the question
+they are on. `<chocabloc-help>` covers multiplication and division facts. It never draws or says the final
+number, and it never opens by itself: your Help button calls `open()`.
+
+```js
+import { helpFactFromQuestion } from 'chocabloc-questions/help';
+
+const help = document.createElement('chocabloc-help');
+slot.append(help);
+help.fact = helpFactFromQuestion(rawQuestion); // the raw bank row, before normalizing
+help.grade = context.grade;                    // 'K' or '1' to '12', or null
+help.pick = picks['mult-facts'] ?? null;       // bridge.requestStrategyPicks()
+help.pictureBase = '/images/animals/';
+
+helpButton.addEventListener('click', () => help.open());
+help.addEventListener('help-step', (e) => lightUp(e.detail.points));
+help.addEventListener('help-record', (e) => saveForReport(e.detail));
+help.addEventListener('help-close', () => { clearLights(); helpButton.focus(); });
+```
+
+- **It takes only what the question shows.** `helpFactFromQuestion` reads `content.operation` and `content.operands`, never the answer, choices, token or id. A game with its own numbers can set `fact` to `{ op, a, b, c }` with one of `a`, `b`, `c` null: the unknown.
+- **`open()` reads the properties once.** Set a different `fact` while it is open and it closes first, because its numbers are out of date. Removing the element closes it too. `open()` on an element that isn't on the page warns and does nothing.
+- **`grade`:** K to 3 get the first two strategies, bigger words, the voice and animals. Anything else, or `null`, gets every strategy that fits; a value that isn't a grade also warns once.
+- **`pick`** goes first when it fits this kid and this fact.
+- **`draw`:** `'card'` (the default) draws the panel's own picture. `'strip'` draws none, for a game that lights up its own grid from `help-step`.
+- **`solved`:** facts already solved on screen, `[{ a, b }]`. Without one next door, the nearby-fact strategy is skipped.
+- **Numbers help can't use** (a zero, out of range, or no fact at all) show "Let's ask your teacher about this one." with no thumbs, and no `help-record`.
+- **`help-record`** fires once each time a strategy is left. Report these with `bridge.reportHelpEvents`; the game adds `beforeAnswer` and `triesBefore`.
+- **Words** are English by default. Give `translator(key, vars)` to answer first for any of them, as in the lesson.
+
+Parts and events: [`PARTS-AND-VARS.md`](./PARTS-AND-VARS.md).
+
 ## Supported formats
 
 > **Before you write a guard against these:** `normalizeQuestion` rewrites `format`, overrides

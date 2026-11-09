@@ -3,12 +3,13 @@ import { createMessages, lessonMessagesEn, safeLang } from '../messages';
 import type { Msg, Translator } from '../messages';
 import type { IdeaCard, Lesson } from '../types';
 import type { NormalizedQuestion, ValidateAnswer } from '../../types';
-import { h, svg, renderPicture } from './pictures';
+import { h, renderPicture } from './pictures';
 import type { Chunk, PictureLook } from './pictures';
 import { lookFor, normalizeGrade } from '../look';
 import { createSpeaker } from './speaker';
 import type { Speaker } from './speaker';
 import { LESSON_CSS } from './styles';
+import { speakerIcon, voiceUnlocked } from './tap-to-hear';
 import { introChips, showIdea, spoken, walkSteps } from './screens';
 import type { Chip, GetQuestions, Kit, LessonShell, ModeController, Screen } from './screens';
 
@@ -69,26 +70,6 @@ function cardsOf(cards: IdeaCard[]): HTMLElement {
     row.append(card);
   }
   return row;
-}
-
-function speakerIcon(): SVGSVGElement {
-  const icon = svg('svg', {
-    viewBox: '0 0 24 24',
-    width: 20,
-    height: 20,
-    'aria-hidden': 'true',
-    fill: 'none',
-    stroke: 'currentColor',
-    'stroke-width': 2.4,
-    'stroke-linecap': 'round',
-    'stroke-linejoin': 'round',
-  });
-  icon.append(
-    svg('path', { d: 'M4 9v6h4l5 4V5L8 9H4z', fill: 'currentColor' }),
-    svg('path', { d: 'M16.5 8.5a5 5 0 0 1 0 7' }),
-    svg('path', { d: 'M19 6a8.5 8.5 0 0 1 0 12' }),
-  );
-  return icon;
 }
 
 /**
@@ -428,14 +409,9 @@ export class ChocaLesson extends HTMLElement {
     };
   }
 
-  /** Browsers refuse speech until the page has been tapped; until then a young kid gets Tap to hear. */
-  private _unlocked(run: Run): boolean {
-    return run.tapped || navigator.userActivation?.hasBeenActive !== false;
-  }
-
   /** A young kid hears what is shown, once the voice is allowed. */
   private _voice(run: Run, text: string): void {
-    if (run.look.young && run.speaker.supported && this._unlocked(run)) run.speaker.speak(text);
+    if (run.look.young && run.speaker.supported && voiceUnlocked(run.tapped)) run.speaker.speak(text);
   }
 
   private _show(run: Run, screen: Screen): HTMLButtonElement[] {
@@ -512,7 +488,7 @@ export class ChocaLesson extends HTMLElement {
       return b;
     };
     const talks = speaker.supported && run.look.young;
-    const voiced = talks && this._unlocked(run);
+    const voiced = talks && voiceUnlocked(run.tapped);
     if (speaker.supported) bar.push(sayButton('button read-to-me', msg('readToMe')));
     if (talks && !voiced) {
       const tap = sayButton('button tap-to-hear', msg('tapToHear'), () => {
