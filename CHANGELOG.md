@@ -5,6 +5,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.7.0-beta.6] — 2026-11-09
+
+**Minor** (strategy help, slice 1): a new `chocabloc-questions/help` entry, two bridge calls, and help in the fact lessons' Try again; nothing renamed or removed. Only Cocoa Lab moves to this release now.
+
 ### Added
 
 - **Strategy help on the bridge** (minor): `bridge.requestStrategyPicks()` (`chocabloc:strategy:request`
