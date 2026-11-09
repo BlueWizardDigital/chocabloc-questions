@@ -1,12 +1,15 @@
 // Screens shared by Help (static) and the lazy practice code. Help loads this
 // file, so it holds only what Help itself needs plus the Intro idea screen.
 import { speakableText } from '../speak-text';
-import type { Msg } from '../messages';
+import type { Msg, Translator } from '../messages';
 import type { IdeaCard, Lesson, LessonPicture, LessonStep } from '../types';
-import type { NormalizedQuestion, ValidateAnswer } from '../../types';
+import type { HelpFamily, NormalizedQuestion, StrategyId, ValidateAnswer } from '../../types';
 import type { h, PictureLook, renderPicture } from './pictures';
 
 export type GetQuestions = (skillId: string, count: number, excludeIds: string[]) => Promise<NormalizedQuestion[]>;
+
+/** The kid's saved strategy per help family. */
+export type StrategyPicks = Partial<Record<HelpFamily, StrategyId>>;
 
 export interface ScreenAction {
   label: string;
@@ -100,6 +103,10 @@ export interface PracticeHost {
   readonly getQuestions: GetQuestions | undefined;
   readonly questions: NormalizedQuestion[];
   readonly validateAnswer: ValidateAnswer | undefined;
+  /** For Try again's strategy help: `strategyPicks` and `translator` are read when its panel opens. */
+  readonly grade: string | null;
+  readonly strategyPicks: StrategyPicks | undefined;
+  readonly translator: Translator | undefined;
 }
 
 const sentence = (s: string): string => (/[.!?…:]$/.test(s) ? s : `${s}.`);

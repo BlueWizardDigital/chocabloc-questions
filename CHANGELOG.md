@@ -23,9 +23,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   print running totals up to the last row only, and every printed number carries `data-help-role`.
   Properties `fact`, `grade`, `pick`, `solved`, `draw`, `translator`, `pictureBase`; methods `open()`,
   `close()`; events `help-step`, `help-record`, `help-close`. See the README and `PARTS-AND-VARS.md`.
+- **Help in the fact lessons' Try again** (minor): when the retry skill is a `MULT-FACTS-` skill or
+  `DIV-BASIC-DIVISION-FACTS`, `<chocabloc-lesson>`'s wrong-answer card on Try again shows the help panel
+  in place of the lesson's tip and picture. New property `strategyPicks`; new event `lesson-help`.
+  The lesson's own card still shows if help can't load or has no strategy for the question's numbers.
+  The panel's code stays out of the lesson's Help bundle: only the practice chunk loads it, so a
+  consumer's bundler now sees a lazy import of `dist/help.mjs` there.
 
 ### Changed
 
+- The lesson's Close now stops the run's current question before it sends `lesson-close`, so an open
+  help panel's last `lesson-help` comes first. Nothing else changes about what Close reports.
 - The lesson's message formatter moved to `src/lesson/message-format.ts`, and the speaker icon and
   the "may the voice start" rule to `src/lesson/dom/tap-to-hear.ts`, so the panel can use them. No
   change to the lesson's behaviour or to its public API.

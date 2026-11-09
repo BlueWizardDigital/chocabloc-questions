@@ -11,7 +11,7 @@ import type { Speaker } from './speaker';
 import { LESSON_CSS } from './styles';
 import { speakerIcon, voiceUnlocked } from './tap-to-hear';
 import { introChips, showIdea, spoken, walkSteps } from './screens';
-import type { Chip, GetQuestions, Kit, LessonShell, ModeController, Screen } from './screens';
+import type { Chip, GetQuestions, Kit, LessonShell, ModeController, Screen, StrategyPicks } from './screens';
 
 export type { GetQuestions, LessonShell, ModeController, Screen, ScreenAction } from './screens';
 export type LessonMode = 'help' | 'intro' | 'check';
@@ -92,6 +92,12 @@ export class ChocaLesson extends HTMLElement {
   private _validateAnswer: ValidateAnswer | undefined = undefined;
   private _translator: Translator | undefined = undefined;
   private _grade: string | null = null;
+  /**
+   * The kid's saved strategy per help family, or undefined for none. Try again's strategy help reads
+   * it when its panel opens, so a host may set it late. Declared only, so it costs the 13.5 KB line
+   * nothing, and one set before the element was defined simply stays.
+   */
+  declare strategyPicks: StrategyPicks | undefined;
   /** The lazy chunks' stylesheets this element has added, each once. */
   private readonly _chunkCss = new Set<string>();
   private _pictureBase: string | null = null;
@@ -427,10 +433,11 @@ export class ChocaLesson extends HTMLElement {
         screen.close();
         return;
       }
+      // First, so an open help panel's last record goes out before lesson-close.
+      run.controller?.dispose();
       this._emit('lesson-close', { step: screen.step });
       // Closing ends the run: a late answer or fetch reports nothing.
       run.ended = true;
-      run.controller?.dispose();
     });
     this._close.textContent = msg('close');
 

@@ -119,13 +119,15 @@ export function captureConsole(): { warn: unknown[][]; error: unknown[][] } {
  * Replaces window.speechSynthesis (or removes it) and logs every cancel and speak, in order; restored in
  * cleanup(). `tapped` is what navigator.userActivation says: false is a page nobody has touched yet.
  */
-export function stubSpeech(present = true, tapped = true): { log: string[]; spoken: string[]; cancels(): number } {
+export function stubSpeech(present = true, tapped = true): { log: string[]; spoken: string[]; langs: string[]; cancels(): number } {
   const log: string[] = [];
   const spoken: string[] = [];
+  const langs: string[] = [];
   const synth = {
     speak(u: SpeechSynthesisUtterance) {
       log.push('speak');
       spoken.push(u.text);
+      langs.push(u.lang);
     },
     cancel() {
       log.push('cancel');
@@ -143,7 +145,7 @@ export function stubSpeech(present = true, tapped = true): { log: string[]; spok
     if (ua) Object.defineProperty(navigator, 'userActivation', ua);
     else Reflect.deleteProperty(navigator, 'userActivation');
   });
-  return { log, spoken, cancels: () => log.filter((l) => l === 'cancel').length };
+  return { log, spoken, langs, cancels: () => log.filter((l) => l === 'cancel').length };
 }
 
 /** The first argument of each captured console call. */

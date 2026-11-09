@@ -239,6 +239,7 @@ The long division's text and lines use `--cl-ink`, and each part's digits and li
 | `lesson-close` | `{ step }` (the id of the screen Close was pressed on) | When the kid closes before the end. The run then reports nothing more. On the Intro and Check done screen, Close sends `lesson-done` instead |
 | `lesson-answer` | `{ step, skillId, question, studentAnswer, outcome }` (`step`: `quickCheck`, `yourTurn`, `tryAgain` or `check`; `outcome`: `right`, `wrong` or `unsure`; `question` is the host's own object) | After each checked answer, or "I'm not sure yet". The only place to record answers |
 | `lesson-error` | `{ reason }` | `unsupported-version` or `invalid` (the lesson file), `no-questions` (nothing arrived, or the practice code did not load), `no-validator` (no `validateAnswer`), `validation-unavailable` (a check failed; the kid can try again) |
+| `lesson-help` | `{ eventId, family, strategy, thumb, fact, beforeAnswer: false, triesBefore: null }` (a `help-record`, below, plus the last two) | Try again in the multiplication and division fact lessons: once each time the kid leaves a strategy in the help panel. That includes moving on, or the lesson's Close, with the panel still open (`thumb: null`, sent before `lesson-close`). A run the host replaced or removed sends nothing more, so a panel open at that moment goes unrecorded. The panel's own `help-*` events stop inside the player |
 
 All events use `bubbles: true, composed: true`.
 

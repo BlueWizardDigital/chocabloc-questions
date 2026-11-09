@@ -95,6 +95,15 @@ try {
   if (!defines(helpLoads, 'chocabloc-help')) fail('dist/help.mjs does not register <chocabloc-help>');
   if (defines(lessonLoads, 'chocabloc-help')) fail('what Lesson Help loads registers <chocabloc-help>');
   if (lessonLoads.includes('Show me more')) fail("what Lesson Help loads carries help's words");
+  // Nothing of src/help reaches Lesson Help, not even as a lazy import: size-limit would count the whole
+  // panel. The fact lessons' Try again loads it from the practice chunk, which also holds the family gate.
+  if (lessonLoads.includes('MULT-FACTS-')) fail("what Lesson Help loads carries help's family gate");
+  if (/\bimport\(\s*["'][^"']*help\.mjs["']\s*\)/.test(lessonLoads)) fail('what Lesson Help loads imports the help entry');
+  if (lazy) {
+    const practiceLoads = allOf(staticClosure(resolve(dist, lazy[1])));
+    if (!/\bimport\(\s*["']\.\.\/help\.mjs["']\s*\)/.test(practiceLoads)) fail('the practice chunk does not load the help entry lazily');
+    if (defines(practiceLoads, 'chocabloc-help')) fail('what the practice chunk loads statically registers <chocabloc-help>');
+  }
   for (const tag of ['chocabloc-lesson', 'chocabloc-question']) {
     if (defines(helpLoads, tag)) fail(`what dist/help.mjs loads registers <${tag}>`);
   }

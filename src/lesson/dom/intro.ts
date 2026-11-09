@@ -82,6 +82,8 @@ export function startIntro(shell: LessonShell, lesson: Lesson, host: PracticeHos
         heading: msg(`steps.${step}`),
         chips: introChips(msg, lesson, step, again),
         afterWrong: lesson.afterWrong,
+        // Try again only. With no kid's grade, the lesson's own decides, as it does for the lesson's look.
+        help: step === 'tryAgain' ? { skillId, grade: host.grade ?? lesson.skillGrade, host } : undefined,
       });
       current = asking;
       outcomes.push(await asking.done);

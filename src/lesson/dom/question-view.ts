@@ -2,8 +2,11 @@
 // "I'm not sure yet", Check again, and the feedback or why card that follows.
 // Part of the lazy practice chunk: it names the question element by its tag
 // only (practice.ts registers it) and takes Help's helpers from the shell.
+import { familyForSkill } from '../../help/catalog';
+import { helpFactFromQuestion } from '../../help/from-question';
+import type { HelpFact } from '../../help/types';
 import { normalizeQuestion } from '../../helpers/normalizer';
-import type { NormalizedQuestion, ValidateAnswer } from '../../types';
+import type { HelpFamily, HelpRecord, NormalizedQuestion, ValidateAnswer } from '../../types';
 import { dedupe } from '../flow';
 import type { Outcome } from '../flow';
 import { createAnswerGuard } from '../guard';
@@ -11,10 +14,18 @@ import type { GuardState } from '../guard';
 import { pictureFromQuestion } from '../from-question';
 import type { Lesson } from '../types';
 import { QUESTION_LOOK_CSS } from './question-look';
-import type { Chip, LessonShell, Screen } from './screens';
+import type { Chip, LessonShell, PracticeHost, Screen } from './screens';
 
 /** The pause on "Yes!" or "Thanks!" before the next screen. Tests set it to 0. */
 export const timing = { advanceMs: 900 };
+
+type HelpCode = typeof import('../../help/index');
+
+/**
+ * How Try again loads strategy help. It lives here, not on the shell, so nothing of it reaches
+ * dist/lesson.mjs. Not public; a test swaps `load` to see it fail, arrive late or to count requests.
+ */
+export const helpChunk = { load: (): Promise<HelpCode> => import('../../help/index') };
 
 /** A host's question, and the same question as <chocabloc-question> takes it. */
 export interface Item {
@@ -60,6 +71,15 @@ export function prepare(batch: readonly NormalizedQuestion[], seen: ReadonlySet<
 
 export type AnswerStep = 'quickCheck' | 'yourTurn' | 'tryAgain' | 'check';
 
+/** What strategy help needs from the run. */
+export interface WhyHelp {
+  /** The skill being retried. Its family decides whether help shows, and which saved pick opens first. */
+  skillId: string;
+  grade: string | null;
+  /** Read when the panel opens: a host's saved picks may arrive while the kid is on the question. */
+  host: Pick<PracticeHost, 'strategyPicks' | 'translator'>;
+}
+
 export interface AskOptions {
   shell: LessonShell;
   item: Item;
@@ -71,6 +91,8 @@ export interface AskOptions {
   chips?: Chip[] | undefined;
   /** Intro: the why card after a wrong or unsure answer. Left out (Check), the answer is never shown. */
   afterWrong?: Lesson['afterWrong'] | undefined;
+  /** Try again: the why card shows strategy help in place of the tip, when this skill and question have any. */
+  help?: WhyHelp | undefined;
 }
 
 export interface Asking {
@@ -93,6 +115,34 @@ const promptOf = (q: NormalizedQuestion): string => (q.format === 'text' ? q.con
 const INNER_EVENTS = ['answered', 'chocabloc-validation-unavailable', 'chocabloc-misconfigured'];
 const stop = (e: Event): void => e.stopPropagation();
 
+/** <chocabloc-help>'s own composed events. They stop at the panel too: the page gets `lesson-help`. */
+const HELP_EVENTS = ['help-step', 'help-record', 'help-close'];
+
+interface QuestionHelp extends WhyHelp {
+  family: HelpFamily;
+  fact: HelpFact;
+  /** Help's code, or null if it couldn't load. */
+  code: Promise<HelpCode | null>;
+}
+
+/** Help for this question, or null: the skill has no family, or the question shows no fact. Non-fact lessons never load the code. */
+function helpFor(o: AskOptions): QuestionHelp | null {
+  const family = o.help ? familyForSkill(o.help.skillId) : null;
+  // item.q, not item.shown: normalizing can drop the operands.
+  const fact = family ? helpFactFromQuestion(o.item.q) : null;
+  if (!o.help || !family || !fact) return null;
+  return {
+    ...o.help,
+    family,
+    fact,
+    // Loads with the question, so a wrong answer doesn't wait for it.
+    code: helpChunk.load().catch((err: unknown) => {
+      console.warn('[chocabloc-lesson] could not load help:', err);
+      return null;
+    }),
+  };
+}
+
 /**
  * Shows one question and reports one answer for it. The first answer (or
  * "I'm not sure yet") is the only one: the guard keeps any later tap from the
@@ -106,8 +156,14 @@ export function ask(o: AskOptions): Asking {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let outcome: Outcome = 'unsure';
   let finish!: (out: Outcome) => void;
+  /** The kid has moved on, or the run ended: help that arrives now draws nothing. */
+  let leaving = false;
+  /** While a help panel is on the card: closes it, then takes its listeners away. */
+  let closeHelp: (() => void) | undefined;
+  const help = helpFor(o);
   const done = new Promise<Outcome>((resolve) => {
     finish = (out) => {
+      leaving = true;
       // "Yes!" was announced while it showed; the next screen starts clean.
       shell.feedback('');
       resolve(out);
@@ -155,8 +211,17 @@ export function ask(o: AskOptions): Asking {
     onResult(r) {
       outcome = r.outcome;
       shell.emit('lesson-answer', { step, skillId, question: item.q, studentAnswer: r.studentAnswer, outcome: r.outcome });
-      if (o.afterWrong && r.outcome !== 'right') {
-        whyCard(o.afterWrong, r.expected);
+      const { afterWrong } = o;
+      if (afterWrong && r.outcome !== 'right') {
+        // Got it first: the kid can go on even if help is slow to arrive.
+        const gotIt = buttons[2];
+        if (gotIt) gotIt.hidden = false;
+        if (help) {
+          gotIt?.focus();
+          void help.code.then((code) => {
+            if (!leaving) whyCard(afterWrong, r.expected, code);
+          });
+        } else whyCard(afterWrong, r.expected, null);
         return;
       }
       // "Yes!" is short enough to finish; the Check thanks is not, and the next question cancels it.
@@ -171,23 +236,66 @@ export function ask(o: AskOptions): Asking {
     },
   });
 
-  /** The question's own numbers drawn as the lesson's picture, the tip, and the answer when the host sent it. */
-  const whyCard = (afterWrong: Lesson['afterWrong'], expected: unknown): void => {
+  /** The help panel on the card, opened. Its thumbs and Close close only the panel: Got it is still the way on. */
+  const openHelp = (code: HelpCode, on: QuestionHelp, card: HTMLElement, answered: boolean): void => {
+    const panel = new code.ChocaHelp();
+    panel.style.alignSelf = 'stretch';
+    // Inside the lesson's shadow root, the panel can't find the page's [lang] by itself.
+    panel.lang = shell.lang;
+    panel.fact = on.fact;
+    panel.grade = on.grade;
+    // Optional chaining: `strategyPicks` is whatever the host set, if anything. The panel ignores a pick it can't use.
+    panel.pick = on.host.strategyPicks?.[on.family] ?? null;
+    panel.translator = on.host.translator;
+    panel.pictureBase = shell.look.base;
+    const onPanel = (e: Event): void => {
+      stop(e);
+      if (e.type === 'help-record') {
+        shell.emit('lesson-help', { ...(e as CustomEvent<HelpRecord>).detail, beforeAnswer: false, triesBefore: null });
+      } else if (e.type === 'help-close' && !leaving) {
+        // Its button just hid, so focus moves on. With no answer line, the card has nothing left to show.
+        card.hidden = !answered;
+        buttons[2]?.focus();
+      }
+    };
+    for (const type of HELP_EVENTS) panel.addEventListener(type, onPanel);
+    closeHelp = () => {
+      panel.close();
+      for (const type of HELP_EVENTS) panel.removeEventListener(type, onPanel);
+    };
+    card.prepend(panel);
+    // It speaks for itself, to a young kid, and takes the focus.
+    panel.open();
+  };
+
+  /**
+   * The question's own numbers drawn as the lesson's picture and the tip, or the help panel in
+   * their place, and the answer when the host sent it. `code` is help's, if it loaded.
+   */
+  const whyCard = (afterWrong: Lesson['afterWrong'], expected: unknown, code: HelpCode | null): void => {
     const card = h('div', 'why');
     card.tabIndex = -1;
-    // The picture shows the question's numbers, and often the answer (a jump's end, a digit's
-    // place), so it waits for the server's verdict: no `expected`, no picture. The tip still shows.
-    const pic = afterWrong.picture && expected != null ? pictureFromQuestion(afterWrong.picture, item.q) : null;
-    if (pic) card.append(renderPicture(pic, msg, shell.lang));
-    card.append(h('p', 'tip', undefined, afterWrong.tip));
+    // K has the shortest list of any grade, so a fact with a way there has one for every kid.
+    const hasWays = code && help && code.strategyOrder(help.fact, { grade: 0, pick: null, solved: [] }).length > 0;
+    if (!hasWays) {
+      // The picture shows the question's numbers, and often the answer (a jump's end, a digit's
+      // place), so it waits for the server's verdict: no `expected`, no picture. The tip still shows.
+      const pic = afterWrong.picture && expected != null ? pictureFromQuestion(afterWrong.picture, item.q) : null;
+      if (pic) card.append(renderPicture(pic, msg, shell.lang));
+      card.append(h('p', 'tip', undefined, afterWrong.tip));
+    }
     // `== null`, never truthiness: 0 is an answer.
     const answer = expected == null ? undefined : msg('feedback.answerIs', { answer: expected });
     if (answer != null) card.append(h('p', 'text', undefined, answer));
     el.after(card);
+    if (hasWays) {
+      // With no answer line, Read to me keeps the question's words.
+      if (answer != null) screen.say = spoken(msg, answer);
+      openHelp(code, help, card, answer != null);
+      return;
+    }
     screen.say = spoken(msg, afterWrong.tip, answer);
     shell.speak(screen.say);
-    const gotIt = buttons[2];
-    if (gotIt) gotIt.hidden = false;
     card.focus();
   };
 
@@ -207,8 +315,12 @@ export function ask(o: AskOptions): Asking {
     done,
     /** Once the kid has moved on, or the run ends: no more reports, timers or listeners. */
     dispose() {
+      leaving = true;
       clearTimeout(timer);
       guard.dispose();
+      // A panel still open sends its last record now, with no thumb, while the run can report it.
+      // shortcut: a run replaced or removed (not closed) has stopped reporting by here, so that record is lost; revisit when a host saves lesson-help.
+      closeHelp?.();
       for (const type of INNER_EVENTS) el.removeEventListener(type, stop);
     },
   };
