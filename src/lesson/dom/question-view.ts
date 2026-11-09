@@ -236,8 +236,8 @@ export function ask(o: AskOptions): Asking {
     },
   });
 
-  /** The help panel on the card, opened. Its thumbs and Close close only the panel: Got it is still the way on. */
-  const openHelp = (code: HelpCode, on: QuestionHelp, card: HTMLElement, answered: boolean): void => {
+  /** The help panel on the card, opened. Its 👍 and Close help close only the panel: Got it is still the way on. */
+  const openHelp = (code: HelpCode, on: QuestionHelp, card: HTMLElement, answer: string | undefined): void => {
     const panel = new code.ChocaHelp();
     panel.style.alignSelf = 'stretch';
     // Inside the lesson's shadow root, the panel can't find the page's [lang] by itself.
@@ -252,10 +252,18 @@ export function ask(o: AskOptions): Asking {
       stop(e);
       if (e.type === 'help-record') {
         shell.emit('lesson-help', { ...(e as CustomEvent<HelpRecord>).detail, beforeAnswer: false, triesBefore: null });
-      } else if (e.type === 'help-close' && !leaving) {
-        // Its button just hid, so focus moves on. With no answer line, the card has nothing left to show.
-        card.hidden = !answered;
-        buttons[2]?.focus();
+      } else if (e.type === 'help-close') {
+        if (answer != null && !leaving) {
+          // The answer's turn (Ruling 26). The button that had focus just hid; on the card, the line gets read.
+          card.append(h('p', 'text', undefined, answer));
+          screen.say = spoken(msg, answer);
+          shell.speak(screen.say);
+          card.focus();
+        } else {
+          // Nothing left to show: the host sent no answer, or the kid left with the panel open.
+          card.hidden = true;
+          if (!leaving) buttons[2]?.focus();
+        }
       }
     };
     for (const type of HELP_EVENTS) panel.addEventListener(type, onPanel);
@@ -269,8 +277,9 @@ export function ask(o: AskOptions): Asking {
   };
 
   /**
-   * The question's own numbers drawn as the lesson's picture and the tip, or the help panel in
-   * their place, and the answer when the host sent it. `code` is help's, if it loaded.
+   * The question's own numbers drawn as the lesson's picture and the tip, and the answer when the
+   * host sent it. Or the help panel in their place, and the answer only once it closes: a panel that
+   * never says the final number can't sit above a line that does (Ruling 26). `code` is help's, if it loaded.
    */
   const whyCard = (afterWrong: Lesson['afterWrong'], expected: unknown, code: HelpCode | null): void => {
     const card = h('div', 'why');
@@ -286,14 +295,14 @@ export function ask(o: AskOptions): Asking {
     }
     // `== null`, never truthiness: 0 is an answer.
     const answer = expected == null ? undefined : msg('feedback.answerIs', { answer: expected });
-    if (answer != null) card.append(h('p', 'text', undefined, answer));
-    el.after(card);
     if (hasWays) {
-      // With no answer line, Read to me keeps the question's words.
-      if (answer != null) screen.say = spoken(msg, answer);
-      openHelp(code, help, card, answer != null);
+      el.after(card);
+      // Read to me keeps the question's words until the answer shows.
+      openHelp(code, help, card, answer);
       return;
     }
+    if (answer != null) card.append(h('p', 'text', undefined, answer));
+    el.after(card);
     screen.say = spoken(msg, afterWrong.tip, answer);
     shell.speak(screen.say);
     card.focus();

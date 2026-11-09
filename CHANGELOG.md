@@ -20,13 +20,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **`<chocabloc-help>`** (minor): a new `chocabloc-questions/help` entry with the help panel and the
   strategy catalog and step builders. A stuck kid gets one short nudge on the question they are on,
   with 👎 for another way and 👍 when one helped. It never draws or says the final number: pictures
-  print running totals up to the last row only, and every printed number carries `data-help-role`.
+  print running totals up to the last row only, and every printed number carries `data-help-role`,
+  except the "Way 1 of 4" line, which is a position count, not a math number.
   Properties `fact`, `grade`, `pick`, `solved`, `draw`, `translator`, `pictureBase`; methods `open()`,
   `close()`; events `help-step`, `help-record`, `help-close`. See the README and `PARTS-AND-VARS.md`.
 - **Help in the fact lessons' Try again** (minor): when the retry skill is a `MULT-FACTS-` skill or
   `DIV-BASIC-DIVISION-FACTS`, `<chocabloc-lesson>`'s wrong-answer card on Try again shows the help panel
   in place of the lesson's tip and picture. New property `strategyPicks`; new event `lesson-help`.
-  The lesson's own card still shows if help can't load or has no strategy for the question's numbers.
+  "The answer is X" waits until the panel closes (👍 or Close help). A kid who moves on with Got it
+  while the panel is open doesn't see it.
+  The lesson's own card still shows if help can't load or has no strategy for the question's numbers,
+  and shows the answer at once, as before.
   The panel's code stays out of the lesson's Help bundle: only the practice chunk loads it, so a
   consumer's bundler now sees a lazy import of `dist/help.mjs` there.
 

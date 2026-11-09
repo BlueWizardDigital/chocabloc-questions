@@ -3,43 +3,52 @@
 // the question element.
 import { expect } from '@esm-bundle/chai';
 import { ChocaLesson } from '../../src/lesson/index';
-import type { Lesson, NormalizedQuestion } from '../../src/lesson/index';
-import type { ChocaHelp } from '../../src/help/index';
-import type { ValidationResult } from '../../src/types';
+import type { NormalizedQuestion } from '../../src/lesson/index';
 import { helpChunk, timing } from '../../src/lesson/dom/question-view';
 import {
   button,
   captureConsole,
   cleanup,
+  deepText,
   deferred,
-  fakeHost,
   heading,
   holder,
   labels,
   listen,
-  mount,
   part,
-  questionEl,
   questionId,
   stubSpeech,
   tick,
   until,
 } from './lesson-test-utils';
-import type { Detail, FakeHost } from './lesson-test-utils';
+import type { Detail } from './lesson-test-utils';
 import { check, click, div, focusedPart, isOpen, mult, say, the, way } from './help-test-utils';
+import {
+  ANSWER_LINE,
+  TIP,
+  WRONG,
+  answer,
+  atTryAgain,
+  expectLessonCard,
+  fq,
+  helpOf,
+  helpShown,
+  lessonFor,
+  loadLessonFixture,
+  right,
+  shown,
+  start,
+  threeFacts,
+  walk,
+  whyShown,
+} from './try-again-test-utils';
 
-const TIP = 'Count the tens first. If the tens match, look at the ones.';
-const WRONG: ValidationResult = { correct: false, expected: 56 };
-const ANSWER_LINE = 'The answer is';
-
-let fixture: Lesson;
 const advanceMs = timing.advanceMs;
 const realLoad = helpChunk.load;
 let loads = 0;
 
 before(async () => {
-  const res = await fetch(new URL('../fixtures/lesson-compare-100.json', import.meta.url));
-  fixture = (await res.json()) as Lesson;
+  await loadLessonFixture();
   timing.advanceMs = 0;
 });
 
@@ -60,119 +69,7 @@ afterEach(() => {
   cleanup();
 });
 
-function lessonFor(retrySkill: string, skillId = 'MULT-FACTS-6-10', skillGrade = '5'): Lesson {
-  const l = JSON.parse(JSON.stringify(fixture)) as Lesson;
-  l.skillId = skillId;
-  l.skillGrade = skillGrade;
-  l.moreHelp.skillId = retrySkill;
-  return l;
-}
-
-/** A fact as the bank sends it: choices-only, with a token, and its numbers in content.operands. */
-function fq(id: string, x: number, y: number, op: 'multiplication' | 'division' = 'multiplication'): NormalizedQuestion {
-  return {
-    id,
-    format: op,
-    skillIds: [op === 'division' ? 'DIV-BASIC-DIVISION-FACTS' : 'MULT-FACTS-0-5'],
-    questionText: `${x} ${op === 'division' ? '÷' : '×'} ${y} = ?`,
-    content: { operands: [x, y], operation: op },
-    choices: [{ value: 10 }, { value: 20 }, { value: 30 }, { value: 40 }],
-    difficulty: 'easy',
-    answerToken: `token-${id}`,
-  } as unknown as NormalizedQuestion;
-}
-
-const threeFacts = (): NormalizedQuestion[] => [fq('e1', 7, 8), fq('e2', 6, 7), fq('e3', 4, 6)];
-const shown = (el: ChocaLesson, id: string) => until(() => questionId(el) === id, `question ${id} on screen`);
-
-/** Taps a choice, however the question draws them. */
-async function tapChoice(el: ChocaLesson, label = '10'): Promise<void> {
-  const pad = (): ShadowRoot | null | undefined => {
-    const q = questionEl(el)?.shadowRoot;
-    const scope = q?.querySelector('choca-canvas-question')?.shadowRoot ?? q;
-    return scope?.querySelector('choca-choice-pad')?.shadowRoot;
-  };
-  await until(() => !!pad()?.querySelector('button'), 'the choices');
-  const b = Array.from(pad()!.querySelectorAll('button')).find((c) => (c.textContent ?? '').trim() === label);
-  if (!b) throw new Error(`no "${label}" choice`);
-  b.click();
-}
-
-async function answer(el: ChocaLesson, host: FakeHost, id: string, verdict: ValidationResult): Promise<void> {
-  await shown(el, id);
-  await tapChoice(el);
-  host.last.reply.resolve(verdict);
-}
-
-async function right(el: ChocaLesson, host: FakeHost, id: string): Promise<void> {
-  await answer(el, host, id, { correct: true });
-  await until(() => questionId(el) !== id, `moved on from ${id}`);
-}
-
-const whyShown = (el: ChocaLesson) => until(() => part(el, 'why') !== null, 'the why card');
-
-async function miss(el: ChocaLesson, host: FakeHost, id: string): Promise<void> {
-  await answer(el, host, id, WRONG);
-  await whyShown(el);
-  button(el, 'Got it').click();
-  await until(() => questionId(el) !== id, `moved on from ${id}`);
-}
-
-async function walk(el: ChocaLesson, steps: { heading: string }[]): Promise<void> {
-  await until(() => heading(el) === steps[0]!.heading, `"${steps[0]!.heading}"`);
-  for (let i = 0; i < steps.length; i++) button(el, 'Next').click();
-}
-
-function start(lesson: Lesson, again: NormalizedQuestion[], setup: (el: ChocaLesson) => void): { el: ChocaLesson; host: FakeHost } {
-  const first = [fq('q1', 2, 3), fq('q2', 2, 4), fq('q3', 2, 5), fq('q4', 2, 6), fq('q5', 2, 7)];
-  const host = fakeHost([first, again]);
-  const el = mount();
-  setup(el);
-  el.getQuestions = host.getQuestions;
-  el.validateAnswer = host.validateAnswer;
-  el.mode = 'intro';
-  el.lesson = lesson;
-  button(el, 'Next').click();
-  return { el, host };
-}
-
-/** Fails Your turn, walks the more examples, and stops on Try again's first question. */
-async function atTryAgain(
-  lesson: Lesson,
-  again: NormalizedQuestion[] = threeFacts(),
-  setup: (el: ChocaLesson) => void = () => undefined,
-): Promise<{ el: ChocaLesson; host: FakeHost }> {
-  const { el, host } = start(lesson, again, setup);
-  await right(el, host, 'q1');
-  await right(el, host, 'q2');
-  await walk(el, lesson.example.steps);
-  await right(el, host, 'q3');
-  await miss(el, host, 'q4');
-  await miss(el, host, 'q5');
-  for (const ex of lesson.moreHelp.examples) await walk(el, ex.steps);
-  await shown(el, again[0]!.id);
-  expect(heading(el)).to.equal('Try again');
-  return { el, host };
-}
-
-const helpOf = (el: ChocaLesson): ChocaHelp | null =>
-  (part(el, 'why')?.querySelector('chocabloc-help') as ChocaHelp | null | undefined) ?? null;
-
-async function helpShown(el: ChocaLesson): Promise<ChocaHelp> {
-  await until(() => helpOf(el) !== null, 'the help panel');
-  return helpOf(el)!;
-}
-
-/** The wrong-answer card as it was before help: the tip, the picture, the answer line, no panel. */
-function expectLessonCard(el: ChocaLesson): void {
-  expect(helpOf(el) === null, 'no help panel').to.equal(true);
-  expect(part(el, 'tip')?.textContent).to.equal(TIP);
-  expect(part(el, 'why')?.querySelector('[part~="picture"]') != null, 'the lesson picture').to.equal(true);
-  expect(part(el, 'why')?.textContent).to.include(`${ANSWER_LINE} 56`);
-  expect(labels(el)).to.include('Got it');
-}
-
-const thumbs = (records: Detail[]): unknown[] => records.map((r) => r.thumb);
+const thumbs =(records: Detail[]): unknown[] => records.map((r) => r.thumb);
 
 describe('<chocabloc-lesson> Try again shows strategy help', () => {
   describe('when it shows', () => {
@@ -187,7 +84,6 @@ describe('<chocabloc-lesson> Try again shows strategy help', () => {
       expect(the(help, 'picture').children.length).to.be.greaterThan(0);
       expect(part(el, 'tip') === null, 'no lesson tip').to.equal(true);
       expect(part(el, 'why')?.querySelector('[part~="picture"]') == null, 'no lesson picture').to.equal(true);
-      expect(part(el, 'why')?.textContent).to.include(`${ANSWER_LINE} 56`);
       expect(labels(el)).to.include('Got it');
       expect(focusedPart(help)).to.equal('text');
       expect(check(help, mult(7, 8), [], undefined, way(help)!)).to.deep.equal([]);
@@ -199,10 +95,10 @@ describe('<chocabloc-lesson> Try again shows strategy help', () => {
       expect(part(el, 'why') === null).to.equal(true);
     });
 
-    it('the answer line shows only when the validator returned it', async () => {
+    it('the answer line shows only when the validator returned it, even after the panel closes', async () => {
       const { el, host } = await atTryAgain(lessonFor('MULT-FACTS-0-5'));
       await answer(el, host, 'e1', { correct: false });
-      await helpShown(el);
+      click(await helpShown(el), 'thumb-up');
       expect(part(el, 'why')?.textContent).to.not.include(ANSWER_LINE);
     });
 
@@ -314,6 +210,114 @@ describe('<chocabloc-lesson> Try again shows strategy help', () => {
     });
   });
 
+  // Ruling 26: a panel that never says the final number can't sit above a line that does.
+  describe('the answer waits for the panel', () => {
+    for (const [label, name] of [
+      ['👍', 'thumb-up'],
+      ['Close help', 'close'],
+    ] as const) {
+      it(`the answer is hidden while help is open and shows after ${label}`, async () => {
+        const { el, host } = await atTryAgain(lessonFor('MULT-FACTS-0-5'));
+        await answer(el, host, 'e1', WRONG);
+        const help = await helpShown(el);
+        expect(deepText(part(el, 'why')!), 'not on the card').to.not.include(ANSWER_LINE);
+        // Light DOM only: the panel's own text has its own oracle, and its <style> is full of digits.
+        expect(part(el, 'why')?.textContent, 'not the number either').to.not.include('56');
+        expect(check(help, mult(7, 8), [], undefined, way(help)!)).to.deep.equal([]);
+        expect(labels(el)).to.include('Got it');
+        click(help, name);
+        expect(isOpen(help)).to.equal(false);
+        expect(part(el, 'why')?.textContent).to.include(`${ANSWER_LINE} 56`);
+        expect(questionId(el), 'still on the question').to.equal('e1');
+        expect(labels(el)).to.include('Got it');
+      });
+    }
+
+    it('👎 is still help: the answer stays hidden', async () => {
+      const { el, host } = await atTryAgain(lessonFor('MULT-FACTS-0-5'));
+      await answer(el, host, 'e1', WRONG);
+      click(await helpShown(el), 'thumb-down');
+      expect(deepText(part(el, 'why')!)).to.not.include(ANSWER_LINE);
+    });
+
+    it('Read to me keeps to the question while the panel is open, and says the answer after', async () => {
+      const speech = stubSpeech();
+      const { el, host } = await atTryAgain(lessonFor('MULT-FACTS-0-5'));
+      await answer(el, host, 'e1', WRONG);
+      const help = await helpShown(el);
+      button(el, 'Read to me').click();
+      const open = speech.spoken[speech.spoken.length - 1];
+      expect(open).to.include('7');
+      expect(open).to.not.include(ANSWER_LINE);
+      click(help, 'close');
+      button(el, 'Read to me').click();
+      expect(speech.spoken[speech.spoken.length - 1]).to.include(`${ANSWER_LINE} 56`);
+    });
+
+    it('a young kid hears the answer when it appears, since they may not read it', async () => {
+      const speech = stubSpeech();
+      const { el, host } = await atTryAgain(lessonFor('MULT-FACTS-0-5'), threeFacts(), (e) => {
+        e.grade = '2';
+      });
+      const before = speech.spoken.length;
+      await answer(el, host, 'e1', WRONG);
+      const help = await helpShown(el);
+      expect(speech.spoken.slice(before).join(' ')).to.not.include(ANSWER_LINE);
+      click(help, 'thumb-up');
+      expect(speech.spoken[speech.spoken.length - 1]).to.include(`${ANSWER_LINE} 56`);
+    });
+
+    it('an older kid hears nothing when it appears', async () => {
+      const speech = stubSpeech();
+      const { el, host } = await atTryAgain(lessonFor('MULT-FACTS-0-5'));
+      await answer(el, host, 'e1', WRONG);
+      const help = await helpShown(el);
+      const before = speech.spoken.length;
+      click(help, 'thumb-up');
+      expect(speech.spoken.length).to.equal(before);
+    });
+
+    it('the fallback card still shows the answer at once', async () => {
+      // Help's code failed to load.
+      const got = captureConsole();
+      helpChunk.load = () => Promise.reject(new Error('offline'));
+      const failed = await atTryAgain(lessonFor('MULT-FACTS-0-5'));
+      await answer(failed.el, failed.host, 'e1', WRONG);
+      await whyShown(failed.el);
+      expectLessonCard(failed.el);
+      expect(got.warn.length).to.be.greaterThan(0);
+      cleanup();
+      helpChunk.load = realLoad;
+      // Help loaded, and has no strategy for these numbers.
+      const none = await atTryAgain(lessonFor('MULT-FACTS-0-5'), [fq('e1', 0, 8), fq('e2', 6, 7), fq('e3', 4, 6)]);
+      await answer(none.el, none.host, 'e1', WRONG);
+      await whyShown(none.el);
+      expectLessonCard(none.el);
+    });
+
+    it('Got it with help open moves on and sends the record once, and the answer never draws', async () => {
+      const records = listen('lesson-help');
+      const { el, host } = await atTryAgain(lessonFor('MULT-FACTS-0-5'));
+      await answer(el, host, 'e1', WRONG);
+      await helpShown(el);
+      const card = part(el, 'why')!;
+      button(el, 'Got it').click();
+      await shown(el, 'e2');
+      expect(thumbs(records)).to.deep.equal([null]);
+      expect(card.textContent, 'the card it left').to.not.include(ANSWER_LINE);
+      expect(part(el, 'why') === null, 'nothing carried over').to.equal(true);
+    });
+
+    it("the lesson's Close with the panel open draws no answer and leaves no empty box", async () => {
+      const { el, host } = await atTryAgain(lessonFor('MULT-FACTS-0-5'));
+      await answer(el, host, 'e1', WRONG);
+      await helpShown(el);
+      part(el, 'close')!.click();
+      expect(part(el, 'why')?.textContent).to.not.include(ANSWER_LINE);
+      expect(part(el, 'why')!.getBoundingClientRect().height).to.equal(0);
+    });
+  });
+
   describe('the kid can always go on', () => {
     it('Got it shows while help is still loading; help then appears on the same card', async () => {
       const slow = deferred<Awaited<ReturnType<typeof realLoad>>>();
@@ -342,7 +346,7 @@ describe('<chocabloc-lesson> Try again shows strategy help', () => {
       expect(records).to.deep.equal([]);
     });
 
-    it("the panel's thumb and Close close only the panel: the card, its answer and Got it stay", async () => {
+    it("the panel's 👍 and Close help close only the panel: the question and Got it stay", async () => {
       for (const name of ['thumb-up', 'close']) {
         cleanup();
         const { el, host } = await atTryAgain(lessonFor('MULT-FACTS-0-5'));
@@ -351,17 +355,16 @@ describe('<chocabloc-lesson> Try again shows strategy help', () => {
         click(help, name);
         expect(isOpen(help), name).to.equal(false);
         expect(questionId(el)).to.equal('e1');
-        expect(part(el, 'why')?.textContent).to.include(`${ANSWER_LINE} 56`);
         expect(part(el, 'tip') === null, 'the tip does not come back').to.equal(true);
         expect(labels(el)).to.include('Got it');
-        // A button that hid must not leave the kid with no focus.
-        expect((el.shadowRoot as ShadowRoot).activeElement?.textContent).to.equal('Got it');
+        // The button that hid had the focus. It goes to the card, so the answer line gets read, as on the lesson's own card.
+        expect((el.shadowRoot as ShadowRoot).activeElement?.getAttribute('part')).to.equal('why');
         button(el, 'Got it').click();
         await shown(el, 'e2');
       }
     });
 
-    it('a card with no answer line and a closed panel leaves no empty box', async () => {
+    it('a card with no answer line and a closed panel leaves no empty box, and focus on Got it', async () => {
       const { el, host } = await atTryAgain(lessonFor('MULT-FACTS-0-5'));
       await answer(el, host, 'e1', { correct: false });
       const help = await helpShown(el);
@@ -369,6 +372,7 @@ describe('<chocabloc-lesson> Try again shows strategy help', () => {
       click(help, 'close');
       expect(part(el, 'why')!.getBoundingClientRect().height).to.equal(0);
       expect(labels(el)).to.include('Got it');
+      expect((el.shadowRoot as ShadowRoot).activeElement?.textContent).to.equal('Got it');
     });
   });
 
@@ -555,7 +559,7 @@ describe('<chocabloc-lesson> Try again shows strategy help', () => {
       expect(speech.langs[speech.langs.length - 1]).to.equal('fr');
     });
 
-    it('a young kid hears the panel, never the tip; Read to me says the answer line', async () => {
+    it('a young kid hears the panel, never the tip', async () => {
       const speech = stubSpeech();
       const { el, host } = await atTryAgain(lessonFor('MULT-FACTS-0-5'), threeFacts(), (e) => {
         e.grade = '2';
@@ -566,8 +570,6 @@ describe('<chocabloc-lesson> Try again shows strategy help', () => {
       await helpShown(el);
       expect(speech.spoken[speech.spoken.length - 1]).to.include('7 rows of 8');
       expect(speech.spoken.slice(before).join(' ')).to.not.include('Count the tens');
-      button(el, 'Read to me').click();
-      expect(speech.spoken[speech.spoken.length - 1]).to.include(`${ANSWER_LINE} 56`);
     });
 
     it('an older kid hears nothing by itself, and Read to me with no answer line reads the question', async () => {

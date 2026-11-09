@@ -426,7 +426,7 @@ describe('<chocabloc-help>: words', () => {
     expect(way(el)).to.equal('Way 1 of 2: Equal groups');
     expect(the(el, 'more').textContent).to.equal('Show me more');
     expect(the(el, 'back').textContent).to.equal('Back');
-    expect(the(el, 'close').textContent).to.equal('Close');
+    expect(the(el, 'close').textContent).to.equal('Close help');
     expect(the(el, 'thumb-up').textContent).to.equal('👍');
     expect(the(el, 'thumb-up').getAttribute('aria-label')).to.equal('That helped');
     expect(the(el, 'thumb-down').textContent).to.equal('👎');

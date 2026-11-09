@@ -263,7 +263,7 @@ totals), so a game themes both at once. It adds no vars. The blocks keep the cou
 | `more` | Show me more (also a `button`). Disabled on a way's last step |
 | `thumb-up` | 👍 (also a `button`) |
 | `thumb-down` | 👎 (also a `button`) |
-| `close` | Close (also a `button`) |
+| `close` | Close help (also a `button`) |
 | `tap-to-hear` | The big Tap to hear button (also a `button`), shown to a young kid until the page has been tapped. Absent where the browser has no speech |
 
 **`data-help-role`.** Every number the panel prints in the words or on a picture sits in an element with
@@ -275,10 +275,10 @@ non-given one. The "Way 1 of 4" line is the one place with no role: it is a posi
 | Event | Detail shape | Fires |
 |-------|--------------|-------|
 | `help-step` | `{ strategy, index, points }` (`index` counts from 0; `points` are `{ a, b }` facts for a game's own grid) | Each time a step shows |
-| `help-record` | `{ eventId, family, strategy, thumb, fact }` (`eventId` is a UUID v4; `thumb` is `up`, `down` or `null`; `fact` is `7x8` or `24÷4`) | Once each time a strategy is left: 👍, 👎, Close, `close()`, a new `fact`, or removing the element. Not for the fallback line, which shows no strategy |
+| `help-record` | `{ eventId, family, strategy, thumb, fact }` (`eventId` is a UUID v4; `thumb` is `up`, `down` or `null`; `fact` is `7x8` or `24÷4`) | Once each time a strategy is left: 👍, 👎, Close help, `close()`, a new `fact`, or removing the element. Not for the fallback line, which shows no strategy |
 | `help-close` | `{}` | When the panel closes. Clear any highlight here |
 
 All events use `bubbles: true, composed: true`. None carries anything about the answer.
 
-A `help-record` and `help-close` sent because the element was removed reach only listeners on the element
-itself: by then it is off the page, so they can't bubble to a parent or `document`.
+A `help-record` and `help-close` sent because the element was removed don't reach `document`, and a parent
+hears them only if it was removed too. Listen on the element.

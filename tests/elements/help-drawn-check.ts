@@ -75,7 +75,7 @@ export function drawnProblems(host: HTMLElement, d: Drawn): string[] {
   // Saying the words on screen, and nothing else, is stricter than matching their numbers: on 1 × 6
   // "The answer is 6." has the same numbers as "One group of 6.", and it gives the answer away.
   // shortcut: a wrapped panel's voice adds "Let's look at this one again.", which this would flag; the sweep stops before a wrap, revisit if it goes past one.
-  const words =host.shadowRoot?.querySelector('[part~="text"]')?.textContent ?? '';
+  const words = host.shadowRoot?.querySelector('[part~="text"]')?.textContent ?? '';
   for (const said of d.spoken) {
     if (said !== voiced(words)) problems.push(`spoken-differs: said "${said}", the words are "${words}"`);
   }
